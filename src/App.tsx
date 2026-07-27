@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Ocean from './components/Ocean'
-import Pet from './components/Pet'
+import Pet, { EAT_MS } from './components/Pet'
 import type { PoseName } from './components/Pet'
 import Dialogue from './components/Dialogue'
 import FullnessMeter from './components/FullnessMeter'
@@ -49,10 +49,10 @@ function App() {
   const grownCount = countGrown(save.seagrass)
   const clarity = clarityOf(save.seagrass)
 
-  // 摆一会儿姿势就回到平时的样子
+  // 摆一会儿姿势就回到平时的样子。进食要沉下去啃一会儿,时间给得长一些
   useEffect(() => {
     if (pose === 'idle') return
-    const timer = setTimeout(() => setPose('idle'), POSE_MS)
+    const timer = setTimeout(() => setPose('idle'), pose === 'eating' ? EAT_MS : POSE_MS)
     return () => clearTimeout(timer)
   }, [pose])
 
