@@ -1,0 +1,176 @@
+{
+  "_说明": "小爱心的剧本对话库。所有台词写死在这里,零成本零延迟完全可控。第 6 周若接 AI 对话,本文件同时作为断网兜底台词库。",
+
+  "_写作规则": [
+    "每句 3–8 个字",
+    "不做拼音了。中文下面那行小字放 en(英文),必须来自 whitelist.json;没有合适的就留空。已有的 pinyin 字段不再显示,留着不碍事。",
+    "不用成语、不用书面语、不用生僻字",
+    "永远不出现:死、病、坏掉、离开你、都怪你",
+    "任何一句读不懂,靠图标也要能玩下去"
+  ],
+
+  "口头禅": {
+    "_待填": "第 0 周和童童一起想 5 句,替换下面的占位内容。她会认出自己写的话。",
+    "lines": [
+      "Give me five!",
+      "你讲......啊！",
+      "我不信！",
+      "凭什么？",
+      "这也太那个了吧..."
+    ]
+  },
+
+  "场景": [
+    {
+      "id": "greet_first",
+      "触发": "首次打开",
+      "text": "你好呀",
+      "pinyin": "nǐ hǎo ya",
+      "en": "Hello!",
+      "options": [
+        { "icon": "👋", "label": "你好", "next": "greet_reply" }
+      ]
+    },
+    {
+      "id": "greet_reply",
+      "text": "我叫小爱心",
+      "pinyin": "wǒ jiào xiǎo ài xīn",
+      "options": [
+        { "icon": "🫧", "label": "陪它换气", "action": "goto_breathe" },
+        { "icon": "🌱", "label": "喂海草", "action": "goto_feed" }
+      ]
+    },
+    {
+      "id": "hungry",
+      "触发": "饱食度低",
+      "text": "我有点饿了",
+      "pinyin": "wǒ yǒu diǎn è le",
+      "options": [
+        { "icon": "🌱", "label": "喂海草", "action": "feed" },
+        { "icon": "💤", "label": "让它睡觉", "action": "sleep" }
+      ]
+    },
+    {
+      "id": "need_air",
+      "触发": "换气计时到",
+      "text": "我要换口气",
+      "pinyin": "wǒ yào huàn kǒu qì",
+      "options": [
+        { "icon": "🫧", "label": "陪它上去", "action": "breathe" }
+      ]
+    },
+    {
+      "id": "welcome_back",
+      "触发": "离开 3 天以上后回来",
+      "text": "你每天都来\n我好开心",
+      "pinyin": "nǐ měi tiān dōu lái, wǒ hǎo kāi xīn",
+      "en": "I miss you.",
+      "_注": "注意语气:永远是想念,不是责怪。禁止出现「你终于来了」「我等了好久」",
+      "options": [
+        { "icon": "❤️", "label": "抱抱它", "action": "hug" }
+      ]
+    },
+    {
+      "id": "seagrass_grown",
+      "触发": "海草长成",
+      "text": "海草长大啦",
+      "pinyin": "hǎi cǎo zhǎng dà la",
+      "options": [
+        { "icon": "🌱", "label": "摘一棵", "action": "harvest" }
+      ]
+    },
+    {
+      "id": "breathe_thanks",
+      "触发": "换气完成后",
+      "text": "谢谢你",
+      "pinyin": "xiè xie nǐ",
+      "en": "Thank you!",
+      "options": [
+        { "icon": "❤️", "label": "不客气" }
+      ]
+    },
+    {
+      "id": "stand_breathe",
+      "触发": "换气浮上水面时,偶尔代替 need_air",
+      "text": "我站着换气",
+      "pinyin": "wǒ zhàn zhe huàn qì",
+      "_注": "儒艮会用尾巴撑住海底站在水里呼吸。对应知识卡 bio_stand_to_breathe",
+      "options": [
+        { "icon": "🫧", "label": "陪它上去", "action": "breathe" }
+      ]
+    },
+    {
+      "id": "feed_more",
+      "触发": "喂食后,饱食度未满时偶尔",
+      "text": "还想再吃一棵",
+      "pinyin": "hái xiǎng zài chī yì kē",
+      "en": "Seagrass",
+      "options": [
+        { "icon": "🌱", "label": "再喂一棵", "action": "feed" },
+        { "icon": "☺️", "label": "吃饱啦" }
+      ]
+    },
+    {
+      "id": "touch_tail",
+      "触发": "点到尾巴(pet.json 的 tailTip 锚点)",
+      "text": "我的尾巴分两片",
+      "pinyin": "wǒ de wěi ba fēn liǎng piàn",
+      "_注": "对应知识卡 bio_fluked_tail。海牛的尾巴是一整片圆桨",
+      "options": [
+        { "icon": "🐋", "label": "像鲸鱼" }
+      ]
+    },
+    {
+      "id": "touch_mouth",
+      "触发": "点到嘴(pet.json 的 mouth 锚点)",
+      "text": "我用胡子找海草",
+      "pinyin": "wǒ yòng hú zi zhǎo hǎi cǎo",
+      "en": "Seagrass",
+      "_注": "对应知识卡 bio_whiskers",
+      "options": [
+        { "icon": "🌱", "label": "喂它一棵", "action": "feed" }
+      ]
+    },
+    {
+      "id": "night_grazing",
+      "触发": "晚上打开",
+      "text": "晚上我也在吃",
+      "pinyin": "wǎn shang wǒ yě zài chī",
+      "en": "Good night!",
+      "_注": "对应知识卡 bio_day_night_grazing。儒艮昼夜都在进食",
+      "options": [
+        { "icon": "🌙", "label": "陪它一会" }
+      ]
+    },
+    {
+      "id": "grow_up",
+      "触发": "成长阶段变化(第 4 周)",
+      "text": "我长大一点了",
+      "pinyin": "wǒ zhǎng dà yì diǎn le",
+      "_注": "小爱心是雌性,长大不长獠牙,变化体现在体色变深",
+      "options": [
+        { "icon": "❤️", "label": "抱抱它", "action": "hug" }
+      ]
+    },
+    {
+      "id": "about_mom",
+      "触发": "成长阶段解锁 / 相册",
+      "text": "妈妈托我换气",
+      "pinyin": "mā ma tuō wǒ huàn qì",
+      "_注": "对应知识卡 bio_mother_first_breath。童童在做的事,正是小爱心妈妈当年做过的",
+      "options": [
+        { "icon": "🫧", "label": "我也帮你", "action": "breathe" }
+      ]
+    }
+  ],
+
+  "兜底": {
+    "_说明": "AI 对话失败、断网、超时时使用。绝不允许白屏或显示 error。",
+    "lines": [
+      "我在发呆",
+      "海草好好吃",
+      "今天水很清",
+      "陪我待一会"
+    ]
+  }
+}

@@ -1,0 +1,336 @@
+{
+  "_说明": "小爱心可以讲的全部知识内容。这是白名单——不在这里的知识,小爱心一律回答「这个我也不知道,我们去问爸爸」。",
+
+  "_爸爸须知": [
+    "新增任何一条之前,自己先核对一遍。宁可少,不可错。",
+    "childText 是给童童看的,3–12 字;dadNote 是给你看的,方便她追问时你能接住。",
+    "不做拼音了。中文下面那行小字放 en(英文),必须来自 whitelist.json;没有合适的就不写,留空即可。已有的 pinyin 字段不再显示,留着不碍事。",
+    "已核对 字段请如实标记。false 的条目代码不得展示。",
+    "同一张卡的再次触发间隔至少 24 小时。",
+    "新卡带 来源 字段,写清这句话是从哪来的。核对时直接顺着它查。",
+    "小爱心是雌性儒艮。凡是只属于雄性的特征(最典型的是獠牙)一律不能安在她身上。"
+  ],
+
+  "触发规则": {
+    "主动触发概率": 0.15,
+    "同卡冷却小时": 24,
+    "呈现方式": "气泡或侧滑卡片,绝不弹窗",
+    "禁止": "卡片后追加「你学会了吗」类追问"
+  },
+
+  "卡片": [
+
+    {
+      "id": "bio_lung",
+      "学科": "生物",
+      "挂载点": "换气动作完成后",
+      "事件": "换气后",
+      "childText": "我用肺呼吸\n我不是鱼",
+      "pinyin": "wǒ yòng fèi hū xī, wǒ bú shì yú",
+      "en": "Bubble!",
+      "dadNote": "儒艮是哺乳动物,用肺呼吸,必须浮到水面换气。鱼用鳃,可以一直待在水里。",
+      "已核对": true
+    },
+    {
+      "id": "bio_mammal_milk",
+      "学科": "生物",
+      "挂载点": "成长阶段解锁",
+      "childText": "小时候\n我喝妈妈的奶",
+      "pinyin": "xiǎo shí hou wǒ hē mā ma de nǎi",
+      "dadNote": "儒艮是哺乳动物,幼崽吃母乳,哺乳期约一年半。这是「哺乳动物」概念最好的切入口。",
+      "已核对": true
+    },
+    {
+      "id": "bio_elephant_cousin",
+      "学科": "生物",
+      "挂载点": "图鉴 / 童童问「你像什么」",
+      "图鉴": true,
+      "childText": "大象是我的\n远房亲戚",
+      "pinyin": "dà xiàng shì wǒ de yuǎn fáng qīn qi",
+      "dadNote": "儒艮所属的海牛目,在演化上与长鼻目(大象)亲缘关系很近,同属近蹄类。这条童童一定会觉得不可思议——很好的话题。",
+      "已核对": true
+    },
+    {
+      "id": "nat_seagrass_flower",
+      "学科": "自然",
+      "挂载点": "首次种海草",
+      "事件": "种海草后",
+      "childText": "海草会开花\n它不是海藻",
+      "pinyin": "hǎi cǎo huì kāi huā, tā bú shì hǎi zǎo",
+      "en": "Seagrass",
+      "dadNote": "海草是开花植物(被子植物),有根、茎、叶、花、种子,是从陆地回到海里的。海藻是藻类,没有这些结构。这条连很多成年人都不知道。",
+      "已核对": true
+    },
+    {
+      "id": "bio_feeding_trail",
+      "学科": "生物",
+      "挂载点": "吃完海草后",
+      "事件": "喂食后",
+      "childText": "我吃过的地方\n会留下一条路",
+      "pinyin": "wǒ chī guò de dì fang huì liú xià yì tiáo lù",
+      "dadNote": "儒艮进食时会在海草床上啃出一条条沟槽,叫「摄食沟」,从空中能看见。科学家靠这个找儒艮。",
+      "已核对": true
+    },
+    {
+      "id": "bio_female_no_tusk",
+      "学科": "生物",
+      "挂载点": "成年阶段解锁",
+      "childText": "我是女孩子\n我不长牙",
+      "pinyin": "wǒ shì nǚ hái zi, wǒ bù zhǎng yá",
+      "dadNote": "儒艮的门齿只在雄性成年后萌出成獠牙,雌性一般不外露(极年老的雌性偶有例外)。小爱心是雌性,所以长大不会长牙 —— 她的成长标志是体色变深,不是獠牙。",
+      "来源": "Britannica「incisors do occur in dugongs, erupting as tusks in the males」",
+      "已核对": true
+    },
+    {
+      "id": "bio_calf_color",
+      "学科": "生物",
+      "挂载点": "成长阶段变化时",
+      "childText": "我小时候\n颜色很浅",
+      "pinyin": "wǒ xiǎo shí hou yán sè hěn qiǎn",
+      "dadNote": "幼崽体色偏淡奶油色,随年龄逐渐变成石板灰/棕灰色。⚠️ 这条是第 4 周成长机制的视觉依据,但 wiki 里三份原文都没直接写,只有你整理的笔记提到。请你先确认再打开。",
+      "来源": "你的资料整理(文档二「皮肤颜色」);NatGeo / Britannica 原文未提及",
+      "已核对": false
+    },
+    {
+      "id": "bio_fluked_tail",
+      "学科": "生物",
+      "挂载点": "点击尾巴(tailTip 锚点)",
+      "锚点": "tailTip",
+      "childText": "我的尾巴\n和鲸鱼一样",
+      "pinyin": "wǒ de wěi ba hé jīng yú yí yàng",
+      "dadNote": "儒艮尾鳍分叉成两叶,像鲸和海豚;海牛的尾巴是圆桨形的一整片。这是一眼分辨儒艮和海牛最快的办法,也是童童画画时最容易画错的地方。",
+      "来源": "National Geographic「the dugong's tail is fluked like a whale's」;Britannica 同",
+      "已核对": true
+    },
+    {
+      "id": "bio_whiskers",
+      "学科": "生物",
+      "挂载点": "点击嘴(mouth 锚点)/ 喂食后",
+      "锚点": "mouth",
+      "事件": "喂食后",
+      "childText": "我用胡子\n找海草",
+      "pinyin": "wǒ yòng hú zi zhǎo hǎi cǎo",
+      "en": "Seagrass",
+      "dadNote": "儒艮吻部长着粗硬的触须(vibrissae),在海底摸索、挑选海草靠的是它。可以让童童摸摸自己的嘴唇周围找找有没有。",
+      "来源": "Britannica「Dugongs also use thick bristles (vibrissae)」;NatGeo「bristled, sensitive snouts」",
+      "已核对": true
+    },
+    {
+      "id": "bio_stand_to_breathe",
+      "学科": "生物",
+      "挂载点": "换气浮上水面时,偶尔",
+      "事件": "换气后",
+      "childText": "我会站着换气",
+      "pinyin": "wǒ huì zhàn zhe huàn qì",
+      "en": "Bubble",
+      "dadNote": "儒艮有时会用尾巴撑住海底「站」在水里,只把头露出水面呼吸。这个姿势很有画面感,值得做成一个偶尔出现的换气动作。",
+      "来源": "National Geographic「They sometimes breathe by \"standing\" on their tail with their heads above water」",
+      "已核对": true
+    },
+    {
+      "id": "bio_hold_breath",
+      "学科": "生物",
+      "挂载点": "换气完成后(与 bio_lung 轮流出现)",
+      "事件": "换气后",
+      "childText": "我能憋气\n六分钟",
+      "pinyin": "wǒ néng biē qì liù fēn zhōng",
+      "dadNote": "儒艮一次可以在水下待约六分钟。游戏里换气间隔设成 3 分钟,在真实范围内偏保守,是为了让童童等得不辛苦。",
+      "来源": "National Geographic「These mammals can stay underwater for six minutes before surfacing」",
+      "已核对": true
+    },
+    {
+      "id": "bio_mother_first_breath",
+      "学科": "生物",
+      "挂载点": "幼崽 → 少年 阶段解锁 / 相册",
+      "childText": "妈妈托我\n换第一口气",
+      "pinyin": "mā ma tuō wǒ huàn dì yī kǒu qì",
+      "dadNote": "儒艮幼崽出生后,母亲会把它托到水面完成第一次呼吸。这条和游戏里「帮小爱心换气」是同一件事的上一代版本 —— 童童现在做的,正是小爱心妈妈当年做过的。适合放在相册里。",
+      "来源": "National Geographic「the mother helps her young reach the surface and take its first breath」",
+      "已核对": true
+    },
+    {
+      "id": "bio_ride_on_back",
+      "学科": "生物",
+      "挂载点": "幼崽阶段 / 图鉴",
+      "图鉴": true,
+      "childText": "我小时候\n趴在妈妈背上",
+      "pinyin": "wǒ xiǎo shí hou pā zài mā ma bèi shang",
+      "dadNote": "幼崽有时趴在母亲宽阔的背上「搭便车」。",
+      "来源": "National Geographic「sometimes catching a ride on her broad back」",
+      "已核对": true
+    },
+    {
+      "id": "bio_with_mom",
+      "学科": "生物",
+      "挂载点": "成长阶段解锁 / 相册",
+      "childText": "我跟着妈妈\n一年半",
+      "pinyin": "wǒ gēn zhe mā ma yì nián bàn",
+      "dadNote": "幼崽出生后约 18 个月一直跟在母亲身边。⚠️ 你整理的笔记里写「跟随母亲 6–7 年」,和 NatGeo 的 18 个月对不上,这里采用 NatGeo。",
+      "来源": "National Geographic「A young dugong remains close to its mother for about 18 months」",
+      "已核对": true
+    },
+    {
+      "id": "bio_one_calf",
+      "学科": "生物",
+      "挂载点": "图鉴,较后阶段",
+      "图鉴": true,
+      "childText": "妈妈怀我\n怀了一年",
+      "pinyin": "mā ma huái wǒ huái le yì nián",
+      "dadNote": "儒艮怀孕约一年,一胎只生一只。生得少、长得慢,是儒艮数量难以恢复的原因之一。",
+      "来源": "National Geographic「Female dugongs have one calf after a yearlong pregnancy」",
+      "已核对": true
+    },
+    {
+      "id": "bio_day_night_grazing",
+      "学科": "生物",
+      "挂载点": "夜晚场景喂食",
+      "事件": "喂食后",
+      "childText": "白天晚上\n我都在吃",
+      "pinyin": "bái tiān wǎn shang wǒ dōu zài chī",
+      "dadNote": "儒艮昼夜都在海草床上进食,不分白天黑夜。和 nat_day_night(太阳下山该睡觉)配合时注意别互相矛盾 —— 可以说成「我边吃边打瞌睡」。",
+      "来源": "National Geographic「Dugongs graze on underwater grasses day and night」",
+      "已核对": true
+    },
+    {
+      "id": "bio_alone_or_herd",
+      "学科": "生物",
+      "挂载点": "图鉴 / 邻居路过",
+      "图鉴": true,
+      "childText": "我常常一个人\n有时候一大群",
+      "pinyin": "wǒ cháng cháng yí gè rén, yǒu shí hou yí dà qún",
+      "dadNote": "儒艮多半独处或成对活动,偶尔聚成上百头的大群。可以用来回答童童「它会不会孤单」——独处是它的正常状态,不是可怜。",
+      "来源": "National Geographic「alone or in pairs, though they are sometimes seen gathered in large herds of a hundred」",
+      "已核对": true
+    },
+    {
+      "id": "nat_salt_water_only",
+      "学科": "自然",
+      "挂载点": "图鉴 / 点击海水",
+      "图鉴": true,
+      "childText": "我只住在\n咸咸的海里",
+      "pinyin": "wǒ zhǐ zhù zài xián xián de hǎi lǐ",
+      "en": "Water",
+      "dadNote": "儒艮完全生活在海水里,不像海牛那样能游进淡水河。可以延伸:海水是咸的,家里的水是淡的。",
+      "来源": "Britannica「Dugongs are exclusively marine, but manatees inhabit both marine and freshwater systems」",
+      "已核对": true
+    },
+    {
+      "id": "bio_shake_sand",
+      "学科": "生物",
+      "挂载点": "喂食动作开始时",
+      "childText": "吃之前\n先抖抖沙子",
+      "pinyin": "chī zhī qián xiān dǒu dou shā zi",
+      "en": "Sand",
+      "dadNote": "据称儒艮会先甩动海草抖掉泥沙再吃。⚠️ wiki 里三份原文都没写,只有你整理的笔记提到,请核实后再打开。",
+      "来源": "你的资料整理(文档一、二);NatGeo / Britannica 原文未提及",
+      "已核对": false
+    },
+    {
+      "id": "bio_shy",
+      "学科": "生物",
+      "挂载点": "很快地连点小爱心时",
+      "childText": "我有点害羞",
+      "pinyin": "wǒ yǒu diǎn hài xiū",
+      "dadNote": "儒艮性情胆小温和,受惊会游走。⚠️ 未在 wiki 原文中找到直接表述,请核实。注意:即使打开,也绝不能让它真的躲开或产生任何损失 —— 只说一句话就好。",
+      "来源": "你的资料整理(文档一、二);NatGeo / Britannica 原文未提及",
+      "已核对": false
+    },
+    {
+      "id": "bio_seed_gardener",
+      "学科": "生物",
+      "挂载点": "海草床,种下新海草后",
+      "事件": "种海草后",
+      "childText": "我帮海草搬家",
+      "pinyin": "wǒ bāng hǎi cǎo bān jiā",
+      "dadNote": "儒艮通过粪便把海草种子带到别处,帮海草扩散。⚠️ 笔记里那个「发芽快 60%」的数字我没能核实到出处,不建议使用具体数字。",
+      "来源": "你的资料整理(文档一);具体数字未核实",
+      "已核对": false
+    },
+    {
+      "id": "hist_mermaid",
+      "学科": "历史",
+      "挂载点": "图鉴",
+      "图鉴": true,
+      "childText": "很久以前\n有人把我当成美人鱼",
+      "pinyin": "hěn jiǔ yǐ qián, yǒu rén bǎ wǒ dàng chéng měi rén yú",
+      "dadNote": "儒艮所属的目叫 Sirenia(海牛目),名字就来自希腊神话里的塞壬。「儒艮」的英文 dugong 来自马来语 duyung,意思是「海里的女士」。古代水手远看儒艮抱着幼崽浮在水面,误认成美人鱼。",
+      "已核对": true
+    },
+    {
+      "id": "math_count_seagrass",
+      "学科": "数学",
+      "挂载点": "海草床,点击时",
+      "事件": "点海草",
+      "childText": "我们一起数\n一 二 三",
+      "pinyin": "wǒ men yì qǐ shǔ, yī èr sān",
+      "en": "one two three",
+      "dadNote": "纯计数练习。数完不判对错,小爱心跟着一起数就行。",
+      "已核对": true
+    },
+    {
+      "id": "math_symmetry",
+      "学科": "数学",
+      "挂载点": "点击小爱心身体",
+      "锚点": "bellyCenter",
+      "childText": "我的左边和右边\n一模一样",
+      "pinyin": "wǒ de zuǒ biān hé yòu biān yì mú yí yàng",
+      "dadNote": "轴对称的启蒙。可以延伸问她:家里还有什么东西左右一模一样?",
+      "已核对": true
+    },
+    {
+      "id": "nat_light_depth",
+      "学科": "自然",
+      "挂载点": "游到深水区",
+      "childText": "越往下\n光越少",
+      "pinyin": "yuè wǎng xià, guāng yuè shǎo",
+      "dadNote": "海水吸收阳光,越深越暗。海草需要阳光,所以只长在浅海——这也解释了儒艮为什么待在浅水区。",
+      "已核对": true
+    },
+    {
+      "id": "nat_day_night",
+      "学科": "自然",
+      "挂载点": "昼夜切换",
+      "childText": "太阳下山了\n该睡觉啦",
+      "pinyin": "tài yáng xià shān le, gāi shuì jiào la",
+      "en": "Good night!",
+      "dadNote": "昼夜概念。游戏时间可以跟随真实系统时间。",
+      "已核对": true
+    },
+    {
+      "id": "enc_turtle",
+      "学科": "百科",
+      "挂载点": "海龟路过",
+      "childText": "海龟也要\n浮上去呼吸",
+      "pinyin": "hǎi guī yě yào fú shàng qù hū xī",
+      "en": "Turtle",
+      "dadNote": "海龟是爬行动物,也用肺呼吸。和儒艮一样必须上浮换气,但它们不是亲戚——一个是爬行动物,一个是哺乳动物。绿海龟也吃海草。",
+      "已核对": true
+    },
+    {
+      "id": "bio_long_life",
+      "学科": "生物",
+      "挂载点": "累计游玩 30 天",
+      "childText": "我可以活很久很久\n比爸爸还久",
+      "pinyin": "wǒ kě yǐ huó hěn jiǔ hěn jiǔ",
+      "dadNote": "儒艮寿命可达 70 年以上。生长和繁殖都很慢,雌性数年才生一胎——这也是它们数量恢复困难的原因。",
+      "已核对": true
+    },
+    {
+      "id": "bio_vulnerable",
+      "学科": "生物 / 历史",
+      "挂载点": "图鉴,建议放在较后的阶段",
+      "childText": "现在我的同伴\n变少了",
+      "pinyin": "xiàn zài wǒ de tóng bàn biàn shǎo le",
+      "dadNote": "IUCN 列为易危(Vulnerable)。主因是海草床退化、渔网误捕。⚠️ 中国沿海儒艮已被研究认定为功能性灭绝,这条信息较沉重,建议由你口头掌握,看童童年龄和情绪再决定何时说,不要做进游戏里。",
+      "已核对": true,
+      "情绪敏感": true
+    }
+  ],
+
+  "不知道时的回答": [
+    "这个我也不知道",
+    "我们去问爸爸",
+    "我要想一想",
+    "下次告诉你好吗"
+  ]
+}

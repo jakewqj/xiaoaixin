@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 小爱心 · 占位素材(几何简笔)。待童童手稿替换,请勿在此基础上精修。 -->
+  <g id="dugong-idle">
+
+    <!-- 尾鳍(儒艮尾为水平双叶,类似海豚) -->
+    <path d="M152 256 L72 184 Q56 256 72 328 Z" fill="#6B8391"/>
+
+    <!-- 身体 -->
+    <ellipse cx="268" cy="256" rx="152" ry="98" fill="#8CA3B0"/>
+
+    <!-- 吻部(钝圆下垂,儒艮特征) -->
+    <circle cx="400" cy="272" r="62" fill="#8CA3B0"/>
+
+    <!-- 腹部 -->
+    <ellipse cx="286" cy="302" rx="118" ry="50" fill="#C3D3D9" opacity="0.85"/>
+
+    <!-- 前肢 -->
+    <ellipse cx="300" cy="336" rx="46" ry="20" fill="#6B8391" transform="rotate(12 300 336)"/>
+
+    <!-- 眼睛 -->
+    <circle cx="384" cy="230" r="9" fill="#243642"/>
+
+    <!-- 鼻孔 / 换气口 → 对应 pet.json 的 blowhole [0.80, 0.45] -->
+    <ellipse cx="410" cy="230" rx="7" ry="5" fill="#6B8391"/>
+
+    <!-- 嘴 → 对应 pet.json 的 mouth [0.86, 0.60] -->
+    <path d="M424 306 Q444 318 452 300" stroke="#6B8391" stroke-width="7" fill="none" stroke-linecap="round"/>
+
+  </g>
+</svg>

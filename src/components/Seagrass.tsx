@@ -1,0 +1,45 @@
+import { heightOf, isGrown } from '../lib/seagrass'
+import type { Seagrass as Plant } from '../lib/seagrass'
+
+function Blades({ grown }: { grown: boolean }) {
+  const color = grown ? 'var(--color-seagrass)' : 'var(--color-seagrass-young)'
+  return (
+    <svg viewBox="0 0 40 100" className="h-full w-full" aria-hidden="true">
+      <g fill="none" stroke={color} strokeWidth="7" strokeLinecap="round">
+        <path d="M20 100 C 16 72 8 52 10 22" />
+        {grown && <path d="M20 100 C 26 74 34 56 32 30" />}
+        {grown && <path d="M20 100 C 20 70 21 50 20 34" />}
+      </g>
+    </svg>
+  )
+}
+
+// 海草床。新芽矮、颜色浅,长成的高、颜色深 —— 差别要一眼看得出,不然三天的等待就白等了
+function SeagrassBed({ bed, onTap }: { bed: Plant[]; onTap: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      aria-label="海草床"
+      className="absolute inset-x-0 bottom-0 h-[22dvh] cursor-pointer"
+    >
+      {bed.map((plant) => {
+        const grown = isGrown(plant)
+        return (
+          <span
+            key={plant.id}
+            className="absolute bottom-[4dvh] block w-[7%] max-w-14 -translate-x-1/2 origin-bottom"
+            style={{
+              left: `${plant.x}%`,
+              height: `${(grown ? 13 : 6) * heightOf(plant)}dvh`,
+            }}
+          >
+            <Blades grown={grown} />
+          </span>
+        )
+      })}
+    </button>
+  )
+}
+
+export default SeagrassBed

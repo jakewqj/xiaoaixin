@@ -1,0 +1,136 @@
+@import 'tailwindcss';
+
+/* 配色来自 CLAUDE.md 视觉规范,不要自行更换 */
+@theme {
+  --color-water-shallow: #7fd1d8;
+  --color-water-mid: #2e8b9b;
+  --color-water-deep: #14495c;
+  --color-sand: #e8dcc0;
+  --color-seagrass: #6fa84b;
+  --color-seagrass-young: #a8cc72;
+  --color-dugong-body: #8ca3b0;
+  --color-dugong-belly: #c3d3d9;
+  --color-heart: #ff8fa3;
+  --color-ink: #243642;
+
+  /* 标题和对话用站酷快乐体,英文小字用霞鹜文楷。字体没加载出来时先用系统字顶上,不留白 */
+  --font-kuaile: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-wenkai: 'LXGW WenKai', 'PingFang SC', 'Microsoft YaHei', serif;
+}
+
+/* 小爱心的漂浮:横向单程约 12 秒,上下浮动周期约 4 秒、幅度很小 */
+@keyframes pet-drift {
+  from {
+    transform: translateX(-9vw);
+  }
+  to {
+    transform: translateX(9vw);
+  }
+}
+
+@keyframes pet-bob {
+  from {
+    transform: translateY(-8px);
+  }
+  to {
+    transform: translateY(8px);
+  }
+}
+
+@keyframes pet-tap {
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.pet-drift {
+  animation: pet-drift 12s ease-in-out infinite alternate;
+}
+
+/* 说话时停住不飘。选项按钮跟着小爱心走,不能让它们变成移动靶子 */
+.pet-drift.is-talking {
+  animation-play-state: paused;
+}
+
+.pet-tap {
+  animation: pet-tap 300ms ease-in-out;
+}
+
+.pet-turn {
+  transition: transform 500ms ease-in-out;
+}
+
+/* 上浮和下沉。时长由组件用 --swim-duration 传进来,保证 JS 计时和动画不会对不上 */
+.pet-swim {
+  transition: top var(--swim-duration, 8000ms) ease-in-out;
+}
+
+/* 换气泡泡 */
+@keyframes bubble-rise {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, calc(-50% - 22vh)) scale(1);
+    opacity: 0;
+  }
+}
+
+/* 知识卡从左边滑进来。不遮挡、不打断,滑进来就完事了 */
+@keyframes card-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.knowledge-card {
+  animation: card-in 400ms ease-out;
+}
+
+/* 散开时整层一起淡出:泡泡各自上升到哪就在哪消失,不会跳回鼻孔重来一遍 */
+.bubbles {
+  transition: opacity var(--pop-duration, 600ms) ease-out;
+}
+
+.bubble {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.42);
+  border: 1px solid rgb(255 255 255 / 0.75);
+  transform: translate(-50%, -50%);
+  animation: bubble-rise 3.2s ease-out infinite;
+}
+
+.pet-bob {
+  animation: pet-bob 4s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-drift,
+  .pet-bob,
+  .pet-tap,
+  .knowledge-card {
+    animation: none;
+  }
+
+  .pet-turn,
+  .pet-swim,
+  .bubbles {
+    transition-property: none;
+  }
+
+  /* 泡泡不动,但必须还看得见 —— 这是「该换气了」的唯一提示,不能一起关掉 */
+  .bubble {
+    animation: none;
+  }
+}
