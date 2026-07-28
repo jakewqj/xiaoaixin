@@ -1,0 +1,18 @@
+{
+  "name": "小爱心 - 童童的儒艮",
+  "short_name": "小爱心",
+  "description": "一只会呼吸、会吃海草、会讲儒艮知识的小爱心",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#7FD1D8",
+  "theme_color": "#2E8B9B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
