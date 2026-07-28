@@ -61,10 +61,11 @@ export function useKnowledge() {
     [cards, isCool],
   )
 
-  // 小爱心自己开口是「偶尔」,不是每次。掷不中就什么都不发生
+  // 小爱心自己开口是「偶尔」,不是每次。掷不中就什么都不发生。
+  // 必定 = true 留给一辈子只发生几次的时刻(比如长大一点),那种时候不该靠掷骰子
   const pickByEvent = useCallback(
-    (event: string, seen: Record<string, string>) => {
-      if (Math.random() >= rules.主动触发概率) return undefined
+    (event: string, seen: Record<string, string>, 必定 = false) => {
+      if (!必定 && Math.random() >= rules.主动触发概率) return undefined
       const pool = cards.filter(
         (card) => card.事件 === event && isCool(card.id, seen),
       )

@@ -3,7 +3,7 @@ import { countGrown, starterBed } from '../lib/seagrass'
 import type { Seagrass } from '../lib/seagrass'
 
 const SAVE_KEY = 'xiaoaixin_save'
-const SAVE_VERSION = 1
+const SAVE_VERSION = 2
 
 export const MAX_FULLNESS = 5
 
@@ -20,7 +20,10 @@ export interface SaveData {
   lastPlayedAt: string
   daysPlayed: number
   fullness: number
-  albumEvents: string[]
+  // 相册:回忆 id → 发生的那一天。只进不出,不会因为任何事被抹掉
+  albumEvents: Record<string, string>
+  // 上次已经陪她过的成长阶段 id。用来判断这次打开有没有长大一点
+  stageSeen: string
   seenScenes: string[]
   // 知识卡 id → 上次出现的时间。用来做 24 小时冷却,不是进度记录
   knowledgeSeen: Record<string, string>
@@ -37,7 +40,8 @@ function createSave(): SaveData {
     lastPlayedAt: now,
     daysPlayed: 1,
     fullness: MAX_FULLNESS,
-    albumEvents: [],
+    albumEvents: {},
+    stageSeen: '',
     seenScenes: [],
     knowledgeSeen: {},
     seagrass: starterBed(),
@@ -57,6 +61,24 @@ function isSeagrass(value: unknown): value is Seagrass {
   const p = value as Partial<Seagrass>
   return (
     typeof p?.id === 'string' && isTimestamp(p.plantedAt) && isCount(p.x)
+  )
+}
+
+// 第 3 周之前相册只存了 id 列表,没存日期。老存档里的那几条按「认识那天」算,
+// 而不是丢掉 —— 相册里的东西一旦记下来就不该消失
+function withAlbum(s: Partial<SaveData>): Record<string, string> {
+  const raw = s.albumEvents as unknown
+  if (Array.isArray(raw)) {
+    const day = isTimestamp(s.createdAt) ? s.createdAt : new Date().toISOString()
+    return Object.fromEntries(
+      raw.filter((id) => typeof id === 'string').map((id: string) => [id, day]),
+    )
+  }
+  if (typeof raw !== 'object' || raw === null) return {}
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => isTimestamp(entry[1]),
+    ),
   )
 }
 
@@ -85,9 +107,7 @@ function parseSave(raw: string | null): SaveData | null {
       !isTimestamp(s.createdAt) ||
       !isTimestamp(s.lastPlayedAt) ||
       !isCount(s.daysPlayed) ||
-      !isCount(s.fullness) ||
-      !Array.isArray(s.albumEvents) ||
-      !s.albumEvents.every((id) => typeof id === 'string')
+      !isCount(s.fullness)
     ) {
       return null
     }
@@ -97,8 +117,11 @@ function parseSave(raw: string | null): SaveData | null {
       lastPlayedAt: s.lastPlayedAt,
       daysPlayed: Math.max(1, Math.floor(s.daysPlayed)),
       fullness: Math.min(MAX_FULLNESS, Math.max(0, s.fullness)),
-      albumEvents: s.albumEvents,
-      // 这两个字段是后来加的。旧存档里没有不算损坏,给个默认值就行,不要因此把整份档丢掉
+      albumEvents: withAlbum(s),
+      // stageSeen 留空表示这份存档还没记过成长阶段。开局那次不当成「长大了」,
+      // 免得老存档一打开就误报一句「我长大一点了」
+      stageSeen: typeof s.stageSeen === 'string' ? s.stageSeen : '',
+      // 这几个字段是后来加的。旧存档里没有不算损坏,给个默认值就行,不要因此把整份档丢掉
       seenScenes: Array.isArray(s.seenScenes)
         ? s.seenScenes.filter((id) => typeof id === 'string')
         : [],

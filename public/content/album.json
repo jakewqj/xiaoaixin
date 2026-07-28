@@ -1,0 +1,24 @@
+{
+  "_说明": "相册里的文字。相册只记发生过的事:没发生的不显示,不显示总数,也没有任何「还差几个」。",
+
+  "_写作规则": [
+    "每条 3–8 字",
+    "永远是「我们一起做过什么」,不是「你完成了什么」——相册是回忆,不是成就",
+    "en 必须来自 whitelist.json,没有合适的就留空",
+    "成长那一行的文字来自 pet.json 的阶段名字,不写在这里"
+  ],
+
+  "标题": {
+    "成长": "我长大",
+    "回忆": "我们一起"
+  },
+
+  "回忆": [
+    { "id": "first_meet", "icon": "👋", "text": "我们第一次见面", "en": "Hello!" },
+    { "id": "first_breath", "icon": "🫧", "text": "你陪我换气", "en": "Bubble" },
+    { "id": "first_feed", "icon": "🌱", "text": "你喂我海草", "en": "Seagrass" },
+    { "id": "first_plant", "icon": "🌿", "text": "你种下海草", "en": "Seagrass" },
+    { "id": "first_grown", "icon": "🌊", "text": "海草长大了", "en": "big" },
+    { "id": "handdrawn", "icon": "🎨", "text": "你画了我", "en": "Wow!" }
+  ]
+}

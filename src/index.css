@@ -57,13 +57,19 @@
   animation: pet-tap 300ms ease-in-out;
 }
 
+/* 转身用的 500ms;体色是长大带来的变化,慢慢渗上去,不要像开关一样啪地一下 */
 .pet-turn {
-  transition: transform 500ms ease-in-out;
+  transition:
+    transform 500ms ease-in-out,
+    filter 1500ms ease-in-out;
 }
 
-/* 上浮和下沉。时长由组件用 --swim-duration 传进来,保证 JS 计时和动画不会对不上 */
+/* 上浮和下沉。时长由组件用 --swim-duration 传进来,保证 JS 计时和动画不会对不上。
+   width 是长大时变的,和体色一个节奏 */
 .pet-swim {
-  transition: top var(--swim-duration, 8000ms) ease-in-out;
+  transition:
+    top var(--swim-duration, 8000ms) ease-in-out,
+    width 1500ms ease-in-out;
 }
 
 /* 进食:沉向海草床啃一会儿再自己浮回来,复刻纪录片里贴着海底吃海草的动作。

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import Bubbles from './Bubbles'
 import { playSfx } from '../lib/sfx'
+import { PET_DIR, toneFilter } from '../lib/pet'
+import type { GrowthStage } from '../lib/pet'
+import type { usePet } from '../hooks/usePet'
 import { SWIM_MS, POP_MS } from '../hooks/useBreath'
 import type { BreathPhase } from '../hooks/useBreath'
 
@@ -10,10 +13,8 @@ export type PoseName = 'idle' | 'happy' | 'eating' | 'sleeping'
 // 进食一次的时长:沉下去 → 贴底啃一会儿 → 浮回来。CSS 里的 pet-dip 动画用的也是这个数
 export const EAT_MS = 4200
 
-interface PetSpec {
-  文件: Record<string, string>
-  锚点: Record<string, [number, number]>
-}
+// 长到最大时占屏幕宽度的比例。小时候按成长阶段的体型往下缩
+const FULL_WIDTH = 45
 
 // 热区直径占小爱心宽度的比例。固定像素不行 —— 屏幕越大小爱心越大,固定尺寸的热区会小到点不中
 const HOTSPOT_RATIO = 0.26
@@ -27,6 +28,8 @@ const ANCHOR_LABELS: Record<string, string> = {
 }
 
 interface PetProps {
+  pet: ReturnType<typeof usePet>
+  stage: GrowthStage
   pose: PoseName
   breath: BreathPhase
   talking: boolean
@@ -38,6 +41,8 @@ interface PetProps {
 
 // 小爱心本体:按 pet.json 声明的文件名加载形象,在海中间极慢地左右漂移 + 轻微上下浮动
 function Pet({
+  pet,
+  stage,
   pose,
   breath,
   talking,
@@ -46,29 +51,8 @@ function Pet({
   onAnchorTap,
   children,
 }: PetProps) {
-  const [spec, setSpec] = useState<PetSpec | null>(null)
   const [facingLeft, setFacingLeft] = useState(false)
   const [tapped, setTapped] = useState(false)
-  const [missingPoses, setMissingPoses] = useState<string[]>([])
-
-  useEffect(() => {
-    fetch('/assets/pet/pet.json')
-      .then((res) => res.json())
-      .then(setSpec)
-      .catch(() => {})
-  }, [])
-
-  // 开局先摸一遍还没画出来的形象,免得第一次切换姿势时闪一下空白。画好的那几张顺便预加载了
-  useEffect(() => {
-    if (!spec) return
-    for (const [name, filename] of Object.entries(spec.文件)) {
-      if (name === 'idle') continue
-      const probe = new Image()
-      probe.onerror = () =>
-        setMissingPoses((prev) => (prev.includes(name) ? prev : [...prev, name]))
-      probe.src = `/assets/pet/${filename}`
-    }
-  }, [spec])
 
   // 放大回弹结束后自己复位。不依赖 animationend,减弱动态效果时动画不跑也能复位
   useEffect(() => {
@@ -100,21 +84,22 @@ function Pet({
     playSfx('tap')
   }
 
-  if (!spec) return null
+  const { spec, fileFor, markMissing } = pet
+  const file = fileFor(pose, stage)
+  if (!spec || !file) return null
 
   const atSurface = breath === 'rising' || breath === 'waiting' || breath === 'popping'
   const showBubbles = breath === 'waiting' || breath === 'popping'
 
-  // 想要哪张图就写哪张。文件还没画出来时自动退回 idle,画好了拖进文件夹就自己生效
-  const file = spec.文件[missingPoses.includes(pose) ? 'idle' : pose] ?? spec.文件.idle
-
   return (
     <div
-      className="pet-swim absolute left-1/2 w-[45%] -translate-x-1/2 -translate-y-1/2"
+      className="pet-swim absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
       style={
         {
           // 别再往上了:头顶要留得下气泡,不然浮上来说的那句话会跑到屏幕外
           top: atSurface ? '30%' : '50%',
+          // 小时候小一点,长大了大一点。变化很慢,是一年里的事,不是一局里的事
+          width: `${FULL_WIDTH * stage.体型}%`,
           '--swim-duration': `${SWIM_MS}ms`,
         } as CSSProperties
       }
@@ -135,22 +120,21 @@ function Pet({
             >
               <div className={tapped ? 'pet-tap' : undefined}>
                 <img
-                  src={`/assets/pet/${file}`}
+                  src={`${PET_DIR}/${file}`}
                   alt=""
                   draggable={false}
-                  onError={() =>
-                    setMissingPoses((prev) =>
-                      prev.includes(pose) ? prev : [...prev, pose],
-                    )
-                  }
+                  onError={() => markMissing(file)}
                   className="pet-turn w-full select-none"
-                  style={{ transform: facingLeft ? 'scaleX(-1)' : undefined }}
+                  style={{
+                    transform: facingLeft ? 'scaleX(-1)' : undefined,
+                    filter: toneFilter(stage.体色),
+                  }}
                 />
               </div>
             </button>
             {/* 身体部位的热区。位置读 pet.json 的锚点,转身时跟着镜像 */}
             {anchors.map((name) => {
-              const point = spec.锚点[name]
+              const point = spec.锚点?.[name]
               if (!point) return null
               const [ax, ay] = point
               return (
@@ -169,7 +153,7 @@ function Pet({
               )
             })}
             {children}
-            {showBubbles && (
+            {showBubbles && spec.锚点?.blowhole && (
               <Bubbles
                 anchor={spec.锚点.blowhole}
                 flipped={facingLeft}
