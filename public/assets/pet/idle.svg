@@ -1,30 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- 小爱心 · 占位素材(几何简笔)。待童童手稿替换,请勿在此基础上精修。 -->
+  <!-- 小爱心 · 占位素材(体态参考纪录片里红海的儒艮)。待童童手稿替换,请勿在此基础上精修。 -->
+  <style>
+    /* 尾鳍和前肢缓慢摆动,像视频里那样慢悠悠地游。减弱动态效果时静止 */
+    @media (prefers-reduced-motion: no-preference) {
+      .fluke {
+        transform-origin: 122px 256px;
+        animation: flap 3.6s ease-in-out infinite alternate;
+      }
+      .flipper {
+        transform-origin: 340px 300px;
+        animation: paddle 3.6s ease-in-out infinite alternate;
+      }
+    }
+    @keyframes flap {
+      from { transform: rotate(-7deg); }
+      to { transform: rotate(7deg); }
+    }
+    @keyframes paddle {
+      from { transform: rotate(4deg); }
+      to { transform: rotate(-5deg); }
+    }
+  </style>
   <g id="dugong-idle">
 
-    <!-- 尾鳍(儒艮尾为水平双叶,类似海豚) -->
-    <path d="M152 256 L72 184 Q56 256 72 328 Z" fill="#6B8391"/>
+    <!-- 尾鳍:水平双叶,中间一道凹口,像鲸鱼 -->
+    <path class="fluke" d="M126 238 C 100 214 74 198 42 190 C 60 216 66 240 64 256 C 66 272 60 296 42 322 C 74 314 100 298 126 274 C 130 262 130 250 126 238 Z" fill="#6B8391"/>
 
-    <!-- 身体 -->
-    <ellipse cx="268" cy="256" rx="152" ry="98" fill="#8CA3B0"/>
+    <!-- 身体:纺锤形,背线光滑没有背鳍 -->
+    <path d="M118 238 C 150 205 210 178 270 178 C 330 178 380 190 415 212 C 438 227 452 246 452 264 C 452 282 442 300 424 312 C 410 320 396 322 384 318 C 350 336 300 340 255 334 C 205 327 160 305 132 278 C 124 270 118 258 118 238 Z" fill="#8CA3B0"/>
 
-    <!-- 吻部(钝圆下垂,儒艮特征) -->
-    <circle cx="400" cy="272" r="62" fill="#8CA3B0"/>
+    <!-- 背部颜色深一点,像视频里的石板灰 -->
+    <path d="M140 226 C 200 186 330 182 420 220 C 350 200 210 202 140 226 Z" fill="#6B8391" opacity="0.35"/>
 
-    <!-- 腹部 -->
-    <ellipse cx="286" cy="302" rx="118" ry="50" fill="#C3D3D9" opacity="0.85"/>
+    <!-- 腹部浅色 -->
+    <path d="M158 292 C 205 326 320 330 400 302 C 340 318 230 314 158 292 Z" fill="#C3D3D9" opacity="0.85"/>
 
-    <!-- 前肢 -->
-    <ellipse cx="300" cy="336" rx="46" ry="20" fill="#6B8391" transform="rotate(12 300 336)"/>
+    <!-- 前肢:短桨,贴着身体往后 -->
+    <path class="flipper" d="M336 298 C 366 300 390 318 398 346 C 376 348 348 334 334 312 Z" fill="#6B8391"/>
 
-    <!-- 眼睛 -->
-    <circle cx="384" cy="230" r="9" fill="#243642"/>
+    <!-- 吻部:宽而朝下,她用它贴着海底找海草 -->
+    <ellipse cx="424" cy="298" rx="26" ry="18" fill="#6B8391" opacity="0.5" transform="rotate(-18 424 298)"/>
 
-    <!-- 鼻孔 / 换气口 → 对应 pet.json 的 blowhole [0.80, 0.45] -->
-    <ellipse cx="410" cy="230" rx="7" ry="5" fill="#6B8391"/>
+    <!-- 触须 -->
+    <g stroke="#6B8391" stroke-width="3" stroke-linecap="round" opacity="0.8" fill="none">
+      <path d="M406 316 l-4 9"/>
+      <path d="M417 320 l-2 10"/>
+      <path d="M428 320 l1 10"/>
+      <path d="M438 315 l4 9"/>
+    </g>
 
-    <!-- 嘴 → 对应 pet.json 的 mouth [0.86, 0.60] -->
-    <path d="M424 306 Q444 318 452 300" stroke="#6B8391" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <!-- 嘴 → 对应 pet.json 的 mouth -->
+    <path d="M404 310 Q 420 320 436 309" stroke="#6B8391" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+    <!-- 眼睛:很小 → 对应 pet.json 的 eye -->
+    <circle cx="398" cy="236" r="7" fill="#243642"/>
+
+    <!-- 鼻孔:长在吻的前上方,换气从这里冒泡 → 对应 pet.json 的 blowhole -->
+    <ellipse cx="420" cy="222" rx="5" ry="4" fill="#6B8391"/>
+    <ellipse cx="432" cy="228" rx="5" ry="4" fill="#6B8391"/>
 
   </g>
 </svg>

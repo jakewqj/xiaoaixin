@@ -7,6 +7,9 @@ import type { BreathPhase } from '../hooks/useBreath'
 
 export type PoseName = 'idle' | 'happy' | 'eating' | 'sleeping'
 
+// 进食一次的时长:沉下去 → 贴底啃一会儿 → 浮回来。CSS 里的 pet-dip 动画用的也是这个数
+export const EAT_MS = 4200
+
 interface PetSpec {
   文件: Record<string, string>
   锚点: Record<string, [number, number]>
@@ -119,7 +122,11 @@ function Pet({
       {/* 说话时停住不飘 —— 选项按钮不能是移动靶子 */}
       <div className={talking ? 'pet-drift is-talking' : 'pet-drift'}>
         <div className="pet-bob">
-          <div className="relative">
+          {/* 进食时沉向海草床啃一会儿再浮回来,复刻纪录片里贴底吃海草的动作。在水面换气时不沉 */}
+          <div
+            className={pose === 'eating' && !atSurface ? 'pet-dip relative' : 'relative'}
+            style={{ '--dip-duration': `${EAT_MS}ms` } as CSSProperties}
+          >
             <button
               type="button"
               onClick={handleTap}

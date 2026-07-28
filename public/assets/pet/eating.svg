@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 小爱心 · 进食占位素材(动作参考纪录片:低头贴底啃海草,扬起一小片沙)。待童童手稿替换。 -->
+  <style>
+    @media (prefers-reduced-motion: no-preference) {
+      .fluke {
+        transform-origin: 122px 256px;
+        animation: flap 2.8s ease-in-out infinite alternate;
+      }
+      .puff {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: puff 2.2s ease-out infinite;
+        opacity: 0;
+      }
+      .p2 { animation-delay: 0.5s; }
+      .p3 { animation-delay: 1.1s; }
+    }
+    /* 减弱动态效果时沙雾定格成淡淡一团,不动但还看得见 */
+    @media (prefers-reduced-motion: reduce) {
+      .puff { opacity: 0.3; }
+    }
+    @keyframes flap {
+      from { transform: rotate(-6deg); }
+      to { transform: rotate(6deg); }
+    }
+    @keyframes puff {
+      0% { opacity: 0; transform: scale(0.5); }
+      25% { opacity: 0.55; }
+      100% { opacity: 0; transform: translate(-16px, -34px) scale(1.5); }
+    }
+  </style>
+
+  <!-- 整只低头 34°,吻部朝下探到画面下方 -->
+  <g id="dugong-eating" transform="translate(-40 60) rotate(34 256 256)">
+
+    <path class="fluke" d="M126 238 C 100 214 74 198 42 190 C 60 216 66 240 64 256 C 66 272 60 296 42 322 C 74 314 100 298 126 274 C 130 262 130 250 126 238 Z" fill="#6B8391"/>
+
+    <path d="M118 238 C 150 205 210 178 270 178 C 330 178 380 190 415 212 C 438 227 452 246 452 264 C 452 282 442 300 424 312 C 410 320 396 322 384 318 C 350 336 300 340 255 334 C 205 327 160 305 132 278 C 124 270 118 258 118 238 Z" fill="#8CA3B0"/>
+
+    <path d="M140 226 C 200 186 330 182 420 220 C 350 200 210 202 140 226 Z" fill="#6B8391" opacity="0.35"/>
+
+    <path d="M158 292 C 205 326 320 330 400 302 C 340 318 230 314 158 292 Z" fill="#C3D3D9" opacity="0.85"/>
+
+    <path d="M336 298 C 366 300 390 318 398 346 C 376 348 348 334 334 312 Z" fill="#6B8391"/>
+
+    <!-- 吻部张得更开,正埋头吃 -->
+    <ellipse cx="424" cy="300" rx="28" ry="20" fill="#6B8391" opacity="0.55" transform="rotate(-18 424 300)"/>
+
+    <g stroke="#6B8391" stroke-width="3" stroke-linecap="round" opacity="0.8" fill="none">
+      <path d="M406 318 l-5 10"/>
+      <path d="M417 322 l-2 11"/>
+      <path d="M428 322 l2 11"/>
+      <path d="M438 317 l5 10"/>
+    </g>
+
+    <!-- 眼睛眯起来,吃得很满足 -->
+    <path d="M390 232 Q 398 240 406 232" stroke="#243642" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+    <ellipse cx="420" cy="222" rx="5" ry="4" fill="#6B8391"/>
+    <ellipse cx="432" cy="228" rx="5" ry="4" fill="#6B8391"/>
+
+  </g>
+
+  <!-- 吻部拱沙扬起的沙雾 -->
+  <g fill="#E8DCC0">
+    <circle class="puff" cx="352" cy="446" r="15"/>
+    <circle class="puff p2" cx="386" cy="450" r="11"/>
+    <circle class="puff p3" cx="330" cy="452" r="9"/>
+  </g>
+</svg>
