@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import Bubbles from './Bubbles'
+import Sprite from './Sprite'
 import { playSfx } from '../lib/sfx'
-import { PET_DIR, toneFilter } from '../lib/pet'
+import { FRAME_HEIGHT, FRAME_WIDTH, toneFilter } from '../lib/pet'
 import type { GrowthStage } from '../lib/pet'
 import type { usePet } from '../hooks/usePet'
 import { SWIM_MS, POP_MS } from '../hooks/useBreath'
@@ -13,10 +14,7 @@ export type PoseName = 'idle' | 'happy' | 'eating' | 'sleeping'
 // 进食一次的时长:沉下去 → 贴底啃一会儿 → 浮回来。CSS 里的 pet-dip 动画用的也是这个数
 export const EAT_MS = 4200
 
-// 长到最大时占屏幕宽度的比例。小时候按成长阶段的体型往下缩
-const FULL_WIDTH = 45
-
-// 热区直径占小爱心宽度的比例。固定像素不行 —— 屏幕越大小爱心越大,固定尺寸的热区会小到点不中
+// 热区直径占小爱心宽度的比例。固定像素不行 —— 小爱心长大了热区要跟着变大
 const HOTSPOT_RATIO = 0.26
 
 const ANCHOR_LABELS: Record<string, string> = {
@@ -39,7 +37,7 @@ interface PetProps {
   children?: ReactNode
 }
 
-// 小爱心本体:按 pet.json 声明的文件名加载形象,在海中间极慢地左右漂移 + 轻微上下浮动
+// 小爱心本体:按 pet.json 声明的动画播放精灵表,在海中间极慢地左右漂移 + 轻微上下浮动
 function Pet({
   pet,
   stage,
@@ -84,11 +82,15 @@ function Pet({
     playSfx('tap')
   }
 
-  const { spec, fileFor, markMissing } = pet
-  const file = fileFor(pose, stage)
-  if (!spec || !file) return null
-
+  const { spec, animFor } = pet
   const atSurface = breath === 'rising' || breath === 'waiting' || breath === 'popping'
+  // 换气浮上来的时候用 surfacing 那套图;吃东西/睡觉各自有专属动画;
+  // 其余时候(包括 happy)小爱心一直在漂,直接用游泳循环——idle 那套现在还用不上
+  const animKey =
+    pose === 'eating' ? 'eating' : pose === 'sleeping' ? 'sleeping' : atSurface ? 'surfacing' : 'swim'
+  const anim = animFor(animKey)
+  if (!spec || !anim) return null
+
   const showBubbles = breath === 'waiting' || breath === 'popping'
 
   return (
@@ -96,10 +98,8 @@ function Pet({
       className="pet-swim absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
       style={
         {
-          // 别再往上了:头顶要留得下气泡,不然浮上来说的那句话会跑到屏幕外
-          top: atSurface ? '30%' : '50%',
-          // 小时候小一点,长大了大一点。变化很慢,是一年里的事,不是一局里的事
-          width: `${FULL_WIDTH * stage.体型}%`,
+          // 别再往上了:头顶要留得下说话气泡,不然浮上来/待机时说的那句话会跑到舞台外面
+          top: atSurface ? '30%' : '70%',
           '--swim-duration': `${SWIM_MS}ms`,
         } as CSSProperties
       }
@@ -116,19 +116,18 @@ function Pet({
               type="button"
               onClick={handleTap}
               aria-label={breath === 'waiting' ? '帮小爱心换气' : '摸摸小爱心'}
-              className="block min-h-14 min-w-14 w-full cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+              className="block min-h-14 min-w-14 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
             >
               <div className={tapped ? 'pet-tap' : undefined}>
-                <img
-                  src={`${PET_DIR}/${file}`}
-                  alt=""
-                  draggable={false}
-                  onError={() => markMissing(file)}
-                  className="pet-turn w-full select-none"
-                  style={{
-                    transform: facingLeft ? 'scaleX(-1)' : undefined,
-                    filter: toneFilter(stage.体色),
-                  }}
+                <Sprite
+                  src={anim.src}
+                  frameWidth={FRAME_WIDTH * stage.体型}
+                  frameHeight={FRAME_HEIGHT * stage.体型}
+                  frameCount={anim.frameCount}
+                  fps={anim.fps}
+                  flipped={facingLeft}
+                  className="pet-turn"
+                  style={{ filter: toneFilter(stage.体色) }}
                 />
               </div>
             </button>
@@ -143,7 +142,7 @@ function Pet({
                   type="button"
                   onClick={() => handleAnchorTap(name)}
                   aria-label={ANCHOR_LABELS[name] ?? '小爱心'}
-                  className="absolute aspect-square min-h-14 min-w-14 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-heart"
+                  className="absolute aspect-square min-h-14 min-w-14 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
                   style={{
                     left: `${(facingLeft ? 1 - ax : ax) * 100}%`,
                     top: `${ay * 100}%`,

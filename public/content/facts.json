@@ -1,0 +1,173 @@
+{
+  "_说明": "每一条游戏设定的真实出处。原则 9：没有出处的设定不许进游戏。",
+  "_规则": [
+    "新增 NPC / 地点 / 知识卡时，必须先在这里加一条 fact，再去引用它的 factRef",
+    "「已核对」= 爸爸本人看过来源并确认。Claude Code 不许自己把这个字段设为 true",
+    "找不到可靠出处的设定，删掉，不要写「大概是」"
+  ],
+
+  "fact_red_sea_dugong": {
+    "说法": "红海儒艮分布零散，集中在马沙阿拉姆、阿布达巴布湾一带的浅水保护区；阿布达巴布是红海最大的儒艮栖息地之一",
+    "出处": "egypt-liveaboard.com / 红海潜水与保育资料",
+    "已核对": true
+  },
+  "fact_red_sea_seagrass": {
+    "说法": "红海儒艮取食痕迹集中在以 Halodule uninervis、Halophila ovalis、H. stipulacea 为主的浅水海草床；海草床局限于 sharm / marsa 等内湾软底区",
+    "出处": "ScienceDirect S0141113622002070 / CMS 儒艮备忘录红海章节",
+    "已核对": true
+  },
+  "fact_red_sea_biodiversity": {
+    "说法": "红海生态系统有 300+ 种珊瑚、2100+ 种鱼，约 10% 为红海特有种",
+    "出处": "redsea-divingsafari.com 生态资料",
+    "已核对": true
+  },
+  "fact_spinner_lagoon": {
+    "说法": "旋转海豚白天在红海浅水潟湖休息（如 Sataya、Samadai 海豚休息区），夜间外出觅食",
+    "出处": "红海海豚保护区管理资料",
+    "已核对": true
+  },
+  "fact_spinner_length": {
+    "说法": "旋转海豚成年体长约 129–235 cm,体重约 23–79 kg（用于按比例定 Dolly 的精灵尺寸）",
+    "出处": "Perrin, W.F.; Dolar, M.L.L.; Chan, C.M.; Chivers, S.J. (2005). \"Length-weight relationships in the spinner dolphin (Stenella longirostris)\". Marine Mammal Science. 21(4): 765–778. doi:10.1111/j.1748-7692.2005.tb01264.x",
+    "已核对": true
+  },
+  "fact_golden_trevally_follows": {
+    "说法": "幼年金鲹会跟随鲨鱼、石斑鱼、儒艮等大型动物游动以求庇护，有时会跟着潜水员",
+    "出处": "scubatravel.co.uk 红海生物资料",
+    "已核对": true
+  },
+  "fact_hawksbill": {
+    "说法": "玳瑁海龟是红海珊瑚礁代表物种，以海绵、海葵、水母为食，体长可达 90 厘米、约 80 公斤",
+    "出处": "divessi.com 红海潜水资料",
+    "已核对": true
+  },
+  "fact_giant_clam": {
+    "说法": "巨砗磲 Tridacna maxima 是红海珊瑚礁常见物种",
+    "出处": "红海礁区物种资料",
+    "已核对": false,
+    "_待办": "补一条更硬的来源"
+  },
+  "fact_red_sea_clownfish": {
+    "说法": "Amphiprion bicinctus（双带小丑鱼）是红海特有种，与海葵共生",
+    "出处": "红海特有种名录",
+    "已核对": false,
+    "_待办": "补来源"
+  },
+  "fact_red_sea_wreck": {
+    "说法": "红海有多处著名沉船遗址，船体被珊瑚覆盖后成为人工礁",
+    "出处": "红海潜水点资料",
+    "已核对": false,
+    "_待办": "确认具体沉船，避免用真实船难做儿童内容"
+  },
+  "fact_dugong_breathing": {
+    "说法": "儒艮是哺乳动物，用肺呼吸，必须定期浮出水面换气",
+    "出处": "基础生物学",
+    "已核对": true
+  },
+  "fact_green_turtle_migration": {
+    "说法": "绿海龟与蠵龟会跨洋洄游数千公里，回到出生地产卵",
+    "出处": "海龟洄游研究通识",
+    "已核对": true
+  },
+
+  "fact_gulf_dugong": {
+    "说法": "阿拉伯湾是全球第二大儒艮种群栖息地，估计 5800–7300 头",
+    "出处": "dugongseagrass.org / CMS 阿拉伯湾章节",
+    "已核对": true
+  },
+  "fact_gulf_salinity": {
+    "说法": "阿拉伯湾近乎封闭，平均水深仅 35 米，仅通过霍尔木兹海峡与印度洋相连；高盐高温差下仅 3 种海草能生存，Halodule uninervis 覆盖率超 60%",
+    "出处": "dugongseagrass.org UAE 页面",
+    "已核对": true
+  },
+  "fact_gulf_winter_herd": {
+    "说法": "儒艮有冬季聚群习性，巴林与卡塔尔之间曾目击 577 头和 97 头两大群体",
+    "出处": "marinemammalhabitat.org 萨勒瓦湾资料",
+    "已核对": true
+  },
+  "fact_pearl_oyster": {
+    "说法": "珍珠贝 Pinctada radiata 在阿拉伯湾具重要经济文化意义，考古贝丘含大量珍珠贝壳",
+    "出处": "CMS 阿拉伯湾章节 / 胡代里亚特岛贝丘考古",
+    "已核对": true
+  },
+  "fact_shell_midden": {
+    "说法": "阿布扎比附近胡代里亚特岛发现晚伊斯兰时期贝丘，含儒艮、海龟、鲨鱼骨骼及珍珠贝壳",
+    "出处": "CMS 阿拉伯湾章节",
+    "已核对": true
+  },
+  "fact_humpback_dolphin": {
+    "说法": "南阿拉伯湾栖息约 700 头印度洋驼背豚",
+    "出处": "marinemammalhabitat.org 南部海湾资料",
+    "已核对": true
+  },
+  "fact_gulf_flamingo": {
+    "说法": "波斯湾有大红鹳分布；火烈鸟的粉色来自食物中的类胡萝卜素",
+    "出处": "波斯湾鸟类资料 / 鸟类色素通识",
+    "已核对": false,
+    "_待办": "补一条明确记载海湾火烈鸟分布的来源"
+  },
+  "fact_gulf_mangrove": {
+    "说法": "阿拉伯湾南部栖息地包括海草床、红树林、沙质软底区、珊瑚礁及天然人工水道",
+    "出处": "dugongseagrass.org UAE 页面",
+    "已核对": true
+  },
+  "fact_fiddler_crab": {
+    "说法": "雄性招潮蟹有一大一小两只螯",
+    "出处": "基础生物学",
+    "已核对": true
+  },
+
+  "fact_shark_bay_dugong": {
+    "说法": "鲨鱼湾拥有全球最大儒艮种群，约 10000–11000 头，占世界总数约 1/8",
+    "出处": "EBSCO Shark Bay 条目 / marinemammalhabitat.org",
+    "已核对": true
+  },
+  "fact_shark_bay_seagrass": {
+    "说法": "鲨鱼湾海草床约 4800 km²，含 12 种海草；乌拉梅尔海草滩绵延约 130 公里，是全球最大最丰富的海草床之一",
+    "出处": "marinemammalhabitat.org Shark Bay 页面",
+    "已核对": true
+  },
+  "fact_stromatolites": {
+    "说法": "鲨鱼湾叠层石由蓝藻堆积形成，是地球上最古老的生命形式之一；鲨鱼湾是少数由碳酸盐而非造礁珊瑚主导的海洋区域",
+    "出处": "UNESCO 世界遗产名录 No.578",
+    "已核对": true
+  },
+  "fact_shell_beach": {
+    "说法": "鲨鱼湾因法尔水坝地形与高蒸发形成近两倍海水盐度的水域，沿岸有全部由贝壳组成的海滩",
+    "出处": "UNESCO 世界遗产名录 No.578",
+    "已核对": true
+  },
+  "fact_sponging_dolphins": {
+    "说法": "鲨鱼湾宽吻海豚会用海绵包住吻部在海底觅食，是野生动物工具使用的著名案例；莫基米亚野生海豚 50 多年来主动靠岸与人互动",
+    "出处": "waholidayguide.com.au / 鲨鱼湾海豚研究通识",
+    "已核对": true
+  },
+  "fact_tiger_shark": {
+    "说法": "鲨鱼湾栖息 28 种鲨鱼，虎鲨为顶级捕食者；儒艮与海龟会因惧怕虎鲨而回避某些觅食区域（恐惧地景）",
+    "出处": "saveourseas.com「Tiger sharks, dugongs and sea turtles: a triangle of fear in Shark Bay」项目",
+    "已核对": true
+  },
+  "fact_shark_bay_heatwave": {
+    "说法": "2011 年海洋热浪导致鲨鱼湾优势海草种大量死亡，随后儒艮、海蛇等物种数量显著下降",
+    "出处": "Ecological Monographs 相关研究 / mote.org 报道",
+    "已核对": true,
+    "情绪敏感": true,
+    "_使用限制": "仅用于「海草变少了」事件，且必须可修复、不会因不作为而恶化、不出现死亡灭绝字眼"
+  },
+
+  "fact_cowrie_currency": {
+    "说法": "贝壳（宝螺）在人类历史上曾真实作为货币使用",
+    "出处": "货币史通识",
+    "已核对": true
+  },
+  "fact_tide_50min": {
+    "说法": "潮汐每天比前一天推迟约 50 分钟，因为月球绕地球公转",
+    "出处": "基础天文/海洋学",
+    "已核对": true
+  },
+  "fact_coral_spawning": {
+    "说法": "许多珊瑚种类集体产卵与月相相关，常在满月后特定夜晚同步进行",
+    "出处": "珊瑚生殖生物学通识",
+    "已核对": true
+  }
+}

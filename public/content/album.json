@@ -19,6 +19,9 @@
     { "id": "first_feed", "icon": "🌱", "text": "你喂我海草", "en": "Seagrass" },
     { "id": "first_plant", "icon": "🌿", "text": "你种下海草", "en": "Seagrass" },
     { "id": "first_grown", "icon": "🌊", "text": "海草长大了", "en": "big" },
-    { "id": "handdrawn", "icon": "🎨", "text": "你画了我", "en": "Wow!" }
+    { "id": "handdrawn", "icon": "🎨", "text": "你画了我", "en": "Wow!" },
+    { "id": "visit_redsea", "icon": "🪸", "text": "我们去了红海", "en": "Fish" },
+    { "id": "visit_indian", "icon": "🌿", "text": "我们去了印度洋", "en": "Water" },
+    { "id": "visit_pacific", "icon": "🐢", "text": "我们去了澳洲", "en": "Turtle" }
   ]
 }

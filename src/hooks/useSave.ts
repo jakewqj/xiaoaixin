@@ -30,6 +30,8 @@ export interface SaveData {
   seagrass: Seagrass[]
   // 上次已经告诉过她「长成了几棵」。用来判断这次打开有没有新长成的
   grownSeen: number
+  // 当前在哪片海。三片海共享同一张海草床,换海只是换风景
+  sea: string
 }
 
 function createSave(): SaveData {
@@ -46,6 +48,7 @@ function createSave(): SaveData {
     knowledgeSeen: {},
     seagrass: starterBed(),
     grownSeen: starterBed().length,
+    sea: 'redsea',
   }
 }
 
@@ -129,6 +132,8 @@ function parseSave(raw: string | null): SaveData | null {
         typeof s.knowledgeSeen === 'object' && s.knowledgeSeen !== null
           ? (s.knowledgeSeen as Record<string, string>)
           : {},
+      // 海域是后来加的字段。旧存档没有就默认回红海浅滩,不因此作废整份档
+      sea: typeof s.sea === 'string' ? s.sea : 'redsea',
       ...withBed(s),
     }
   } catch {

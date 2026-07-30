@@ -8,14 +8,31 @@ export interface GrowthStage {
   文件?: Record<string, string>
 }
 
+export interface SpriteAnim {
+  文件: string
+  帧数: number
+  fps: number
+  循环?: boolean
+}
+
 export interface PetSpec {
-  文件: Record<string, string>
+  动画: Record<string, SpriteAnim>
   锚点: Record<string, [number, number]>
-  成长?: { 阶段?: GrowthStage[] }
+  成长缩放?: Record<string, number>
+  皮肤?: Record<string, { 路径: string }>
   手稿?: { 已替换?: boolean; 画的人?: string }
+  // 旧存档系统按天数分阶段的字段。新 pet.json 已经不提供了,stagesOf
+  // 会因此一直落回默认阶段——这是已知缺口,留给专门做成长系统的 Season
+  // 处理,这里先不碰
+  成长?: { 阶段?: GrowthStage[] }
 }
 
 export const PET_DIR = '/assets/pet'
+export const DEFAULT_SKIN_DIR = '/assets/pet/pixel/'
+
+// 精灵表每一帧的基准像素尺寸(成年基准),和 pet.json 的「规格」保持一致
+export const FRAME_WIDTH = 192
+export const FRAME_HEIGHT = 64
 
 // pet.json 里没写成长阶段时用这一个:不变大、不变色,和第 3 周长得一模一样
 const ONLY_STAGE: GrowthStage = {
@@ -68,4 +85,9 @@ export function toneFilter(体色: number) {
 // 这只小爱心是不是童童画的。pet.json 里把「手稿.已替换」改成 true 就算
 export function isHanddrawn(spec: PetSpec | null) {
   return spec?.手稿?.已替换 === true
+}
+
+// 当前皮肤的素材目录。config.json 的皮肤开关还没接进来,先固定用像素风
+export function skinDir(spec: PetSpec | null) {
+  return spec?.皮肤?.pixel?.路径 ?? DEFAULT_SKIN_DIR
 }

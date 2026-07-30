@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Ocean from './components/Ocean'
+import ScreenFrame, { STAGE_WIDTH } from './components/ScreenFrame'
+import Scene from './components/Scene'
+import GameHud from './components/GameHud'
 import Pet, { EAT_MS } from './components/Pet'
 import type { PoseName } from './components/Pet'
 import Dialogue from './components/Dialogue'
@@ -12,12 +14,16 @@ import Book from './components/Book'
 import BookButton from './components/BookButton'
 import Album from './components/Album'
 import AlbumButton from './components/AlbumButton'
+import SeaButton from './components/SeaButton'
+import SeaPicker from './components/SeaPicker'
+import LocationNav from './components/LocationNav'
 import {
   BED_LIMIT,
   clarityOf,
   countGrown,
   plantSeagrass,
 } from './lib/seagrass'
+import { SEAS, seaById, SEA_CARD_EVENTS } from './lib/seas'
 import { currentStage, isHanddrawn, stagesReached } from './lib/pet'
 import { useSave, MAX_FULLNESS, HUNGER_STEP_MS } from './hooks/useSave'
 import { usePet } from './hooks/usePet'
@@ -27,6 +33,10 @@ import type { DialogueOption } from './hooks/useDialogue'
 import { useKnowledge } from './hooks/useKnowledge'
 import type { KnowledgeCardData } from './hooks/useKnowledge'
 import { useAlbum } from './hooks/useAlbum'
+import { useWorld } from './hooks/useWorld'
+import { useConfig } from './hooks/useConfig'
+import { useNpcs } from './hooks/useNpcs'
+import Npc from './components/Npc'
 import { playSfx } from './lib/sfx'
 
 const POSE_MS = 2500
@@ -59,11 +69,45 @@ function App() {
   const [card, setCard] = useState<KnowledgeCardData | null>(null)
   // 不用路由库,页面切换就是一个状态
   const [page, setPage] = useState<'sea' | 'book' | 'album'>('sea')
+  const [seaPickerOpen, setSeaPickerOpen] = useState(false)
 
   const grownCount = countGrown(save.seagrass)
   const clarity = clarityOf(save.seagrass)
   const stage = currentStage(pet.spec, save.daysPlayed)
   const stages = stagesReached(pet.spec, save.daysPlayed)
+  const sea = seaById(save.sea)
+
+  const world = useWorld()
+  const config = useConfig()
+  const [locationIndex, setLocationIndex] = useState(0)
+
+  // world.json 的海域用中文名当 key,seas.ts 的 sea.name 正好是同一个字符串,靠它对上
+  const allSpots = world?.海域[sea.name]?.地点 ?? []
+  // config 还没加载完之前先当作一个地点都没开放,免得先闪出一整排、加载完又收回去
+  const openSpots = config ? allSpots.filter((spot) => config.开放地点.includes(spot.名字)) : []
+  const locationNames = openSpots.length > 0 ? openSpots.map((spot) => spot.名字) : ['']
+  // 假定 config 里开放的地点是 world.json 地点列表的一段前缀,这是当前唯一一份内容数据的实际排法
+  const lockedBeyondEnd = openSpots.length > 0 && allSpots.length > openSpots.length
+
+  // 换了一片海,地点索引要归零,不然可能指向一个不存在的地点
+  useEffect(() => {
+    setLocationIndex(0)
+  }, [save.sea])
+
+  // 地点数变少了(比如后台关掉了一个)就把索引拉回有效范围
+  useEffect(() => {
+    setLocationIndex((prev) => Math.min(prev, Math.max(0, locationNames.length - 1)))
+  }, [locationNames.length])
+
+  const npcs = useNpcs()
+  const currentSpotId = openSpots[locationIndex]?.id
+  // 只有「开放NPC」里点了名、又刚好住在当前这个地点的邻居才会出现
+  const visibleNpcs =
+    npcs && config
+      ? Object.entries(npcs).filter(
+          ([id, npc]) => npc.地点 === currentSpotId && config.开放NPC.some((n) => n.id === id),
+        )
+      : []
 
   // 摆一会儿姿势就回到平时的样子。进食要沉下去啃一会儿,时间给得长一些
   useEffect(() => {
@@ -280,43 +324,99 @@ function App() {
 
   const scene = sceneId ? scenes[sceneId] : undefined
 
+  // 换一片海:只换风景,海草床、饱腹度、换气都不动。第一次去某片海记进相册,
+  // 并且一定给一张那片海的知识卡 —— 这种第一次不该靠掷骰子
+  const pickSea = useCallback(
+    (id: string) => {
+      setSeaPickerOpen(false)
+      if (id === save.sea) return
+      update({ sea: id })
+      remember(`visit_${id}`)
+      const event = SEA_CARD_EVENTS[id]
+      if (event) showCard(knowledge.pickByEvent(event, save.knowledgeSeen, true))
+    },
+    [save.sea, save.knowledgeSeen, update, remember, showCard, knowledge],
+  )
+
   return (
-    <main className="relative min-h-dvh overflow-hidden">
-      <Ocean clarity={clarity} />
-      <SeagrassBed
-        bed={save.seagrass}
-        onTap={() => showCard(knowledge.pickByEvent('点海草', save.knowledgeSeen))}
-      />
-      <Pet
-        pet={pet}
-        stage={stage}
-        pose={pose}
-        breath={breath.phase}
-        talking={Boolean(scene)}
-        anchors={knowledge.anchors}
-        onBreathe={handleBreathe}
-        onAnchorTap={(anchor) =>
-          showCard(knowledge.pickByAnchor(anchor, save.knowledgeSeen))
-        }
-      >
-        {scene && <Dialogue scene={scene} onChoose={chooseOption} />}
-      </Pet>
-      {card && <KnowledgeCard card={card} onDismiss={() => setCard(null)} />}
-      {page === 'sea' && (
-        <>
-          <AlbumButton onOpen={() => setPage('album')} />
-          <BookButton onOpen={() => setPage('book')} />
-          {/* 这条横栏铺满整个屏幕宽度,必须让空白处透过点击 ——
-              否则它会把左右下角的按钮和海草床整片挡住 */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 pb-5">
-            <FullnessMeter value={save.fullness} />
-            <div className="pointer-events-auto flex items-end gap-3">
-              {grownCount > 0 && <FeedButton onFeed={feed} />}
-              <PlantButton onPlant={plant} />
+    <>
+      <ScreenFrame>
+        <Scene
+          sea={sea}
+          clarity={clarity}
+          surfaced={breath.atSurface}
+          locationNames={locationNames}
+          locationIndex={locationIndex}
+          lockedBeyondEnd={lockedBeyondEnd}
+          actors={
+            // 世界横条一格是一个地点、宽度是 STAGE_WIDTH 的整数倍;这个包装 div 卡在
+            // 当前地点那一格,小爱心跟着她去哪个地点就到哪一格的正中间。
+            // 海草床固定长在「家海草床」,不跟她走到别的地点去
+            <div className="absolute inset-y-0" style={{ left: locationIndex * STAGE_WIDTH, width: STAGE_WIDTH }}>
+              {locationIndex === 0 && (
+                <SeagrassBed
+                  bed={save.seagrass}
+                  onTap={() => showCard(knowledge.pickByEvent('点海草', save.knowledgeSeen))}
+                />
+              )}
+              {visibleNpcs.map(([id, npc], i) => (
+                <Npc key={id} npc={npc} leftPercent={65 + i * 15} />
+              ))}
+              <Pet
+                pet={pet}
+                stage={stage}
+                pose={pose}
+                breath={breath.phase}
+                talking={Boolean(scene)}
+                anchors={knowledge.anchors}
+                onBreathe={handleBreathe}
+                onAnchorTap={(anchor) =>
+                  showCard(knowledge.pickByAnchor(anchor, save.knowledgeSeen))
+                }
+              >
+                {scene && <Dialogue scene={scene} onChoose={chooseOption} />}
+              </Pet>
             </div>
-          </div>
-        </>
-      )}
+          }
+          hud={
+            <>
+              {/* 月相和潮汐还没有真的算,先占位;第几天是存档里现成的真数据。见 S4「时间系统」 */}
+              <GameHud
+                day={save.daysPlayed}
+                moonPhase="满月"
+                tide="涨潮中"
+                grownSeagrass={grownCount}
+              />
+              {card && <KnowledgeCard card={card} onDismiss={() => setCard(null)} />}
+              {page === 'sea' && openSpots.length > 1 && (
+                <LocationNav
+                  name={locationNames[locationIndex]}
+                  canPrev={locationIndex > 0}
+                  canNext={locationIndex < locationNames.length - 1}
+                  onPrev={() => setLocationIndex((i) => Math.max(0, i - 1))}
+                  onNext={() => setLocationIndex((i) => Math.min(locationNames.length - 1, i + 1))}
+                />
+              )}
+              {page === 'sea' && (
+                <>
+                  <AlbumButton onOpen={() => setPage('album')} />
+                  <BookButton onOpen={() => setPage('book')} />
+                  <SeaButton onOpen={() => setSeaPickerOpen(true)} />
+                  {/* 这条横栏铺满整个屏幕宽度,必须让空白处透过点击 ——
+                      否则它会把左右下角的按钮和海草床整片挡住 */}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 pb-5">
+                    <FullnessMeter value={save.fullness} />
+                    <div className="pointer-events-auto flex items-end gap-3">
+                      {grownCount > 0 && <FeedButton onFeed={feed} />}
+                      <PlantButton onPlant={plant} />
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          }
+        />
+      </ScreenFrame>
       {page === 'book' && (
         <Book
           cards={knowledge.bookCards(save.knowledgeSeen)}
@@ -334,7 +434,15 @@ function App() {
           onClose={() => setPage('sea')}
         />
       )}
-    </main>
+      {seaPickerOpen && (
+        <SeaPicker
+          seas={SEAS}
+          current={sea.id}
+          onPick={pickSea}
+          onClose={() => setSeaPickerOpen(false)}
+        />
+      )}
+    </>
   )
 }
 

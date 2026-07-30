@@ -14,24 +14,25 @@ function Blades({ grown }: { grown: boolean }) {
   )
 }
 
-// 海草床。新芽矮、颜色浅,长成的高、颜色深 —— 差别要一眼看得出,不然三天的等待就白等了
+// 海草床。新芽矮、颜色浅,长成的高、颜色深 —— 差别要一眼看得出,不然三天的等待就白等了。
+// 高度原来用 dvh(相对真实视口),现在舞台是固定像素的世界,换算成固定像素
 function SeagrassBed({ bed, onTap }: { bed: Plant[]; onTap: () => void }) {
   return (
     <button
       type="button"
       onClick={onTap}
       aria-label="海草床"
-      className="absolute inset-x-0 bottom-0 h-[22dvh] cursor-pointer"
+      className="absolute inset-x-0 bottom-0 h-[70px] cursor-pointer focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
     >
       {bed.map((plant) => {
         const grown = isGrown(plant)
         return (
           <span
             key={plant.id}
-            className="absolute bottom-[4dvh] block w-[7%] max-w-14 -translate-x-1/2 origin-bottom"
+            className="absolute bottom-[10px] block w-[7%] max-w-10 -translate-x-1/2 origin-bottom"
             style={{
               left: `${plant.x}%`,
-              height: `${(grown ? 13 : 6) * heightOf(plant)}dvh`,
+              height: `${(grown ? 34 : 16) * heightOf(plant)}px`,
             }}
           >
             <Blades grown={grown} />

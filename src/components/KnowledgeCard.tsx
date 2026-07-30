@@ -12,7 +12,7 @@ function KnowledgeCard({ card, onDismiss }: KnowledgeCardProps) {
       type="button"
       onClick={onDismiss}
       aria-label="收起"
-      className="knowledge-card absolute bottom-44 left-0 max-w-[76vw] cursor-pointer rounded-r-3xl bg-white/92 py-4 pr-6 pl-5 text-left shadow-xl focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+      className="knowledge-card pointer-events-auto absolute bottom-16 left-0 max-w-[340px] cursor-pointer rounded-r-3xl bg-white/92 py-4 pr-6 pl-5 text-left shadow-xl focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
     >
       <p className="font-kuaile text-2xl leading-snug whitespace-pre-line text-ink">
         {card.childText}

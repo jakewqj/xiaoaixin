@@ -1,5 +1,32 @@
 @import 'tailwindcss';
 
+/* 像素画的边一旦被平滑插值就毁了,canvas 也要加。见 CLAUDE.md 十二/十三 */
+img,
+canvas,
+video {
+  image-rendering: pixelated;
+}
+
+/* Sprite 组件用 div 的背景图切帧,不是 <img>,像素渲染要单独补上 */
+.sprite-frames {
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+  background-position-x: 0;
+  animation-name: sprite-play;
+  animation-iteration-count: infinite;
+}
+
+/* from/to 只是位置的起止,真正一帧一帧硬切靠 steps(frameCount, jump-end),
+   在 Sprite.tsx 里按帧数和 fps 动态算 duration,这里不用管具体多少帧 */
+@keyframes sprite-play {
+  from {
+    background-position-x: 0;
+  }
+  to {
+    background-position-x: var(--sprite-shift, 0);
+  }
+}
+
 /* 配色来自 CLAUDE.md 视觉规范,不要自行更换 */
 @theme {
   --color-water-shallow: #7fd1d8;
@@ -18,13 +45,14 @@
   --font-wenkai: 'LXGW WenKai', 'PingFang SC', 'Microsoft YaHei', serif;
 }
 
-/* 小爱心的漂浮:横向单程约 12 秒,上下浮动周期约 4 秒、幅度很小 */
+/* 小爱心的漂浮:横向单程约 12 秒,上下浮动周期约 4 秒、幅度很小。
+   幅度原来是 9vw(相对真实视口),现在舞台是固定 480 宽的逻辑像素,换算成固定像素 */
 @keyframes pet-drift {
   from {
-    transform: translateX(-9vw);
+    transform: translateX(-40px);
   }
   to {
-    transform: translateX(9vw);
+    transform: translateX(40px);
   }
 }
 
@@ -41,6 +69,17 @@
 @keyframes pet-tap {
   50% {
     transform: scale(1.08);
+  }
+}
+
+/* 竖屏提示图标:轻轻转一下再转回来,不停顿 */
+@keyframes rotate-hint {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-90deg);
   }
 }
 
@@ -80,7 +119,7 @@
   }
   25%,
   78% {
-    transform: translateY(15dvh);
+    transform: translateY(40px);
   }
   100% {
     transform: translateY(0);
@@ -101,7 +140,7 @@
     opacity: 0.95;
   }
   100% {
-    transform: translate(-50%, calc(-50% - 22vh)) scale(1);
+    transform: translate(-50%, calc(-50% - 70px)) scale(1);
     opacity: 0;
   }
 }
@@ -141,112 +180,131 @@
   animation: pet-bob 4s ease-in-out infinite alternate;
 }
 
-/* ---- 海洋环境的光线,复刻纪录片里的红海浅滩 ---- */
+/* 换气镜头摇移。ROADMAP §1.3:镜头运动是唯一允许的连续运动,平滑 300–500ms,取中间值 */
+.camera-world {
+  transition: transform 400ms ease-in-out;
+}
 
-/* 光柱:从水面斜射进来,明暗缓慢呼吸、微微摇摆。倾角和亮度由组件传进来 */
-.ray {
+/* ---- Scene.tsx 九层占位:纯色块 + 速度分层,验证「越远越慢」的视差节奏 ---- */
+
+/* 天上的云,离得最远,飘得最慢 */
+.scene-cloud {
   position: absolute;
-  top: -14dvh;
-  height: 90dvh;
-  pointer-events: none;
-  transform-origin: top center;
-  transform: rotate(var(--ray-tilt, 12deg));
-  background: linear-gradient(
-    to right,
-    rgb(255 255 255 / 0),
-    rgb(255 255 255 / 0.55) 45% 55%,
-    rgb(255 255 255 / 0)
-  );
-  mask-image: linear-gradient(to bottom, black, transparent 78%);
-  opacity: var(--ray-peak, 0.3);
-  animation: ray-breathe 10s ease-in-out infinite alternate;
-}
-
-@keyframes ray-breathe {
-  from {
-    opacity: calc(var(--ray-peak, 0.3) * 0.4);
-    transform: rotate(calc(var(--ray-tilt, 12deg) - 2deg));
-  }
-  to {
-    opacity: var(--ray-peak, 0.3);
-    transform: rotate(calc(var(--ray-tilt, 12deg) + 2deg));
-  }
-}
-
-/* 水面波光:一条碎金色的亮纹,整层左右缓缓晃 */
-.surface-glimmer {
-  pointer-events: none;
-  opacity: 0.5;
-  background: repeating-linear-gradient(
-    100deg,
-    rgb(255 255 255 / 0) 0 40px,
-    rgb(255 255 255 / 0.35) 60px,
-    rgb(255 255 255 / 0) 80px 120px
-  );
-  animation: glimmer-sway 16s ease-in-out infinite alternate;
-}
-
-@keyframes glimmer-sway {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-25%);
-  }
-}
-
-/* 悬浮颗粒:慢慢往上飘,飘着飘着就淡出了 */
-.mote {
-  position: absolute;
-  pointer-events: none;
   border-radius: 9999px;
-  background: rgb(255 255 255 / 0.55);
-  opacity: 0.4;
-  animation: mote-drift 15s linear infinite;
+  background: rgb(255 255 255 / 0.8);
+  animation: scene-cloud-drift 46s linear infinite;
 }
 
-@keyframes mote-drift {
-  0% {
-    transform: translate(0, 4vh);
-    opacity: 0;
+@keyframes scene-cloud-drift {
+  from {
+    transform: translateX(-40px);
   }
-  15% {
+  to {
+    transform: translateX(520px);
+  }
+}
+
+/* 水面线,细微的明暗呼吸 */
+.scene-water-surface {
+  animation: scene-surface-glint 3s ease-in-out infinite alternate;
+}
+
+@keyframes scene-surface-glint {
+  from {
     opacity: 0.7;
   }
-  75% {
-    opacity: 0.35;
-  }
-  100% {
-    transform: translate(1.5vw, -10vh);
-    opacity: 0;
+  to {
+    opacity: 1;
   }
 }
 
-/* 沙面波纹:水流推出来的细细几道,静态的 */
-.sand-ripples {
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    170deg,
-    rgb(36 54 66 / 0.08) 0 3px,
-    transparent 3px 26px
-  );
+/* 水下远景剪影,几乎不动,只有很轻的摇摆 */
+.scene-plant-far {
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 34px;
+  background: rgb(10 30 36 / 0.5);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  transform-origin: bottom center;
+  animation: scene-sway 9s ease-in-out infinite alternate;
+}
+
+/* 水下中景的珊瑚/海草占位,比远景摇得明显一点,离镜头更近 */
+.scene-coral {
+  position: absolute;
+  bottom: 0;
+  width: 16px;
+  height: 26px;
+  border-radius: 8px 8px 2px 2px;
+  background: #e8876a;
+  transform-origin: bottom center;
+  animation: scene-sway 4s ease-in-out infinite alternate;
+}
+
+@keyframes scene-sway {
+  from {
+    transform: rotate(-6deg);
+  }
+  to {
+    transform: rotate(6deg);
+  }
+}
+
+/* 沙底散落物,静止的小点 */
+.scene-litter {
+  position: absolute;
+  bottom: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: rgb(36 54 66 / 0.3);
+}
+
+/* 气泡层占位,离镜头最近,升得最快,验证它盖在角色层之上 */
+.scene-bubble {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.75);
+  animation: scene-bubble-rise 3s ease-in infinite;
+}
+
+@keyframes scene-bubble-rise {
+  from {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .scene-cloud,
+  .scene-water-surface,
+  .scene-plant-far,
+  .scene-coral,
+  .scene-bubble,
+  .sprite-frames {
+    animation: none;
+  }
+
   .pet-drift,
   .pet-bob,
   .pet-tap,
   .pet-dip,
-  .ray,
-  .surface-glimmer,
-  .mote,
   .knowledge-card {
     animation: none;
   }
 
   .pet-turn,
   .pet-swim,
-  .bubbles {
+  .sea-picker,
+  .bubbles,
+  .camera-world {
     transition-property: none;
   }
 

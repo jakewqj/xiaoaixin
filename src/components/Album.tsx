@@ -1,4 +1,5 @@
-import { PET_DIR, toneFilter } from '../lib/pet'
+import Sprite from './Sprite'
+import { FRAME_HEIGHT, FRAME_WIDTH, toneFilter } from '../lib/pet'
 import type { GrowthStage } from '../lib/pet'
 import type { usePet } from '../hooks/usePet'
 import type { AlbumTitles, Memory } from '../hooks/useAlbum'
@@ -43,7 +44,7 @@ function Album({
     .sort((a, b) => Date.parse(events[a.id]) - Date.parse(events[b.id]))
 
   return (
-    <div className="absolute inset-0 z-10 overflow-y-auto bg-sand">
+    <div className="fixed inset-0 z-20 overflow-y-auto bg-sand">
       <div className="sticky top-0 bg-sand/95 px-5 py-4 backdrop-blur-sm">
         <button
           type="button"
@@ -63,21 +64,23 @@ function Album({
           {/* 顶对齐:有的阶段有日期有的没有,底对齐会让照片高低不齐 */}
           <div className="flex flex-wrap items-start gap-4">
             {stages.map((stage, index) => {
-              const file = pet.fileFor('idle', stage)
+              const anim = pet.animFor('idle')
               const day = stageDay(stage, index)
+              // 圆框(h-28 w-28 = 112px)里留 92% 当最大宽度,和以前 <img width:92%> 的观感一致,
+              // 只是现在精灵表要显式给宽高,不能只设宽度靠浏览器按原图比例自动算高度了
+              const scale = (stage.体型 / biggest) * ((112 * 0.92) / FRAME_WIDTH)
               return (
                 <figure key={stage.id} className="flex flex-col items-center gap-1">
                   <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-water-shallow/60 shadow-sm">
-                    {file && (
-                      <img
-                        src={`${PET_DIR}/${file}`}
-                        alt=""
-                        draggable={false}
-                        className="select-none"
-                        style={{
-                          width: `${(stage.体型 / biggest) * 92}%`,
-                          filter: toneFilter(stage.体色),
-                        }}
+                    {anim && (
+                      <Sprite
+                        src={anim.src}
+                        frame={0}
+                        frameWidth={FRAME_WIDTH * scale}
+                        frameHeight={FRAME_HEIGHT * scale}
+                        frameCount={anim.frameCount}
+                        fps={anim.fps}
+                        style={{ filter: toneFilter(stage.体色) }}
                       />
                     )}
                   </div>

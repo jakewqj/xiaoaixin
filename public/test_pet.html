@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Pet Sprite Test</title>
+<style>
+  body { background-color: #2ab7ca; padding: 40px; font-family: sans-serif; color: white; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
+  .row { display: flex; flex-wrap: wrap; gap: 24px; }
+  .sprite-box {
+    position: relative;
+    width: 384px; height: 128px; /* 192x64 @2x */
+    background-color: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.6);
+    image-rendering: pixelated;
+    background-repeat: no-repeat;
+  }
+  .anim-idle      { background-image: url('assets/pet/pixel/idle.png');      background-size: 1536px 128px; animation: a-idle 0.5s steps(4) infinite; }
+  .anim-swim      { background-image: url('assets/pet/pixel/swim.png');      background-size: 2304px 128px; animation: a-swim 0.75s steps(6) infinite; }
+  .anim-eating    { background-image: url('assets/pet/pixel/eating.png');    background-size: 1536px 128px; animation: a-eating 0.5s steps(4) infinite; }
+  .anim-surfacing { background-image: url('assets/pet/pixel/surfacing.png'); background-size: 1536px 128px; animation: a-surfacing 0.5s steps(4) infinite; }
+  .anim-sleeping  { background-image: url('assets/pet/pixel/sleeping.png');  background-size: 768px 128px;  animation: a-sleeping 0.5s steps(2) infinite; }
+  @keyframes a-idle      { 100% { background-position: -1536px 0; } }
+  @keyframes a-swim      { 100% { background-position: -2304px 0; } }
+  @keyframes a-eating    { 100% { background-position: -1536px 0; } }
+  @keyframes a-surfacing { 100% { background-position: -1536px 0; } }
+  @keyframes a-sleeping  { 100% { background-position: -768px 0; } }
+  .dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: red; display: none; }
+  .show-anchors .dot { display: block; }
+  button { font-size: 14px; padding: 4px 12px; margin-bottom: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Dugong Pet Sprite Inspection (frame 192x64, shown at 2x)</h1>
+<button onclick="document.body.classList.toggle('show-anchors')">toggle anchors</button>
+<div class="row">
+  <div class="cell"><h2>idle (4f, 8fps)</h2><div class="sprite-box anim-idle" data-anchors></div></div>
+  <div class="cell"><h2>swim (6f, 8fps)</h2><div class="sprite-box anim-swim" data-anchors></div></div>
+  <div class="cell"><h2>eating (4f, 8fps)</h2><div class="sprite-box anim-eating" data-anchors></div></div>
+  <div class="cell"><h2>surfacing (4f, 8fps)</h2><div class="sprite-box anim-surfacing" data-anchors></div></div>
+  <div class="cell"><h2>sleeping (2f, 4fps)</h2><div class="sprite-box anim-sleeping" data-anchors></div></div>
+</div>
+<script>
+  // anchors from pet.json, in frame coords (192x64), rendered at 2x
+  const anchors = { blowhole: [154, 19], mouth: [165, 38], eye: [144, 24], tailTip: [19, 32], bellyCenter: [106, 40] }
+  document.querySelectorAll('[data-anchors]').forEach((box) => {
+    for (const [name, [x, y]] of Object.entries(anchors)) {
+      const d = document.createElement('div')
+      d.className = 'dot'
+      d.title = name
+      d.style.left = x * 2 + 'px'
+      d.style.top = y * 2 + 'px'
+      box.appendChild(d)
+    }
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+{
+  "_说明": "海域 → 地点 → 互动点。是否可进入由 config.json 的「开放地点」决定，本文件只描述世界长什么样。",
+  "_未开放地点的表现": "显示为远处的模糊轮廓，点击无反应、无提示、无「敬请期待」字样。",
+
+  "海域": {
+    "红海浅滩": {
+      "id": "red_sea",
+      "原型": "埃及马沙阿拉姆 Marsa Alam / 阿布达巴布湾 Abu Dabab",
+      "解锁阶段": "幼年",
+      "factRef": "fact_red_sea_dugong",
+      "环境": {
+        "水色": ["#7FD1D8", "#2E8B9B", "#14495C"],
+        "沙色": "#E8DCC0",
+        "特征": "珊瑚礁 + 内湾式浅海（sharm / marsa）"
+      },
+      "海草物种": ["Halodule uninervis", "Halophila ovalis", "Halophila stipulacea"],
+      "地点": [
+        {
+          "id": "home_meadow",
+          "名字": "家海草床",
+          "解锁阶段": "幼年",
+          "常驻NPC": [],
+          "互动点": [
+            { "id": "plant_spot", "名字": "可种植的沙地", "类型": "种植" },
+            { "id": "water_clarity", "名字": "水的清澈度", "类型": "环境反馈" },
+            { "id": "nap_spot", "名字": "睡觉的地方", "类型": "休息" }
+          ],
+          "学习挂载": ["数学:计数", "数学:分配", "生物:海草是开花植物"],
+          "factRef": "fact_red_sea_seagrass"
+        },
+        {
+          "id": "surface",
+          "名字": "换气水面",
+          "解锁阶段": "幼年",
+          "常驻NPC": [],
+          "_镜头": "从此处镜头垂直上摇穿过水面线，露出天空与远景小岛",
+          "互动点": [
+            { "id": "breathe", "名字": "换气", "类型": "核心机制" },
+            { "id": "sky", "名字": "看天空", "类型": "观察" },
+            { "id": "far_island", "名字": "远处的小岛", "类型": "观察" }
+          ],
+          "学习挂载": ["自然:昼夜", "自然:天气", "生物:用肺呼吸"],
+          "factRef": "fact_dugong_breathing"
+        },
+        {
+          "id": "dolphin_lagoon",
+          "名字": "海豚潟湖",
+          "解锁阶段": "幼年",
+          "常驻NPC": ["dolly"],
+          "互动点": [
+            { "id": "dolly_spot", "名字": "Dolly", "类型": "NPC" },
+            { "id": "gallery_board", "名字": "挂画的木板", "类型": "画作展示", "上限": 3 }
+          ],
+          "学习挂载": ["英语:主战场", "数学:计数", "数学:比大小"],
+          "factRef": "fact_spinner_lagoon"
+        },
+        {
+          "id": "coral_garden",
+          "名字": "珊瑚花园",
+          "解锁阶段": "幼年",
+          "常驻NPC": ["clownfish_family"],
+          "互动点": [
+            { "id": "brain_coral", "名字": "脑珊瑚", "类型": "观察" },
+            { "id": "anemone", "名字": "海葵", "类型": "观察" },
+            { "id": "fish_school", "名字": "小鱼群", "类型": "观察" }
+          ],
+          "学习挂载": ["自然:颜色", "生物:共生", "数学:数一数有几条"],
+          "factRef": "fact_red_sea_biodiversity"
+        },
+        {
+          "id": "sand_flat",
+          "名字": "沙地浅滩",
+          "解锁阶段": "少年",
+          "常驻NPC": ["giant_clam"],
+          "互动点": [
+            { "id": "dig", "名字": "挖沙", "类型": "采集" },
+            { "id": "shells", "名字": "散落的贝壳", "类型": "采集" },
+            { "id": "clam_spot", "名字": "砗磲奶奶", "类型": "NPC" }
+          ],
+          "学习挂载": ["财商:贝壳", "历史:贝壳当钱用", "百科:图鉴入口"],
+          "factRef": "fact_giant_clam"
+        },
+        {
+          "id": "old_wreck",
+          "名字": "老沉船",
+          "解锁阶段": "少年",
+          "常驻NPC": ["ada"],
+          "互动点": [
+            { "id": "coral_hull", "名字": "长满珊瑚的船身", "类型": "观察" },
+            { "id": "ada_spot", "名字": "阿玳", "类型": "NPC" }
+          ],
+          "学习挂载": ["历史:人与海", "历史:美人鱼传说", "百科"],
+          "factRef": "fact_red_sea_wreck"
+        }
+      ]
+    },
+
+    "印度海湾": {
+      "id": "arabian_gulf",
+      "原型": "阿联酋马拉瓦海洋生物圈保护区 / 巴林–卡塔尔间萨勒瓦湾",
+      "解锁阶段": "亚成年",
+      "_进入方式": "信使远行。加载画面固定显示诚实标注，见 GDD §3。",
+      "factRef": "fact_gulf_dugong",
+      "环境": {
+        "特征": "近乎封闭的浅海，平均水深 35 米，极端高盐"
+      },
+      "海草物种": ["Halodule uninervis", "Halophila stipulacea", "Halophila ovalis"],
+      "地点": [
+        { "id": "mangrove_edge", "名字": "红树林边", "常驻NPC": ["crab_siblings", "flamingo"], "学习挂载": ["自然:潮汐", "数学:对称"], "factRef": "fact_gulf_mangrove" },
+        { "id": "pearl_bank", "名字": "珍珠滩", "常驻NPC": ["pearl_grandpa"], "学习挂载": ["财商:主战场", "历史:采珠"], "factRef": "fact_pearl_oyster" },
+        { "id": "hypersaline_bay", "名字": "咸水浅湾", "常驻NPC": ["sousa"], "学习挂载": ["自然:盐度与蒸发", "英语:进阶"], "factRef": "fact_gulf_salinity" },
+        { "id": "winter_gathering", "名字": "越冬聚集地", "常驻NPC": ["dugong_herd_gulf"], "季节限定": "冬季", "学习挂载": ["生物:群聚", "数学:估数"], "factRef": "fact_gulf_winter_herd" },
+        { "id": "shell_midden", "名字": "沉没的贝壳堆", "常驻NPC": [], "学习挂载": ["历史:人与海的关系"], "factRef": "fact_shell_midden" }
+      ]
+    },
+
+    "澳洲浅海": {
+      "id": "shark_bay",
+      "原型": "西澳鲨鱼湾 Shark Bay / Gathaagudu",
+      "解锁阶段": "成年",
+      "factRef": "fact_shark_bay_dugong",
+      "环境": {
+        "特征": "世界最大海草床 + 叠层石 + 高盐水域 + 全贝壳海滩"
+      },
+      "地点": [
+        { "id": "wooramel", "名字": "乌拉梅尔草原", "常驻NPC": ["dugong_aunt"], "学习挂载": ["生物:群体", "数学:大数"], "factRef": "fact_shark_bay_seagrass" },
+        { "id": "stromatolites", "名字": "叠层石浅滩", "常驻NPC": ["stone_grandpa"], "学习挂载": ["历史:时间尺度"], "factRef": "fact_stromatolites" },
+        { "id": "dolphin_bay", "名字": "海豚湾", "常驻NPC": ["sponge"], "学习挂载": ["英语", "工程思维:工具"], "factRef": "fact_sponging_dolphins" },
+        { "id": "shell_beach", "名字": "贝壳海滩", "常驻NPC": [], "学习挂载": ["自然:地质", "数学"], "factRef": "fact_shell_beach" },
+        { "id": "deep_channel", "名字": "深水通道", "常驻NPC": ["laohu"], "解锁阶段": "成年", "_安全": "老虎只在白天、只在通道口 20% 区域内出现。见 GDD §7.5", "学习挂载": ["生物:食物链", "自然:恐惧地景", "社会:边界感"], "factRef": "fact_tiger_shark" }
+      ]
+    }
+  }
+}

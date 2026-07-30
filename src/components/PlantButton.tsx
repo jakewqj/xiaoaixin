@@ -1,15 +1,14 @@
-// 种海草。没有花费、没有数量限制的焦虑,种满了也只是种满了
+// 种海草。没有花费、没有数量限制的焦虑,种满了也只是种满了。
+// 和相册/图鉴/换海用同一种 56px 圆按钮语言
 function PlantButton({ onPlant }: { onPlant: () => void }) {
   return (
     <button
       type="button"
       onClick={onPlant}
-      className="flex min-h-14 min-w-14 cursor-pointer flex-col items-center gap-0.5 rounded-3xl bg-white/85 px-6 py-3 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+      aria-label="种海草"
+      className="pointer-events-auto flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-white/85 text-3xl shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
     >
-      <span className="text-4xl leading-none" aria-hidden="true">
-        🌿
-      </span>
-      <span className="font-kuaile text-2xl text-ink">种一棵</span>
+      <span aria-hidden="true">🌿</span>
     </button>
   )
 }

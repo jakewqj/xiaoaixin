@@ -1,16 +1,13 @@
-// 喂食按钮。图标够大,不识字也能认出是海草
+// 喂食按钮。和相册/图鉴/换海用同一种 56px 圆按钮语言,图标够大不识字也认得出
 function FeedButton({ onFeed }: { onFeed: () => void }) {
   return (
     <button
       type="button"
       onClick={onFeed}
-      className="flex min-h-14 min-w-14 cursor-pointer flex-col items-center gap-0.5 rounded-3xl bg-white/85 px-8 py-3 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+      aria-label="喂海草"
+      className="pointer-events-auto flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-white/85 text-3xl shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
     >
-      <span className="text-4xl leading-none" aria-hidden="true">
-        🌱
-      </span>
-      <span className="text-2xl text-ink">海草</span>
-      <span className="text-sm text-ink/55">Seagrass</span>
+      <span aria-hidden="true">🌱</span>
     </button>
   )
 }

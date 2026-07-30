@@ -23,5 +23,21 @@
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
-  }
+  },
+  "description": "一只雌性儒艮(dugong dugon),住在一片浅海里。爸爸做给童童玩的电子宠物网页。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jakewqj/xiaoaixing.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jakewqj/xiaoaixing/issues"
+  },
+  "homepage": "https://github.com/jakewqj/xiaoaixing#readme"
 }

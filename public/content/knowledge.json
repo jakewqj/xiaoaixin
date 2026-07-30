@@ -320,6 +320,36 @@
       "已核对": true
     },
     {
+      "id": "sea_redsea",
+      "学科": "自然",
+      "挂载点": "第一次到红海浅滩",
+      "事件": "到红海后",
+      "childText": "这片海很清",
+      "dadNote": "红海是儒艮分布带的西端。水又清又暖,浅滩上有珊瑚,儒艮就在珊瑚礁旁边的海草床上吃草。",
+      "来源": "National Geographic「warm coastal waters from East Africa to Australia, including the Red Sea, Indian Ocean, and Pacific」;wildlifenomads 分布段落「The Persian Gulf and Red Sea retain isolated dugong populations」",
+      "已核对": true
+    },
+    {
+      "id": "sea_indian",
+      "学科": "自然",
+      "挂载点": "第一次到印度海湾",
+      "事件": "到印度洋后",
+      "childText": "这里的草很多",
+      "dadNote": "印度洋的马纳尔湾有大片海草床,是儒艮的重要家。这里的海湾水浅、安静,岸边长着红树林。",
+      "来源": "wildlifenomads 分布段落「Parts of India, particularly the Gulf of Mannar and Andaman & Nicobar Islands, also have documented dugong sightings」;NatGeo 分布句同上",
+      "已核对": true
+    },
+    {
+      "id": "sea_pacific",
+      "学科": "自然",
+      "挂载点": "第一次到澳洲浅海",
+      "事件": "到澳洲后",
+      "childText": "海龟也住这儿",
+      "dadNote": "澳大利亚的鲨鱼湾和大堡礁一带是世界上儒艮最多的地方之一。那里也是绿海龟的家,它们和儒艮一样吃海草、一样要浮上水面呼吸。",
+      "来源": "wildlifenomads 分布段落「Shark Bay and Moreton Bay... remain significant population centers」「the Great Barrier Reef is a particularly important habitat」;NatGeo 分布句同上",
+      "已核对": true
+    },
+    {
       "id": "bio_vulnerable",
       "学科": "生物 / 历史",
       "挂载点": "图鉴,建议放在较后的阶段",

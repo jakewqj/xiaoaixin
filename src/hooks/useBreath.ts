@@ -43,5 +43,8 @@ export function useBreath() {
     }
   }, [phase])
 
-  return { phase, nudge }
+  // 浮出水面的这几个阶段共用一个判断,Pet 和摇镜头的 Scene 都要用,别各写一份
+  const atSurface = phase === 'rising' || phase === 'waiting' || phase === 'popping'
+
+  return { phase, nudge, atSurface }
 }
