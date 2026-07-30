@@ -30,24 +30,28 @@ interface PetProps {
   stage: GrowthStage
   pose: PoseName
   breath: BreathPhase
-  talking: boolean
+  // 在世界横条里的水平位置(世界坐标 px)。点哪游哪,由 usePetSwim 驱动
+  worldX: number
+  // 朝向跟着游动方向走,不再随便点一下就转身
+  facingLeft: boolean
   anchors: string[]
   onBreathe: () => void
   onAnchorTap: (anchor: string) => boolean
 }
 
-// 小爱心本体:按 pet.json 声明的动画播放精灵表,在海中间极慢地左右漂移 + 轻微上下浮动
+// 小爱心本体:按 pet.json 声明的动画播放精灵表,位置由点击控制的巡游决定,
+// 原地只保留轻微的上下浮动
 function Pet({
   pet,
   stage,
   pose,
   breath,
-  talking,
+  worldX,
+  facingLeft,
   anchors,
   onBreathe,
   onAnchorTap,
 }: PetProps) {
-  const [facingLeft, setFacingLeft] = useState(false)
   const [tapped, setTapped] = useState(false)
 
   // 放大回弹结束后自己复位。不依赖 animationend,减弱动态效果时动画不跑也能复位
@@ -64,7 +68,6 @@ function Pet({
       onBreathe()
       return
     }
-    setFacingLeft((v) => !v)
     playSfx('tap')
   }
 
@@ -76,7 +79,6 @@ function Pet({
       return
     }
     if (onAnchorTap(name)) return
-    setFacingLeft((v) => !v)
     playSfx('tap')
   }
 
@@ -102,18 +104,17 @@ function Pet({
 
   return (
     <div
-      className="pet-swim absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
+      className="pet-swim absolute -translate-x-1/2 -translate-y-1/2"
       style={
         {
+          left: worldX,
           // 别再往上了:头顶要留得下说话气泡,不然浮上来/待机时说的那句话会跑到舞台外面
           top: atSurface ? '30%' : '70%',
           '--swim-duration': `${SWIM_MS}ms`,
         } as CSSProperties
       }
     >
-      {/* 说话时停住不飘 —— 选项按钮不能是移动靶子 */}
-      <div className={talking ? 'pet-drift is-talking' : 'pet-drift'}>
-        <div className="pet-bob">
+      <div className="pet-bob">
           {/* 进食时沉向海草床啃一会儿再浮回来,复刻纪录片里贴底吃海草的动作。在水面换气时不沉 */}
           <div
             className={pose === 'eating' && !atSurface ? 'pet-dip relative' : 'relative'}
@@ -123,7 +124,7 @@ function Pet({
               type="button"
               onClick={handleTap}
               aria-label={breath === 'waiting' ? '帮小爱心换气' : '摸摸小爱心'}
-              className="block min-h-14 min-w-14 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+              className="pointer-events-auto block min-h-14 min-w-14 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
             >
               <div className={tapped ? 'pet-tap' : undefined}>
                 <Sprite
@@ -149,7 +150,7 @@ function Pet({
                   type="button"
                   onClick={() => handleAnchorTap(name)}
                   aria-label={ANCHOR_LABELS[name] ?? '小爱心'}
-                  className="absolute aspect-square min-h-14 min-w-14 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+                  className="pointer-events-auto absolute aspect-square min-h-14 min-w-14 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
                   style={{
                     left: `${(facingLeft ? 1 - ax : ax) * 100}%`,
                     top: `${ay * 100}%`,
@@ -168,7 +169,6 @@ function Pet({
             )}
           </div>
         </div>
-      </div>
     </div>
   )
 }

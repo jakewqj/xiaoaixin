@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+const UI = '/assets/world/ui'
+
 interface SlotProps {
   icon: string
   label: string
@@ -9,25 +11,29 @@ interface SlotProps {
   glow?: boolean
 }
 
-// 一个紧凑方形按钮。尺寸按参考图的视觉比例定,不再套旧的 56px 触摸底线——
-// 见本次会话决定:美术还原度优先于旧的像素数值规则(CLAUDE.md 已同步注明)。
-// locked = 系统还没做,灰着占位,点了给提示而不是没反应。
-// glow = 现在特别需要点它(比如该换气了),边框亮一圈,不用文字也看得出来
+// 一格道具/动作:仿参考图 hotbar 的 26px 木格,图标是 16px 像素画,数量白字在右下。
+// locked = 系统还没做,图标压灰,点了给提示而不是没反应。
+// glow = 现在特别需要点它(比如该换气了),整格换成红框呼吸灯
 function Slot({ icon, label, onClick, locked, badge, glow }: SlotProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={`relative flex h-9 w-9 cursor-pointer items-center justify-center rounded text-lg shadow-sm transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart ${
-        locked ? 'bg-parchment/70 opacity-40 grayscale' : 'bg-parchment'
-      } ${glow ? 'ring-2 ring-heart' : ''}`}
+      className={`ui-slot relative flex cursor-pointer items-center justify-center transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart ${
+        glow ? 'ui-slot-active' : ''
+      }`}
     >
-      <span aria-hidden="true">{icon}</span>
+      <img
+        src={`${UI}/${icon}`}
+        alt=""
+        aria-hidden="true"
+        className={locked ? 'opacity-35 grayscale' : undefined}
+      />
       {badge !== undefined && badge > 0 && (
         <span
           aria-hidden="true"
-          className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-heart px-0.5 font-wenkai text-[8px] leading-none text-white"
+          className="absolute right-[3px] bottom-[2px] font-wenkai text-[8px] leading-none text-[#f8e8c8] [text-shadow:1px_1px_0_#3e2614]"
         >
           {badge}
         </span>
@@ -47,9 +53,9 @@ interface ActionBarProps {
   onBreathe: () => void
 }
 
-// 右下角紧凑方形按钮区,仿参考图的两排布局。第一排是道具栏(贝壳/礼物/背包还没做,灰着;
-// 图鉴已经做好了,混在同一排,位置比功能优先);第二排是常用动作。
-// 永远不超过 4 格的是「道具栏」(贝壳/礼物/背包)——图鉴和第二排都是功能入口,不算道具
+// 右下角两排 hotbar,仿参考图的道具栏(格子紧挨着共享边框,不再套外层托盘)。
+// 第一排是道具栏(贝壳/礼物/背包还没做,灰着;图鉴混在同一排);第二排是常用动作。
+// 「道具栏」(贝壳/礼物/背包)永远不超过 4 格——图鉴和第二排都是功能入口,不算道具
 function ActionBar({
   grownSeagrass,
   breathWaiting,
@@ -72,26 +78,26 @@ function ActionBar({
   return (
     <div className="pointer-events-auto absolute right-2 bottom-2 flex flex-col items-end gap-1">
       {tip && (
-        <p className="pointer-events-none rounded-md bg-ink/85 px-2 py-1 font-wenkai text-[9px] leading-none whitespace-nowrap text-white shadow-sm">
+        <p className="pointer-events-none rounded-sm bg-[#3e2614]/90 px-2 py-1 font-wenkai text-[9px] leading-none whitespace-nowrap text-[#f8e8c8] shadow-sm">
           {tip}
         </p>
       )}
-      <div className="flex gap-1 rounded-md border-2 border-wood-dark bg-wood p-1 shadow-sm">
-        <Slot icon="🐚" label="贝壳(长大了才有)" locked onClick={() => setTip('长大了才有')} />
-        <Slot icon="🎁" label="礼物(长大了才有)" locked onClick={() => setTip('长大了才有')} />
-        <Slot icon="🎒" label="背包(长大了才有)" locked onClick={() => setTip('长大了才有')} />
-        <Slot icon="📖" label="图鉴" onClick={onOpenBook} />
+      <div className="flex">
+        <Slot icon="icon_shell.png" label="贝壳(长大了才有)" locked onClick={() => setTip('长大了才有')} />
+        <Slot icon="icon_gift.png" label="礼物(长大了才有)" locked onClick={() => setTip('长大了才有')} />
+        <Slot icon="icon_backpack.png" label="背包(长大了才有)" locked onClick={() => setTip('长大了才有')} />
+        <Slot icon="icon_book.png" label="图鉴" onClick={onOpenBook} />
       </div>
-      <div className="flex gap-1 rounded-md border-2 border-wood-dark bg-wood p-1 shadow-sm">
+      <div className="flex">
         {grownSeagrass > 0 ? (
-          <Slot icon="🌱" label="喂海草" badge={grownSeagrass} onClick={onFeed} />
+          <Slot icon="icon_sprout.png" label="喂海草" badge={grownSeagrass} onClick={onFeed} />
         ) : (
-          <Slot icon="🌱" label="海草还没长成" locked onClick={() => setTip('还没有长成的海草')} />
+          <Slot icon="icon_sprout.png" label="海草还没长成" locked onClick={() => setTip('还没有长成的海草')} />
         )}
-        <Slot icon="🌿" label="种海草" onClick={onPlant} />
-        <Slot icon="🗺️" label="换一片海" onClick={onOpenSea} />
-        <Slot icon="📷" label="相册" onClick={onOpenAlbum} />
-        <Slot icon="🫧" label="帮小爱心换气" glow={breathWaiting} onClick={onBreathe} />
+        <Slot icon="icon_seagrass.png" label="种海草" onClick={onPlant} />
+        <Slot icon="icon_map.png" label="换一片海" onClick={onOpenSea} />
+        <Slot icon="icon_camera.png" label="相册" onClick={onOpenAlbum} />
+        <Slot icon="icon_bubble.png" label="帮小爱心换气" glow={breathWaiting} onClick={onBreathe} />
       </div>
     </div>
   )

@@ -51,17 +51,6 @@ video {
   --font-wenkai: 'LXGW WenKai', 'PingFang SC', 'Microsoft YaHei', serif;
 }
 
-/* 小爱心的漂浮:横向单程约 12 秒,上下浮动周期约 4 秒、幅度很小。
-   幅度原来是 9vw(相对真实视口),现在舞台是固定 480 宽的逻辑像素,换算成固定像素 */
-@keyframes pet-drift {
-  from {
-    transform: translateX(-40px);
-  }
-  to {
-    transform: translateX(40px);
-  }
-}
-
 /* 上下浮的同时身体轻轻俯仰,复刻纪录片里儒艮靠尾鳍推进时慢慢摇的泳姿 */
 @keyframes pet-bob {
   from {
@@ -87,15 +76,6 @@ video {
   50% {
     transform: rotate(-90deg);
   }
-}
-
-.pet-drift {
-  animation: pet-drift 12s ease-in-out infinite alternate;
-}
-
-/* 说话时停住不飘。选项按钮跟着小爱心走,不能让它们变成移动靶子 */
-.pet-drift.is-talking {
-  animation-play-state: paused;
 }
 
 .pet-tap {
@@ -242,25 +222,43 @@ video {
   }
 }
 
-/* 气泡层占位,离镜头最近,升得最快,验证它盖在角色层之上 */
+/* 环境气泡(描边气泡精灵),慢慢升起淡出 */
 .scene-bubble {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: rgb(255 255 255 / 0.75);
-  animation: scene-bubble-rise 3s ease-in infinite;
+  animation: scene-bubble-rise 3.6s ease-in infinite;
 }
 
 @keyframes scene-bubble-rise {
   from {
     transform: translateY(0);
-    opacity: 0.9;
+    opacity: 0.95;
   }
   to {
-    transform: translateY(-30px);
+    transform: translateY(-70px);
     opacity: 0;
   }
+}
+
+/* ---- 像素 HUD:深棕木底 + 金棕边 + 奶白字(参考图的面板语言) ---- */
+
+/* 九宫格木框面板。border-image 的切片和边宽 1:1(6px),保证边框不被非整数缩放 */
+.hud-panel {
+  border-style: solid;
+  border-width: 6px;
+  border-image: url('/assets/world/ui/panel.png') 6 fill;
+  image-rendering: pixelated;
+}
+
+/* 道具格:26x26 整张背景图,图标由组件放进来 */
+.ui-slot {
+  width: 26px;
+  height: 26px;
+  background-image: url('/assets/world/ui/slot.png');
+  image-rendering: pixelated;
+}
+
+.ui-slot-active {
+  background-image: url('/assets/world/ui/slot_red.png');
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -272,7 +270,6 @@ video {
     animation: none;
   }
 
-  .pet-drift,
   .pet-bob,
   .pet-tap,
   .pet-dip,

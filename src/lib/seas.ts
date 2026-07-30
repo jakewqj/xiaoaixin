@@ -27,12 +27,13 @@ export interface SeaTheme {
 
 export const SEAS: SeaTheme[] = [
   {
-    // 红海浅滩:现有 Ocean 的基调,清亮的 turquoise 三层水色
+    // 红海浅滩:2026-07-30 真美术二轮起,直接按参考图取色——底部保持明亮青绿,
+    // 不再沉到深藏青(参考图的海底没有"越深越黑",整片都是饱和的 teal)
     id: 'redsea',
     name: '红海浅滩',
-    shallow: '#7fd1d8',
-    mid: '#2e8b9b',
-    deep: '#14495c',
+    shallow: '#38a8ac',
+    mid: '#2a8e92',
+    deep: '#1f7a7c',
     rayBoost: 1,
     rayHeight: 90,
     motes: 8,

@@ -10,8 +10,8 @@ const WORLD_DIR = '/assets/world'
 // 水面线取整数像素:sky.png 就是按这个高度画的,非整数会引起半像素拉伸
 const WATER_LINE = 86
 
-// 金沙海底的高度(sand.png tile 的高度)
-const SAND_H = 36
+// 金沙海底的高度(sand.png tile 的高度)。参考图沙地约占画面高 15%
+const SAND_H = 40
 
 // 世界比舞台高出一截天空:平时(潜水)镜头往上顶到底,画面里全是水下,
 // 一点天空都看不见;换气时镜头往下松开 WATER_LINE 这么多,天空和水面线一起露出来
@@ -52,18 +52,25 @@ function Sky({ count }: { count: number }) {
   )
 }
 
-// 海平线上的棕榈小岛,每个地点一座,位置随格子错开
+// 海平线上的棕榈小岛:参考图是一大一小两座,底座压着海平线(y=46)
 function FarIslands({ count }: { count: number }) {
   return (
     <div className="absolute inset-x-0 top-0" style={{ height: WATER_LINE, zIndex: LAYER_Z.farIsland }}>
       {Array.from({ length: count }, (_, i) => (
-        <img
-          key={i}
-          src={`${WORLD_DIR}/island.png`}
-          alt=""
-          className="absolute"
-          style={{ left: i * STAGE_WIDTH + 80 + ((i * 137) % 260), top: 26 }}
-        />
+        <span key={i}>
+          <img
+            src={`${WORLD_DIR}/island_big.png`}
+            alt=""
+            className="absolute"
+            style={{ left: i * STAGE_WIDTH + 260 + ((i * 97) % 120), top: 15 }}
+          />
+          <img
+            src={`${WORLD_DIR}/island_small.png`}
+            alt=""
+            className="absolute"
+            style={{ left: i * STAGE_WIDTH + 150 + ((i * 61) % 90), top: 27 }}
+          />
+        </span>
       ))}
     </div>
   )
@@ -103,7 +110,7 @@ function Underwater({ sea, clarity }: { sea: SeaTheme; clarity: number }) {
         className="absolute inset-x-0"
         style={{
           bottom: SAND_H - 6,
-          height: 130,
+          height: 120,
           backgroundImage: `url(${WORLD_DIR}/far.png)`,
           backgroundRepeat: 'repeat-x',
           backgroundPosition: 'bottom',
@@ -123,36 +130,50 @@ interface Decor {
   sway?: boolean
 }
 
+// 数组顺序就是叠放顺序(后面的画在前面):岩石垫底,珊瑚层层叠在岩石前,
+// 参考图两个下角都是这样挤满的,中间留给小爱心和海草床
 const DECOR_VARIANTS: Decor[][] = [
   [
-    { file: 'kelp.png', x: 2, sway: true },
-    { file: 'rock_grey.png', x: 12 },
-    { file: 'coral_brain_pink.png', x: 42 },
-    { file: 'coral_tube.png', x: 70 },
-    { file: 'seagrass_tall.png', x: 92, sway: true },
-    { file: 'fan_purple.png', x: 382 },
-    { file: 'coral_green.png', x: 408 },
-    { file: 'coral_brain_orange.png', x: 430 },
-    { file: 'coral_branch_pink.png', x: 452 },
-    { file: 'kelp.png', x: 464, sway: true },
+    // 左角
+    { file: 'kelp.png', x: 0, sway: true },
+    { file: 'rock_big.png', x: -18 },
+    { file: 'tubes_purple.png', x: 4 },
+    { file: 'coral_brain_pink.png', x: 32, lift: -2 },
+    { file: 'coral_branch_red.png', x: 68, lift: -2 },
+    { file: 'seagrass_tall.png', x: 100, sway: true },
+    // 中部沙线上的小件,参考图的构图中间也不是全空的
+    { file: 'rock_small.png', x: 278 },
+    { file: 'coral_green.png', x: 296, lift: -2 },
+    // 右角
+    { file: 'kelp.png', x: 454, sway: true },
+    { file: 'rock_small.png', x: 396 },
+    { file: 'fan_purple.png', x: 368 },
+    { file: 'coral_green.png', x: 398, lift: -2 },
+    { file: 'coral_brain_orange.png', x: 424, lift: -3 },
+    { file: 'coral_tube.png', x: 452, lift: -2 },
   ],
   [
-    { file: 'coral_branch_pink.png', x: 8 },
-    { file: 'coral_green.png', x: 34 },
-    { file: 'seagrass_tall.png', x: 58, sway: true },
-    { file: 'kelp.png', x: 388, sway: true },
-    { file: 'coral_brain_orange.png', x: 404 },
-    { file: 'rock_grey.png', x: 428 },
-    { file: 'coral_tube.png', x: 458 },
+    { file: 'kelp.png', x: 4, sway: true },
+    { file: 'rock_small.png', x: -12 },
+    { file: 'coral_branch_pink.png', x: 8, lift: -2 },
+    { file: 'coral_green.png', x: 40, lift: -2 },
+    { file: 'seagrass_tall.png', x: 74, sway: true },
+    { file: 'kelp.png', x: 428, sway: true },
+    { file: 'rock_big.png', x: 392 },
+    { file: 'coral_brain_orange.png', x: 396, lift: -3 },
+    { file: 'tubes_purple.png', x: 428, lift: -2 },
+    { file: 'coral_branch_red.png', x: 456, lift: -2 },
   ],
   [
-    { file: 'fan_purple.png', x: 6 },
-    { file: 'coral_brain_orange.png', x: 32 },
-    { file: 'kelp.png', x: 56, sway: true },
-    { file: 'seagrass_tall.png', x: 372, sway: true },
-    { file: 'coral_brain_pink.png', x: 394 },
-    { file: 'coral_green.png', x: 424 },
-    { file: 'rock_grey.png', x: 446 },
+    { file: 'fan_purple.png', x: 0 },
+    { file: 'coral_brain_orange.png', x: 28, lift: -2 },
+    { file: 'kelp.png', x: 58, sway: true },
+    { file: 'coral_tube.png', x: 66, lift: -2 },
+    { file: 'seagrass_tall.png', x: 366, sway: true },
+    { file: 'rock_small.png', x: 390 },
+    { file: 'coral_brain_pink.png', x: 394, lift: -2 },
+    { file: 'coral_green.png', x: 434, lift: -2 },
+    { file: 'coral_branch_pink.png', x: 456, lift: -2 },
   ],
 ]
 
@@ -179,7 +200,14 @@ function UnderwaterMid({ count }: { count: number }) {
 }
 
 // 沙底上的小散落物,位置按格子错开;不挡路、不可点,纯风景
-const SCATTER = ['shell_pink.png', 'starfish.png', 'stones.png'] as const
+const SCATTER = [
+  'shell_pink.png',
+  'starfish.png',
+  'stones.png',
+  'shell_white.png',
+  'gem_blue.png',
+  'fish_small.png',
+] as const
 
 function Seabed({ count }: { count: number }) {
   return (
@@ -192,54 +220,39 @@ function Seabed({ count }: { count: number }) {
         backgroundRepeat: 'repeat-x',
       }}
     >
-      {Array.from({ length: count }, (_, i) =>
-        SCATTER.map((file, j) => (
-          <img
-            key={`${i}-${j}`}
-            src={`${WORLD_DIR}/${file}`}
-            alt=""
-            className="absolute"
-            style={{
-              left: i * STAGE_WIDTH + 120 + ((i * 211 + j * 149) % 240),
-              bottom: 4 + ((i * 31 + j * 17) % 12),
-            }}
-          />
-        )),
-      )}
-    </div>
-  )
-}
-
-// 每个地点在世界横条里占一格,顶上放个名字牌
-function LocationLabels({ names }: { names: string[] }) {
-  return (
-    <div className="absolute inset-x-0 top-0" style={{ height: WATER_LINE, zIndex: LAYER_Z.farIsland }}>
-      {names.map((name, index) => (
-        <span
-          key={name}
-          className="absolute font-wenkai text-[10px] text-ink/40"
-          style={{ left: index * STAGE_WIDTH + STAGE_WIDTH / 2, top: 6, transform: 'translateX(-50%)' }}
-        >
-          {name}
+      {Array.from({ length: count }, (_, i) => (
+        <span key={i}>
+          {SCATTER.map((file, j) => (
+            <img
+              key={j}
+              src={`${WORLD_DIR}/${file}`}
+              alt=""
+              className="absolute"
+              style={{
+                left: i * STAGE_WIDTH + 116 + ((i * 211 + j * 149) % 250),
+                bottom: 4 + ((i * 31 + j * 17) % 14),
+              }}
+            />
+          ))}
         </span>
       ))}
     </div>
   )
 }
 
-// 右边界之外还有没开放的地点时,露出一点模糊的影子——看得见、够不着、点了没反应
-function LockedHint({ atLeftEdge, atRightEdge }: { atLeftEdge: boolean; atRightEdge: boolean }) {
+// 世界边界之外还有没开放的地点时,在边缘露出一点模糊的影子——看得见、够不着
+function LockedHint({ atLeftEdge, atRightEdge, worldWidth }: { atLeftEdge: boolean; atRightEdge: boolean; worldWidth: number }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-6" style={{ zIndex: LAYER_Z.underwaterMid }}>
+    <div className="pointer-events-none absolute inset-y-0" style={{ width: worldWidth, zIndex: LAYER_Z.underwaterMid }}>
       {atRightEdge && (
         <span
-          className="absolute rounded-full bg-ink/20 blur-[3px]"
-          style={{ right: -20, width: 40, height: 60 }}
+          className="absolute bottom-16 rounded-full bg-ink/20 blur-[3px]"
+          style={{ left: worldWidth - 20, width: 40, height: 60 }}
         />
       )}
       {atLeftEdge && (
         <span
-          className="absolute rounded-full bg-ink/20 blur-[3px]"
+          className="absolute bottom-16 rounded-full bg-ink/20 blur-[3px]"
           style={{ left: -20, width: 40, height: 60 }}
         />
       )}
@@ -247,20 +260,39 @@ function LockedHint({ atLeftEdge, atRightEdge }: { atLeftEdge: boolean; atRightE
   )
 }
 
-// 小爱心、海草床、NPC 都挂在这一层,内容由调用方传进来。这层跟着世界一起摇镜头
+// 小爱心、海草床、NPC 都挂在这一层,内容由调用方传进来。这层跟着世界一起摇镜头。
+// 整层必须穿透点击(不然会把下面「点哪游哪」的点击层整个吞掉),
+// 真正可以点的角色按钮各自开 pointer-events-auto
 function Actors({ children }: { children?: ReactNode }) {
   return (
-    <div className="absolute inset-0" style={{ zIndex: LAYER_Z.actors }}>
+    <div className="pointer-events-none absolute inset-0" style={{ zIndex: LAYER_Z.actors }}>
       {children}
     </div>
   )
 }
 
-function Bubbles() {
+// 参考图那种白圈+高光的描边气泡,每个地点几串,大小混着,慢慢升起
+const BUBBLE_SIZES = ['bubble_big.png', 'bubble_mid.png', 'bubble_small.png'] as const
+
+function Bubbles({ count }: { count: number }) {
   return (
     <div className="pointer-events-none absolute inset-0" style={{ zIndex: LAYER_Z.bubbles }}>
-      <span className="scene-bubble" style={{ left: '46%', bottom: 30 }} />
-      <span className="scene-bubble" style={{ left: '49%', bottom: 30, animationDelay: '-1.4s' }} />
+      {Array.from({ length: count }, (_, i) =>
+        Array.from({ length: 5 }, (_, j) => (
+          <img
+            key={`${i}-${j}`}
+            src={`${WORLD_DIR}/${BUBBLE_SIZES[(i + j) % 3]}`}
+            alt=""
+            className="scene-bubble"
+            style={{
+              left: i * STAGE_WIDTH + 90 + ((i * 173 + j * 97) % 320),
+              bottom: SAND_H + 40 + ((i * 53 + j * 71) % 110),
+              animationDelay: `${-((i * 5 + j * 13) % 40) / 10}s`,
+              animationDuration: `${3.4 + ((i + j * 3) % 4) * 0.6}s`,
+            }}
+          />
+        )),
+      )}
     </div>
   )
 }
@@ -280,9 +312,12 @@ interface SceneProps {
   clarity: number
   // 换气时为 true:镜头往下松开,露出天空和水面线。见 CLAUDE.md 十二「镜头」
   surfaced?: boolean
-  // 当前海域里已经开放的地点名字,按 world.json 里的顺序。默认只有一个地点,水平不动
-  locationNames?: string[]
-  locationIndex?: number
+  // 开放地点数,决定世界横条一共有几格
+  slotCount?: number
+  // 镜头水平位置(世界坐标),由 App 按小爱心的位置算好传进来
+  cameraX?: number
+  // 点了世界里的某一点(x 是世界坐标):小爱心朝那边游过去
+  onWorldTap?: (x: number) => void
   // 开放地点之外,世界那一侧是不是还有没开放的地点(用来露模糊影子)
   lockedBeyondEnd?: boolean
   lockedBeforeStart?: boolean
@@ -294,45 +329,59 @@ function Scene({
   sea,
   clarity,
   surfaced = false,
-  locationNames = [''],
-  locationIndex = 0,
+  slotCount = 1,
+  cameraX = 0,
+  onWorldTap,
   lockedBeyondEnd = false,
   lockedBeforeStart = false,
   actors,
   hud,
 }: SceneProps) {
-  const count = locationNames.length
+  const count = Math.max(1, slotCount)
   const worldWidth = STAGE_WIDTH * count
   return (
     <div
       className="relative overflow-hidden"
       style={{ width: STAGE_WIDTH, height: STAGE_HEIGHT }}
     >
+      {/* 水平跟随逐帧更新不做缓动(小爱心本身就是匀速的);垂直摇移(换气)保留 400ms 平滑 */}
       <div
-        className="camera-world absolute top-0 left-0"
-        style={{
-          width: worldWidth,
-          height: WORLD_HEIGHT,
-          transform: `translate(${-locationIndex * STAGE_WIDTH}px, ${surfaced ? 0 : -WATER_LINE}px)`,
-        }}
+        className="absolute top-0 left-0"
+        style={{ width: worldWidth, height: WORLD_HEIGHT, transform: `translateX(${-cameraX}px)` }}
       >
-        <Sky count={count} />
-        <FarIslands count={count} />
-        <WaterSurface />
-        <Underwater sea={sea} clarity={clarity} />
-        <UnderwaterMid count={count} />
-        <Seabed count={count} />
-        {count > 1 && <LocationLabels names={locationNames} />}
-        <Actors>{actors}</Actors>
-        <Bubbles />
-        {(lockedBeyondEnd || lockedBeforeStart) && (
-          <div
-            className="absolute top-0"
-            style={{ left: locationIndex * STAGE_WIDTH, width: STAGE_WIDTH, height: STAGE_HEIGHT }}
-          >
-            <LockedHint atLeftEdge={lockedBeforeStart} atRightEdge={lockedBeyondEnd} />
-          </div>
-        )}
+        <div
+          className="camera-world absolute top-0 left-0"
+          style={{
+            width: worldWidth,
+            height: WORLD_HEIGHT,
+            transform: `translateY(${surfaced ? 0 : -WATER_LINE}px)`,
+          }}
+        >
+          <Sky count={count} />
+          <FarIslands count={count} />
+          <WaterSurface />
+          <Underwater sea={sea} clarity={clarity} />
+          <UnderwaterMid count={count} />
+          <Seabed count={count} />
+          {/* 点哪游哪:铺满整个世界的点击层,在角色层之下——点小爱心/邻居仍是他们自己的反应 */}
+          {onWorldTap && (
+            <div
+              role="presentation"
+              className="absolute inset-0 cursor-pointer"
+              style={{ zIndex: LAYER_Z.actors }}
+              onClick={(event) => onWorldTap(event.nativeEvent.offsetX)}
+            />
+          )}
+          <Actors>{actors}</Actors>
+          <Bubbles count={count} />
+          {(lockedBeyondEnd || lockedBeforeStart) && (
+            <LockedHint
+              atLeftEdge={lockedBeforeStart}
+              atRightEdge={lockedBeyondEnd}
+              worldWidth={worldWidth}
+            />
+          )}
+        </div>
       </div>
       <Hud>{hud}</Hud>
     </div>

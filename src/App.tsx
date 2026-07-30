@@ -13,7 +13,6 @@ import Book from './components/Book'
 import Album from './components/Album'
 import ActionBar from './components/ActionBar'
 import SeaPicker from './components/SeaPicker'
-import LocationNav from './components/LocationNav'
 import {
   BED_LIMIT,
   clarityOf,
@@ -34,6 +33,7 @@ import { useWorld } from './hooks/useWorld'
 import { useConfig } from './hooks/useConfig'
 import { useNpcs, unlockedTopics } from './hooks/useNpcs'
 import type { NpcSpec, NpcTopic } from './hooks/useNpcs'
+import { usePetSwim } from './hooks/usePetSwim'
 import Npc from './components/Npc'
 import AdminGate from './components/AdminGate'
 import AdminPanel from './components/AdminPanel'
@@ -96,35 +96,31 @@ function App() {
 
   const world = useWorld()
   const { config, update: updateConfig, reset: resetConfig, resetToOnlyPet } = useConfig()
-  const [locationIndex, setLocationIndex] = useState(0)
 
   // world.json 的海域用中文名当 key,seas.ts 的 sea.name 正好是同一个字符串,靠它对上
   const allSpots = world?.海域[sea.name]?.地点 ?? []
   // config 还没加载完之前先当作一个地点都没开放,免得先闪出一整排、加载完又收回去
   const openSpots = config ? allSpots.filter((spot) => config.开放地点.includes(spot.名字)) : []
-  const locationNames = openSpots.length > 0 ? openSpots.map((spot) => spot.名字) : ['']
   // 假定 config 里开放的地点是 world.json 地点列表的一段前缀,这是当前唯一一份内容数据的实际排法
   const lockedBeyondEnd = openSpots.length > 0 && allSpots.length > openSpots.length
 
-  // 换了一片海,地点索引要归零,不然可能指向一个不存在的地点
-  useEffect(() => {
-    setLocationIndex(0)
-  }, [save.sea])
-
-  // 地点数变少了(比如后台关掉了一个)就把索引拉回有效范围
-  useEffect(() => {
-    setLocationIndex((prev) => Math.min(prev, Math.max(0, locationNames.length - 1)))
-  }, [locationNames.length])
+  // 世界横条:一格一个地点。地点切换没有按钮了——点哪游哪,她自己游过去,镜头跟着
+  const slotCount = Math.max(1, openSpots.length)
+  const worldWidth = slotCount * STAGE_WIDTH
+  const petSwim = usePetSwim(worldWidth)
+  const cameraX = Math.max(0, Math.min(worldWidth - STAGE_WIDTH, petSwim.x - STAGE_WIDTH / 2))
 
   const npcs = useNpcs()
   const { entries: logEntries, log: logDialogue } = useDialogueLog(config?.后台.对话日志上限)
-  const currentSpotId = openSpots[locationIndex]?.id
-  // 只有「开放NPC」里点了名、又刚好住在当前这个地点的邻居才会出现
-  const visibleNpcs =
+  // 「开放NPC」里点了名、住的地点也开放了的邻居,按她住的那格摆进世界
+  const placedNpcs =
     npcs && config
-      ? Object.entries(npcs).filter(
-          ([id, npc]) => npc.地点 === currentSpotId && config.开放NPC.some((n) => n.id === id),
-        )
+      ? Object.entries(npcs).flatMap(([id, npc]) => {
+          if (!config.开放NPC.some((n) => n.id === id)) return []
+          const spotIndex = openSpots.findIndex((spot) => spot.id === npc.地点)
+          if (spotIndex < 0) return []
+          return [{ id, npc, spotIndex }]
+        })
       : []
 
   // 熟悉度只增不减、每天最多涨一级。上限读 config.json 的「开放NPC」,不在里面就按 5 算
@@ -464,21 +460,20 @@ function App() {
           sea={sea}
           clarity={clarity}
           surfaced={breath.atSurface}
-          locationNames={locationNames}
-          locationIndex={locationIndex}
+          slotCount={slotCount}
+          cameraX={cameraX}
+          onWorldTap={petSwim.swimTo}
           lockedBeyondEnd={lockedBeyondEnd}
           actors={
-            // 世界横条一格是一个地点、宽度是 STAGE_WIDTH 的整数倍;这个包装 div 卡在
-            // 当前地点那一格,小爱心跟着她去哪个地点就到哪一格的正中间。
-            // 海草床固定长在「家海草床」,不跟她走到别的地点去
-            <div className="absolute inset-y-0" style={{ left: locationIndex * STAGE_WIDTH, width: STAGE_WIDTH }}>
-              {locationIndex === 0 && (
+            // 所有角色都用世界坐标摆放。海草床固定长在第一格「家海草床」,不跟她走
+            <>
+              <div className="absolute inset-y-0" style={{ left: 0, width: STAGE_WIDTH }}>
                 <SeagrassBed
                   bed={save.seagrass}
                   onTap={() => showCard(knowledge.pickByEvent('点海草', save.knowledgeSeen))}
                 />
-              )}
-              {visibleNpcs.map(([id, npc], i) => {
+              </div>
+              {placedNpcs.map(({ id, npc, spotIndex }) => {
                 const cap = config?.开放NPC.find((n) => n.id === id)?.熟悉度上限 ?? 5
                 const canGift =
                   grownCount > 0 && save.giftedAt[id] !== new Date().toDateString()
@@ -487,7 +482,7 @@ function App() {
                   <Npc
                     key={id}
                     npc={npc}
-                    leftPercent={65 + i * 15}
+                    leftPx={spotIndex * STAGE_WIDTH + STAGE_WIDTH * 0.65}
                     reacting={reactingNpc === id}
                     onTapSprite={() => handleNpcTapSprite(id, npc, level)}
                     canGift={canGift}
@@ -495,19 +490,28 @@ function App() {
                   />
                 )
               })}
+              {/* 白天投在沙地上的影子,跟着她游动移动(参考图沙地中间那块深色)。
+                  体型长大影子跟着变大 */}
+              <img
+                src="/assets/world/shadow.png"
+                alt=""
+                className="pointer-events-none absolute -translate-x-1/2"
+                style={{ left: petSwim.x, bottom: 30, width: 170 * stage.体型 }}
+              />
               <Pet
                 pet={pet}
                 stage={stage}
                 pose={pose}
                 breath={breath.phase}
-                talking={Boolean(scene)}
+                worldX={petSwim.x}
+                facingLeft={petSwim.facingLeft}
                 anchors={knowledge.anchors}
                 onBreathe={handleBreathe}
                 onAnchorTap={(anchor) =>
                   showCard(knowledge.pickByAnchor(anchor, save.knowledgeSeen))
                 }
               />
-            </div>
+            </>
           }
           hud={
             <>
@@ -521,22 +525,17 @@ function App() {
               />
               {card && <KnowledgeCard card={card} onDismiss={() => setCard(null)} />}
               <DialoguePanel content={panelContent} />
-              {page === 'sea' && openSpots.length > 1 && (
-                <LocationNav
-                  name={locationNames[locationIndex]}
-                  canPrev={locationIndex > 0}
-                  canNext={locationIndex < locationNames.length - 1}
-                  onPrev={() => setLocationIndex((i) => Math.max(0, i - 1))}
-                  onNext={() => setLocationIndex((i) => Math.min(locationNames.length - 1, i + 1))}
-                />
-              )}
               {/* 对话面板从底部滑上来的时候,饱腹度条和按钮区会被它盖住/撞在一起——
                   说话的时候先让它们让开,面板收起再回来 */}
               {page === 'sea' && !panelContent && (
                 <>
-                  <div className="pointer-events-none absolute inset-x-0 bottom-5 flex justify-center">
-                    <FullnessMeter value={save.fullness} />
-                  </div>
+                  {/* 换气(镜头在水面)时藏起来:计量条长得像海草,浮在水面画面里
+                      会被当成"种的海草跟着浮上来了" */}
+                  {!breath.atSurface && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-5 flex justify-center">
+                      <FullnessMeter value={save.fullness} />
+                    </div>
+                  )}
                   <ActionBar
                     grownSeagrass={grownCount}
                     breathWaiting={breath.phase === 'waiting'}

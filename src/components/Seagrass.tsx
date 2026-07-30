@@ -22,7 +22,7 @@ function SeagrassBed({ bed, onTap }: { bed: Plant[]; onTap: () => void }) {
       type="button"
       onClick={onTap}
       aria-label="海草床"
-      className="absolute inset-x-0 bottom-0 h-[70px] cursor-pointer focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+      className="pointer-events-auto absolute inset-x-0 bottom-0 h-[70px] cursor-pointer focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
     >
       {bed.map((plant) => {
         const grown = isGrown(plant)

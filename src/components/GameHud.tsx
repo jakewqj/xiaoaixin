@@ -4,6 +4,8 @@ import type { GrowthStage } from '../lib/pet'
 // 长按标题进控制后台需要按住这么久,比童童的手指停留时间长得多,不会被误触发
 const ADMIN_HOLD_MS = 5000
 
+const UI = '/assets/world/ui'
+
 interface GameHudProps {
   day: number
   moonPhase: string
@@ -14,9 +16,8 @@ interface GameHudProps {
   onHoldTitle?: () => void
 }
 
-// 左上角的紧凑状态框:月相 + 潮汐 + 第几天 + 体长/体重。仿参考图里的时钟挂件位置和方形边框。
-// moonPhase/tide 现在还是外面传进来的占位文字,真正的月相/潮汐计算是 S4 的事,这里不算。
-// 体长/体重读的是 pet.json 成长阶段里的真实数据(见该文件注释里的出处和换算方法)
+// 左上角状态挂件:仿参考图的深棕木底+金棕边+奶白字像素面板,图标也是像素画。
+// moonPhase/tide 仍是占位文字(S4 才算真的),第几天和体长/体重是真数据
 function GameHud({ day, moonPhase, tide, stage, onHoldTitle }: GameHudProps) {
   const holdTimer = useRef<number | null>(null)
 
@@ -38,26 +39,27 @@ function GameHud({ day, moonPhase, tide, stage, onHoldTitle }: GameHudProps) {
       onPointerUp={cancelHold}
       onPointerLeave={cancelHold}
       onPointerCancel={cancelHold}
-      className="absolute top-2 left-2 rounded-md border-2 border-wood-dark bg-wood p-1 shadow-sm select-none"
+      className="hud-panel absolute top-2 left-2 px-1.5 py-1 select-none"
     >
-      <div className="rounded-sm bg-parchment px-1.5 py-1">
-      <p className="font-kuaile text-[7px] leading-none text-ink/40">小爱心</p>
-      <p className="mt-0.5 flex items-center gap-1.5 font-wenkai text-[9px] leading-none whitespace-nowrap text-ink">
-        <span aria-hidden="true">🌙</span>
+      {/* 两行信息,和参考图时钟挂件一样紧凑:上行月相/潮汐,下行天数+体长体重 */}
+      <p className="font-kuaile text-[7px] leading-none text-[#e8d4a8]/60">小爱心</p>
+      <p className="mt-1 flex items-center gap-1 font-wenkai text-[9px] leading-none whitespace-nowrap text-[#f8e8c8]">
+        <img src={`${UI}/icon_moon.png`} alt="" aria-hidden="true" />
         <span>{moonPhase}</span>
-        <span aria-hidden="true">🌊</span>
+        <img src={`${UI}/icon_wave.png`} alt="" aria-hidden="true" />
         <span>{tide}</span>
       </p>
-      <p className="mt-1 font-wenkai text-[9px] leading-none text-ink">第 {day} 天</p>
-      {stage.真实体长_m !== undefined && stage.真实体重_kg !== undefined && (
-        <p className="mt-1 flex items-center gap-1.5 font-wenkai text-[9px] leading-none whitespace-nowrap text-ink">
-          <span aria-hidden="true">📏</span>
-          <span>{stage.真实体长_m} m</span>
-          <span aria-hidden="true">⚖️</span>
-          <span>{stage.真实体重_kg} kg</span>
-        </p>
-      )}
-      </div>
+      <p className="mt-1 flex items-center gap-1 font-wenkai text-[9px] leading-none whitespace-nowrap text-[#f8e8c8]">
+        <span>第 {day} 天</span>
+        {stage.真实体长_m !== undefined && stage.真实体重_kg !== undefined && (
+          <>
+            <img src={`${UI}/icon_ruler.png`} alt="" aria-hidden="true" />
+            <span>{stage.真实体长_m} m</span>
+            <img src={`${UI}/icon_weight.png`} alt="" aria-hidden="true" />
+            <span>{stage.真实体重_kg} kg</span>
+          </>
+        )}
+      </p>
     </div>
   )
 }

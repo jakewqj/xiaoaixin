@@ -49,12 +49,12 @@ function Album({
         <button
           type="button"
           onClick={onClose}
-          className="flex min-h-14 cursor-pointer items-center gap-2 rounded-xl border-2 border-wood-dark bg-parchment px-6 py-3 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+          className="hud-panel flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
         >
           <span className="text-3xl leading-none" aria-hidden="true">
             🌊
           </span>
-          <span className="font-kuaile text-2xl text-ink">回海里</span>
+          <span className="font-kuaile text-2xl text-[#f8e8c8]">回海里</span>
         </button>
       </div>
 

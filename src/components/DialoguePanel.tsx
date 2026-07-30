@@ -52,8 +52,8 @@ function DialoguePanel({ content }: { content: PanelContent | null }) {
       className="dialogue-panel pointer-events-none absolute inset-x-0 bottom-0 flex justify-center"
       style={{ transform: open ? 'translateY(0)' : 'translateY(100%)' }}
     >
-      <div className="pointer-events-auto w-full max-w-[420px] rounded-t-lg border-2 border-b-0 border-wood-dark bg-wood px-2 pt-2 pb-2 shadow-lg">
-        <p className="font-wenkai mb-1 text-[9px] leading-none text-parchment/80">{shown.speaker}</p>
+      <div className="hud-panel pointer-events-auto w-full max-w-[420px] px-1 pt-0.5 pb-1 shadow-lg">
+        <p className="font-wenkai mb-1 text-[9px] leading-none text-[#f8e8c8]/85">{shown.speaker}</p>
         <button
           type="button"
           onClick={handleTextTap}

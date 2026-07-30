@@ -35,8 +35,8 @@ function SeaPicker({ seas, current, onPick, onClose }: SeaPickerProps) {
               type="button"
               onClick={() => onPick(sea.id)}
               aria-label={sea.name}
-              className={`flex min-h-36 w-28 cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-wood-dark px-3 py-4 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart ${
-                isCurrent ? 'bg-parchment' : 'bg-parchment/75'
+              className={`hud-panel flex min-h-36 w-28 cursor-pointer flex-col items-center gap-2 px-3 py-4 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart ${
+                isCurrent ? '' : 'opacity-80'
               }`}
             >
               <span
@@ -49,7 +49,7 @@ function SeaPicker({ seas, current, onPick, onClose }: SeaPickerProps) {
               <span className="text-3xl leading-none" aria-hidden="true">
                 {SEA_ICONS[sea.id] ?? '🌊'}
               </span>
-              <span className="font-kuaile text-xl text-ink">{sea.name}</span>
+              <span className="font-kuaile text-xl text-[#f8e8c8]">{sea.name}</span>
             </button>
           )
         })}
