@@ -32,6 +32,12 @@ export interface SaveData {
   grownSeen: number
   // 当前在哪片海。三片海共享同一张海草床,换海只是换风景
   sea: string
+  // 熟悉度:邻居 id → 等级。只增不减,永不衰减
+  familiarity: Record<string, number>
+  // 熟悉度每天最多涨一级。记的是上次涨级那天,不是上次说话那天
+  familiarityLastAt: Record<string, string>
+  // 送礼:邻居 id → 上次送礼的那天。每个邻居每天只能送 1 次
+  giftedAt: Record<string, string>
 }
 
 function createSave(): SaveData {
@@ -49,6 +55,9 @@ function createSave(): SaveData {
     seagrass: starterBed(),
     grownSeen: starterBed().length,
     sea: 'redsea',
+    familiarity: {},
+    familiarityLastAt: {},
+    giftedAt: {},
   }
 }
 
@@ -134,6 +143,20 @@ function parseSave(raw: string | null): SaveData | null {
           : {},
       // 海域是后来加的字段。旧存档没有就默认回红海浅滩,不因此作废整份档
       sea: typeof s.sea === 'string' ? s.sea : 'redsea',
+      // 熟悉度是 S1 才加的字段,老存档没有就当作谁都还没升过级
+      familiarity:
+        typeof s.familiarity === 'object' && s.familiarity !== null
+          ? (s.familiarity as Record<string, number>)
+          : {},
+      familiarityLastAt:
+        typeof s.familiarityLastAt === 'object' && s.familiarityLastAt !== null
+          ? (s.familiarityLastAt as Record<string, string>)
+          : {},
+      // 送礼也是 S1 才加的字段,老存档没有就当作谁都还没送过
+      giftedAt:
+        typeof s.giftedAt === 'object' && s.giftedAt !== null
+          ? (s.giftedAt as Record<string, string>)
+          : {},
       ...withBed(s),
     }
   } catch {

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Ada</title>
+<style>
+  body { background-color: #2ab7ca; padding: 40px; font-family: sans-serif; color: white; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
+  .row { display: flex; flex-wrap: wrap; gap: 24px; }
+  .sprite-box {
+    position: relative;
+    width: 176px; height: 104px; /* 88x52 @2x */
+    background-color: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.6);
+    image-rendering: pixelated;
+    background-repeat: no-repeat;
+  }
+  .anim-idle { background-image: url('assets/npc/ada/idle.png'); background-size: 704px 104px; animation: a-idle 0.5s steps(4) infinite; }
+  @keyframes a-idle { 100% { background-position: -704px 0; } }
+  .anim-swim { background-image: url('assets/npc/ada/swim.png'); background-size: 1056px 104px; animation: a-swim 0.75s steps(6) infinite; }
+  @keyframes a-swim { 100% { background-position: -1056px 0; } }
+  .anim-talk { background-image: url('assets/npc/ada/talk.png'); background-size: 704px 104px; animation: a-talk 0.5s steps(4) infinite; }
+  @keyframes a-talk { 100% { background-position: -704px 0; } }
+  .dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: red; display: none; }
+  .show-anchors .dot { display: block; }
+  button { font-size: 14px; padding: 4px 12px; margin-bottom: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Ada (frame 88x52, shown at 2x)</h1>
+<button onclick="document.body.classList.toggle('show-anchors')">toggle anchors</button>
+<div class="row">
+  <div class="cell"><h2>idle (4f, 8fps)</h2><div class="sprite-box anim-idle" data-anchors></div></div>
+  <div class="cell"><h2>swim (6f, 8fps)</h2><div class="sprite-box anim-swim" data-anchors></div></div>
+  <div class="cell"><h2>talk (4f, 8fps)</h2><div class="sprite-box anim-talk" data-anchors></div></div>
+</div>
+<script>
+  const anchors = {"eye":[72,17]}
+  document.querySelectorAll('[data-anchors]').forEach((box) => {
+    for (const [name, [x, y]] of Object.entries(anchors)) {
+      const d = document.createElement('div')
+      d.className = 'dot'
+      d.title = name
+      d.style.left = x * 2 + 'px'
+      d.style.top = y * 2 + 'px'
+      box.appendChild(d)
+    }
+  })
+</script>
+</body>
+</html>

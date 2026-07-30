@@ -15,12 +15,12 @@ function LocationNav({ name, canPrev, canNext, onPrev, onNext }: LocationNavProp
           type="button"
           onClick={onPrev}
           aria-label="去左边"
-          className="flex h-8 min-h-8 w-8 min-w-8 cursor-pointer items-center justify-center rounded-full bg-white/80 text-xs shadow focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+          className="flex h-8 min-h-8 w-8 min-w-8 cursor-pointer items-center justify-center rounded-md border-2 border-wood-dark bg-parchment/95 text-xs text-ink shadow focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
         >
           ◀
         </button>
       )}
-      <span className="rounded-full bg-white/80 px-2 py-0.5 font-kuaile text-[10px] whitespace-nowrap text-ink shadow">
+      <span className="rounded-md border-2 border-wood-dark bg-parchment/95 px-2 py-1 font-kuaile text-[10px] whitespace-nowrap text-ink shadow">
         {name}
       </span>
       {canNext && (
@@ -28,7 +28,7 @@ function LocationNav({ name, canPrev, canNext, onPrev, onNext }: LocationNavProp
           type="button"
           onClick={onNext}
           aria-label="去右边"
-          className="flex h-8 min-h-8 w-8 min-w-8 cursor-pointer items-center justify-center rounded-full bg-white/80 text-xs shadow focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+          className="flex h-8 min-h-8 w-8 min-w-8 cursor-pointer items-center justify-center rounded-md border-2 border-wood-dark bg-parchment/95 text-xs text-ink shadow focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
         >
           ▶
         </button>

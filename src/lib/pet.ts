@@ -6,6 +6,9 @@ export interface GrowthStage {
   体型: number
   体色: number
   文件?: Record<string, string>
+  // 真实体长/体重,来自 GDD §5.1(体重除成年外是按体长比例的立方从成年锚点算出来的,见 pet.json 注释)
+  真实体长_m?: number
+  真实体重_kg?: number
 }
 
 export interface SpriteAnim {

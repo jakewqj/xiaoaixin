@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { CSSProperties } from 'react'
 import Bubbles from './Bubbles'
 import Sprite from './Sprite'
 import { playSfx } from '../lib/sfx'
@@ -34,7 +34,6 @@ interface PetProps {
   anchors: string[]
   onBreathe: () => void
   onAnchorTap: (anchor: string) => boolean
-  children?: ReactNode
 }
 
 // 小爱心本体:按 pet.json 声明的动画播放精灵表,在海中间极慢地左右漂移 + 轻微上下浮动
@@ -47,7 +46,6 @@ function Pet({
   anchors,
   onBreathe,
   onAnchorTap,
-  children,
 }: PetProps) {
   const [facingLeft, setFacingLeft] = useState(false)
   const [tapped, setTapped] = useState(false)
@@ -84,10 +82,19 @@ function Pet({
 
   const { spec, animFor } = pet
   const atSurface = breath === 'rising' || breath === 'waiting' || breath === 'popping'
-  // 换气浮上来的时候用 surfacing 那套图;吃东西/睡觉各自有专属动画;
-  // 其余时候(包括 happy)小爱心一直在漂,直接用游泳循环——idle 那套现在还用不上
+  // 换气浮上来(rising)/吐泡泡(popping)用 surfacing 那套上浮动作;
+  // 到了水面等着(waiting)换成 holding——腮帮鼓起、嘴巴闭紧地安静漂着,
+  // 不再靠头顶那句「我要换口气」的文字气泡提示,靠这个姿势本身就能看出她在等你
   const animKey =
-    pose === 'eating' ? 'eating' : pose === 'sleeping' ? 'sleeping' : atSurface ? 'surfacing' : 'swim'
+    pose === 'eating'
+      ? 'eating'
+      : pose === 'sleeping'
+        ? 'sleeping'
+        : breath === 'waiting'
+          ? 'holding'
+          : atSurface
+            ? 'surfacing'
+            : 'swim'
   const anim = animFor(animKey)
   if (!spec || !anim) return null
 
@@ -151,7 +158,6 @@ function Pet({
                 />
               )
             })}
-            {children}
             {showBubbles && spec.锚点?.blowhole && (
               <Bubbles
                 anchor={spec.锚点.blowhole}

@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Dugong Aunt vs Xiao Aixin</title>
+<style>
+  body { background-color: #2ab7ca; padding: 40px; font-family: sans-serif; color: white; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
+  .row { display: flex; flex-wrap: wrap; gap: 24px; }
+  .sprite-box {
+    position: relative;
+    width: 384px; height: 128px; /* 192x64 @2x */
+    background-color: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.6);
+    image-rendering: pixelated;
+    background-repeat: no-repeat;
+  }
+  .anim-idle { background-image: url('assets/npc/dugong_aunt/idle.png'); background-size: 1536px 128px; animation: a-idle 0.5s steps(4) infinite; }
+  @keyframes a-idle { 100% { background-position: -1536px 0; } }
+  .anim-swim { background-image: url('assets/npc/dugong_aunt/swim.png'); background-size: 2304px 128px; animation: a-swim 0.75s steps(6) infinite; }
+  @keyframes a-swim { 100% { background-position: -2304px 0; } }
+  .anim-talk { background-image: url('assets/npc/dugong_aunt/talk.png'); background-size: 1536px 128px; animation: a-talk 0.5s steps(4) infinite; }
+  @keyframes a-talk { 100% { background-position: -1536px 0; } }
+  .dot { position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: red; display: none; }
+  .show-anchors .dot { display: block; }
+  button { font-size: 14px; padding: 4px 12px; margin-bottom: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+<h1>Dugong Aunt vs Xiao Aixin (frame 192x64, shown at 2x)</h1>
+<button onclick="document.body.classList.toggle('show-anchors')">toggle anchors</button>
+<div class="row">
+  <div class="cell"><h2>idle (4f, 8fps)</h2><div class="sprite-box anim-idle" data-anchors></div></div>
+  <div class="cell"><h2>swim (6f, 8fps)</h2><div class="sprite-box anim-swim" data-anchors></div></div>
+  <div class="cell"><h2>talk (4f, 8fps)</h2><div class="sprite-box anim-talk" data-anchors></div></div>
+</div>
+<h1 style="margin-top:48px">Xiao Aixin (pet, for species comparison)</h1>
+<div class="row">
+  <div class="cell"><h2>pet idle (4f, 8fps)</h2><div class="sprite-box cmp-idle"></div></div>
+  <div class="cell"><h2>pet swim (6f, 8fps)</h2><div class="sprite-box cmp-swim"></div></div>
+</div>
+<style>
+  .cmp-idle { background-image: url('assets/pet/pixel/idle.png'); background-size: 1536px 128px; animation: a-cmp-idle 0.5s steps(4) infinite; }
+  @keyframes a-cmp-idle { 100% { background-position: -1536px 0; } }
+  .cmp-swim { background-image: url('assets/pet/pixel/swim.png'); background-size: 2304px 128px; animation: a-cmp-swim 0.75s steps(6) infinite; }
+  @keyframes a-cmp-swim { 100% { background-position: -2304px 0; } }
+</style>
+<script>
+  const anchors = {"blowhole":[154,19],"mouth":[165,38],"eye":[144,24],"tailTip":[19,32],"bellyCenter":[106,40]}
+  document.querySelectorAll('[data-anchors]').forEach((box) => {
+    for (const [name, [x, y]] of Object.entries(anchors)) {
+      const d = document.createElement('div')
+      d.className = 'dot'
+      d.title = name
+      d.style.left = x * 2 + 'px'
+      d.style.top = y * 2 + 'px'
+      box.appendChild(d)
+    }
+  })
+</script>
+</body>
+</html>

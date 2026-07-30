@@ -1,84 +1,64 @@
-import { useEffect, useState } from 'react'
+import { useRef } from 'react'
+import type { GrowthStage } from '../lib/pet'
 
-// 右下道具栏固定 3 格,永远不超过 4 格。见 ROADMAP §0 变更 2:星露谷的 12 格背包对 6 岁是灾难。
-// 贝壳/礼物对应的系统(S5 贝币经济、S1 送礼)还没做,先灰着占位,点了给一句话而不是没反应
-const LOCKED_ITEMS = [
-  { icon: '🐚', label: '贝壳', tip: '长大了才有' },
-  { icon: '🎁', label: '礼物', tip: '长大了才有' },
-]
+// 长按标题进控制后台需要按住这么久,比童童的手指停留时间长得多,不会被误触发
+const ADMIN_HOLD_MS = 5000
 
 interface GameHudProps {
   day: number
   moonPhase: string
   tide: string
-  // 已经长成、可以喂给小爱心的海草有几棵。这里只显示数量,不是按钮——
-  // 真正喂食的动作在下面那个圆按钮上,两边不重复
-  grownSeagrass: number
+  // 当前成长阶段。体长/体重只是好玩的展示数字,不是分数,不会因为没达标而扣什么
+  stage: GrowthStage
+  // 长按标题 5 秒:爸爸的控制后台入口。童童不知道要按这么久,不会误进去
+  onHoldTitle?: () => void
 }
 
-// 左上木框(月相 + 潮汐 + 第几天)+ 右下道具栏。不放金钱、不放剑、不放鱼——见 ROADMAP §0 变更 2。
-// moonPhase/tide 现在还是外面传进来的占位文字,真正的月相/潮汐计算是 S4 的事,这里不算
-function GameHud({ day, moonPhase, tide, grownSeagrass }: GameHudProps) {
-  const [tip, setTip] = useState<string | null>(null)
+// 左上角的紧凑状态框:月相 + 潮汐 + 第几天 + 体长/体重。仿参考图里的时钟挂件位置和方形边框。
+// moonPhase/tide 现在还是外面传进来的占位文字,真正的月相/潮汐计算是 S4 的事,这里不算。
+// 体长/体重读的是 pet.json 成长阶段里的真实数据(见该文件注释里的出处和换算方法)
+function GameHud({ day, moonPhase, tide, stage, onHoldTitle }: GameHudProps) {
+  const holdTimer = useRef<number | null>(null)
 
-  // 提示自己收起来,不用她点第二下
-  useEffect(() => {
-    if (!tip) return
-    const timer = setTimeout(() => setTip(null), 2200)
-    return () => clearTimeout(timer)
-  }, [tip])
+  function startHold() {
+    if (!onHoldTitle) return
+    holdTimer.current = window.setTimeout(onHoldTitle, ADMIN_HOLD_MS)
+  }
+
+  function cancelHold() {
+    if (holdTimer.current !== null) {
+      clearTimeout(holdTimer.current)
+      holdTimer.current = null
+    }
+  }
 
   return (
-    <>
-      <div className="absolute top-2 left-2 rounded-md border-2 border-ink bg-sand/90 px-2 py-1 shadow-sm">
-        <p className="flex items-center gap-1.5 font-wenkai text-[9px] leading-none whitespace-nowrap text-ink">
-          <span aria-hidden="true">🌙</span>
-          <span>{moonPhase}</span>
-          <span aria-hidden="true">🌊</span>
-          <span>{tide}</span>
+    <div
+      onPointerDown={startHold}
+      onPointerUp={cancelHold}
+      onPointerLeave={cancelHold}
+      onPointerCancel={cancelHold}
+      className="absolute top-2 left-2 rounded-md border-2 border-wood-dark bg-wood p-1 shadow-sm select-none"
+    >
+      <div className="rounded-sm bg-parchment px-1.5 py-1">
+      <p className="font-kuaile text-[7px] leading-none text-ink/40">小爱心</p>
+      <p className="mt-0.5 flex items-center gap-1.5 font-wenkai text-[9px] leading-none whitespace-nowrap text-ink">
+        <span aria-hidden="true">🌙</span>
+        <span>{moonPhase}</span>
+        <span aria-hidden="true">🌊</span>
+        <span>{tide}</span>
+      </p>
+      <p className="mt-1 font-wenkai text-[9px] leading-none text-ink">第 {day} 天</p>
+      {stage.真实体长_m !== undefined && stage.真实体重_kg !== undefined && (
+        <p className="mt-1 flex items-center gap-1.5 font-wenkai text-[9px] leading-none whitespace-nowrap text-ink">
+          <span aria-hidden="true">📏</span>
+          <span>{stage.真实体长_m} m</span>
+          <span aria-hidden="true">⚖️</span>
+          <span>{stage.真实体重_kg} kg</span>
         </p>
-        <p className="mt-1 font-wenkai text-[9px] leading-none text-ink">第 {day} 天</p>
+      )}
       </div>
-
-      {/* 右下角已经被相册/图鉴/换海几个圆按钮占满了,道具栏挪到右上角,别撞在一起 */}
-      <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-        <div className="flex gap-1 rounded-md border-2 border-ink bg-sand/90 px-1.5 py-1 shadow-sm">
-          <div className="flex flex-col items-center gap-0.5">
-            <span
-              aria-hidden="true"
-              className="flex h-5 w-5 items-center justify-center rounded bg-white/70 text-[11px] leading-none"
-            >
-              🌱
-            </span>
-            <span className="font-wenkai text-[7px] leading-none text-ink/70">
-              海草 x{grownSeagrass}
-            </span>
-          </div>
-          {LOCKED_ITEMS.map((item) => (
-            <button
-              key={item.icon}
-              type="button"
-              onClick={() => setTip(item.tip)}
-              aria-label={`${item.label}(${item.tip})`}
-              className="pointer-events-auto flex flex-col items-center gap-0.5"
-            >
-              <span
-                aria-hidden="true"
-                className="flex h-5 w-5 items-center justify-center rounded bg-white/70 text-[11px] leading-none opacity-40 grayscale"
-              >
-                {item.icon}
-              </span>
-              <span className="font-wenkai text-[7px] leading-none text-ink/40">{item.label}</span>
-            </button>
-          ))}
-        </div>
-        {tip && (
-          <p className="pointer-events-none rounded-md bg-ink/85 px-2 py-1 font-wenkai text-[9px] leading-none whitespace-nowrap text-white shadow-sm">
-            {tip}
-          </p>
-        )}
-      </div>
-    </>
+    </div>
   )
 }
 

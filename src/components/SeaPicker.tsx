@@ -35,8 +35,8 @@ function SeaPicker({ seas, current, onPick, onClose }: SeaPickerProps) {
               type="button"
               onClick={() => onPick(sea.id)}
               aria-label={sea.name}
-              className={`flex min-h-36 w-28 cursor-pointer flex-col items-center gap-2 rounded-3xl px-3 py-4 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart ${
-                isCurrent ? 'bg-white/95' : 'bg-white/70'
+              className={`flex min-h-36 w-28 cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-wood-dark px-3 py-4 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart ${
+                isCurrent ? 'bg-parchment' : 'bg-parchment/75'
               }`}
             >
               <span

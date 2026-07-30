@@ -41,25 +41,6 @@
       ]
     },
     {
-      "id": "hungry",
-      "触发": "饱食度低",
-      "text": "我有点饿了",
-      "pinyin": "wǒ yǒu diǎn è le",
-      "options": [
-        { "icon": "🌱", "label": "喂海草", "action": "feed" },
-        { "icon": "💤", "label": "让它睡觉", "action": "sleep" }
-      ]
-    },
-    {
-      "id": "need_air",
-      "触发": "换气计时到",
-      "text": "我要换口气",
-      "pinyin": "wǒ yào huàn kǒu qì",
-      "options": [
-        { "icon": "🫧", "label": "陪它上去", "action": "breathe" }
-      ]
-    },
-    {
       "id": "welcome_back",
       "触发": "离开 3 天以上后回来",
       "text": "你每天都来\n我好开心",
@@ -91,7 +72,7 @@
     },
     {
       "id": "stand_breathe",
-      "触发": "换气浮上水面时,偶尔代替 need_air",
+      "触发": "_待接:换气浮上水面时偶尔说这句(目前还没有代码触发它)",
       "text": "我站着换气",
       "pinyin": "wǒ zhàn zhe huàn qì",
       "_注": "儒艮会用尾巴撑住海底站在水里呼吸。对应知识卡 bio_stand_to_breathe",

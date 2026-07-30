@@ -44,12 +44,12 @@ function Album({
     .sort((a, b) => Date.parse(events[a.id]) - Date.parse(events[b.id]))
 
   return (
-    <div className="fixed inset-0 z-20 overflow-y-auto bg-sand">
-      <div className="sticky top-0 bg-sand/95 px-5 py-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-20 overflow-y-auto bg-parchment">
+      <div className="sticky top-0 border-b-4 border-wood-dark bg-wood px-5 py-3">
         <button
           type="button"
           onClick={onClose}
-          className="flex min-h-14 cursor-pointer items-center gap-2 rounded-3xl bg-white/85 px-6 py-3 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+          className="flex min-h-14 cursor-pointer items-center gap-2 rounded-xl border-2 border-wood-dark bg-parchment px-6 py-3 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
         >
           <span className="text-3xl leading-none" aria-hidden="true">
             🌊
@@ -60,7 +60,7 @@ function Album({
 
       <div className="mx-auto flex max-w-2xl flex-col gap-7 px-5 pt-2 pb-16">
         <section className="flex flex-col gap-3">
-          <h2 className="font-kuaile text-xl text-ink/45">{titles.成长}</h2>
+          <h2 className="font-kuaile text-xl text-wood-dark/80">{titles.成长}</h2>
           {/* 顶对齐:有的阶段有日期有的没有,底对齐会让照片高低不齐 */}
           <div className="flex flex-wrap items-start gap-4">
             {stages.map((stage, index) => {
@@ -71,7 +71,7 @@ function Album({
               const scale = (stage.体型 / biggest) * ((112 * 0.92) / FRAME_WIDTH)
               return (
                 <figure key={stage.id} className="flex flex-col items-center gap-1">
-                  <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-water-shallow/60 shadow-sm">
+                  <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-wood-dark/50 bg-water-shallow/60 shadow-sm">
                     {anim && (
                       <Sprite
                         src={anim.src}
@@ -99,11 +99,11 @@ function Album({
 
         {shown.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h2 className="font-kuaile text-xl text-ink/45">{titles.回忆}</h2>
+            <h2 className="font-kuaile text-xl text-wood-dark/80">{titles.回忆}</h2>
             {shown.map((memory) => (
               <article
                 key={memory.id}
-                className="flex items-center gap-4 rounded-3xl bg-white/80 px-5 py-4 shadow-sm"
+                className="flex items-center gap-4 rounded-xl border-2 border-wood-dark/50 bg-white/60 px-5 py-4 shadow-sm"
               >
                 <span className="text-4xl leading-none" aria-hidden="true">
                   {memory.icon}

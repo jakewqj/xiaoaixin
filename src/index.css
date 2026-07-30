@@ -40,6 +40,12 @@ video {
   --color-heart: #ff8fa3;
   --color-ink: #243642;
 
+  /* 追加(2026-07-30,UI 统一重做):对话面板专用的木纹/羊皮纸色,不在原来那套海洋配色里。
+     见 CLAUDE.md 二十——这次美术还原度优先,只加不改原有十色 */
+  --color-wood: #a9713c;
+  --color-wood-dark: #6b4226;
+  --color-parchment: #f3e1b8;
+
   /* 标题和对话用站酷快乐体,英文小字用霞鹜文楷。字体没加载出来时先用系统字顶上,不留白 */
   --font-kuaile: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-wenkai: 'LXGW WenKai', 'PingFang SC', 'Microsoft YaHei', serif;
@@ -185,13 +191,16 @@ video {
   transition: transform 400ms ease-in-out;
 }
 
-/* ---- Scene.tsx 九层占位:纯色块 + 速度分层,验证「越远越慢」的视差节奏 ---- */
+/* 对话面板从底部滑上来/滑下去。时长和 DialoguePanel.tsx 里卸载的延时对上 */
+.dialogue-panel {
+  transition: transform 320ms ease-in-out;
+}
 
-/* 天上的云,离得最远,飘得最慢 */
+/* ---- Scene.tsx 九层真素材(draw-world.mjs 生成)---- */
+
+/* 天上的云,离得最远,飘得最慢。素材是 img,这里只管飘 */
 .scene-cloud {
   position: absolute;
-  border-radius: 9999px;
-  background: rgb(255 255 255 / 0.8);
   animation: scene-cloud-drift 46s linear infinite;
 }
 
@@ -204,61 +213,33 @@ video {
   }
 }
 
-/* 水面线,细微的明暗呼吸 */
-.scene-water-surface {
-  animation: scene-surface-glint 3s ease-in-out infinite alternate;
+/* 水面白沫横向漂移:96px 一循环,steps 硬切成 4px 一跳,像素风不做平滑滚动 */
+.scene-surface-tile {
+  animation: scene-surface-drift 3s steps(24) infinite;
 }
 
-@keyframes scene-surface-glint {
+@keyframes scene-surface-drift {
   from {
-    opacity: 0.7;
+    background-position-x: 0;
   }
   to {
-    opacity: 1;
+    background-position-x: 96px;
   }
 }
 
-/* 水下远景剪影,几乎不动,只有很轻的摇摆 */
-.scene-plant-far {
-  position: absolute;
-  bottom: 0;
-  width: 10px;
-  height: 34px;
-  background: rgb(10 30 36 / 0.5);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+/* 中景海带/高海草的摇摆,根部固定 */
+.decor-sway {
   transform-origin: bottom center;
-  animation: scene-sway 9s ease-in-out infinite alternate;
-}
-
-/* 水下中景的珊瑚/海草占位,比远景摇得明显一点,离镜头更近 */
-.scene-coral {
-  position: absolute;
-  bottom: 0;
-  width: 16px;
-  height: 26px;
-  border-radius: 8px 8px 2px 2px;
-  background: #e8876a;
-  transform-origin: bottom center;
-  animation: scene-sway 4s ease-in-out infinite alternate;
+  animation: scene-sway 5s ease-in-out infinite alternate;
 }
 
 @keyframes scene-sway {
   from {
-    transform: rotate(-6deg);
+    transform: rotate(-4deg);
   }
   to {
-    transform: rotate(6deg);
+    transform: rotate(4deg);
   }
-}
-
-/* 沙底散落物,静止的小点 */
-.scene-litter {
-  position: absolute;
-  bottom: 6px;
-  width: 5px;
-  height: 5px;
-  border-radius: 9999px;
-  background: rgb(36 54 66 / 0.3);
 }
 
 /* 气泡层占位,离镜头最近,升得最快,验证它盖在角色层之上 */
@@ -284,9 +265,8 @@ video {
 
 @media (prefers-reduced-motion: reduce) {
   .scene-cloud,
-  .scene-water-surface,
-  .scene-plant-far,
-  .scene-coral,
+  .scene-surface-tile,
+  .decor-sway,
   .scene-bubble,
   .sprite-frames {
     animation: none;
@@ -304,7 +284,8 @@ video {
   .pet-swim,
   .sea-picker,
   .bubbles,
-  .camera-world {
+  .camera-world,
+  .dialogue-panel {
     transition-property: none;
   }
 

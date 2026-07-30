@@ -29,7 +29,8 @@ function SeagrassBed({ bed, onTap }: { bed: Plant[]; onTap: () => void }) {
         return (
           <span
             key={plant.id}
-            className="absolute bottom-[10px] block w-[7%] max-w-10 -translate-x-1/2 origin-bottom"
+            // 沙底 tile 高 36px,根扎在沙面往下一点,像长在沙里而不是浮在沙上
+            className="absolute bottom-[30px] block w-[7%] max-w-10 -translate-x-1/2 origin-bottom"
             style={{
               left: `${plant.x}%`,
               height: `${(grown ? 34 : 16) * heightOf(plant)}px`,

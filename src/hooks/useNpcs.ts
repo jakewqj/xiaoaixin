@@ -12,6 +12,11 @@ export interface NpcTopic {
   options?: { text: string; icon: string }[]
 }
 
+export interface NpcGiftReaction {
+  text: string
+  audio?: string | null
+}
+
 export interface NpcSpec {
   名字: string
   地点: string
@@ -20,6 +25,8 @@ export interface NpcSpec {
   精灵规格?: { 尺寸: string }
   动画: Record<string, NpcAnim>
   话题库?: Record<string, NpcTopic[]>
+  熟悉度上限?: number
+  礼物反馈?: { 很喜欢: NpcGiftReaction; 谢谢你: NpcGiftReaction }
 }
 
 // "112x48" 这种字符串换算成像素宽高。哪个 NPC 的格式写错了就退回一个不算太离谱的默认方块,
@@ -28,6 +35,15 @@ export function frameSizeOf(npc: NpcSpec): [number, number] {
   const match = /^(\d+)x(\d+)$/.exec(npc.精灵规格?.尺寸 ?? '')
   if (!match) return [64, 64]
   return [Number(match[1]), Number(match[2])]
+}
+
+// 熟悉度解锁话题库:等级到了哪一档,就能抽到那一档及以下的话。
+// 刚认识、等级还是 0 的时候也按 1 算,不然第一次见面反而一句话都抽不到
+export function unlockedTopics(npc: NpcSpec, level: number): NpcTopic[] {
+  const effective = Math.max(level, 1)
+  return Object.entries(npc.话题库 ?? {})
+    .filter(([tier]) => Number(tier) <= effective)
+    .flatMap(([, topics]) => topics)
 }
 
 export type NpcMap = Record<string, NpcSpec>

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pixel Sprite"
+  short_description: "按帧尺寸、帧数、固定调色板与锚点坐标参数化生成像素风游戏精灵表"
+  default_prompt: "按规格生成一套像素风精灵表：帧尺寸、帧数、调色板、锚点见下"
