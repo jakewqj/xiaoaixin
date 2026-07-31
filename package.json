@@ -1,5 +1,5 @@
 {
-  "name": "xiaoaixing",
+  "name": "xiaoaixin",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -31,13 +31,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jakewqj/xiaoaixing.git"
+    "url": "git+https://github.com/jakewqj/xiaoaixin.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jakewqj/xiaoaixing/issues"
+    "url": "https://github.com/jakewqj/xiaoaixin/issues"
   },
-  "homepage": "https://github.com/jakewqj/xiaoaixing#readme"
+  "homepage": "https://github.com/jakewqj/xiaoaixin#readme"
 }

@@ -62,7 +62,7 @@
 |存档|~~localStorage 单个 JSON key:`xiaoaixin\_save`~~ **【已作废,见十四、双存储】**|
 |路由|**不使用路由库**。页面切换用状态变量控制|
 |后端|**无**。零服务器、零 API(第 6 周的 AI 对话除外,届时另行讨论)|
-|部署|~~Cloudflare Pages~~ **Vercel**(2026-07-31 用户确认改),静态构建。正式地址 https://xiaoaixing.vercel.app ,CLI 已 link 到 heiyu/xiaoaixing,`vercel deploy --prod` 发布|
+|部署|~~Cloudflare Pages~~ **Vercel**(2026-07-31 用户确认改),静态构建。正式地址 https://xiaoaixin.vercel.app ,CLI 已 link 到 heiyu/xiaoaixin,`vercel deploy --prod` 发布|
 |屏幕|~~手机/平板**竖屏优先**~~ **【已作废,见十二、屏幕与渲染:横屏锁定】**|
 
 **依赖包能不装就不装。** 每次想 `npm install` 新东西之前,先问我。

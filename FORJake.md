@@ -1,38 +1,75 @@
-# FORJake · 宪法渲染松绑 + 首次上线
+# FORJake · 全项目改名 xiaoaixing → xiaoaixin
+
+> 上一轮(宪法 §21 渲染松绑 + 首次上线)的复盘在 git 历史里,commit `afc5f24`。
 
 ## 我做了什么、为什么这么做
 
-两件事:一是把 CLAUDE.md 里挡着「完美复刻 Stardew」的规则找出来松绑,二是把游戏第一次部署上线。
+**第一步是确认"哪些名字动了会丢数据"。** 改名任务最怕的不是漏改,是改到了当数据键用的字符串。所以我先 grep 了 `src/`:
 
-**松绑的思路**:先想清楚 Stardew 的观感到底由什么构成,再对着宪法逐条比对。答案是一个公式——**低帧率翻帧的精灵 + 60fps 平滑的位移/镜头/粒子 + 光照色调层**。旧宪法只允许第一样:精灵 8fps 用 CSS steps() 翻帧没问题,但「不引入 canvas 游戏循环」「镜头运动是唯一允许的连续运动」这两条把平滑位移和粒子全禁了,「九层 z-index 固定」又没给光照层留位置。所以真正的阻碍不是「像素规范太严」,而是**当年为了防止过度工程化写的技术禁令,现在挡住了美术目标**。
+```
+src/hooks/useSave.ts:5        const SAVE_KEY = 'xiaoaixin_save'
+src/hooks/useConfig.ts:30     const OVERRIDE_KEY = 'xiaoaixin_config'
+src/hooks/useDialogueLog.ts:3 const LOG_KEY = 'xiaoaixin_log'
+```
 
-具体动了 5 处,全部用你们一贯的 ~~划线~~【已作废/已放宽,见二十一】格式标在原处,再在文末新增「二十一、Stardew 级渲染松绑」集中说明。没动的:480×270、整数倍缩放、无抗锯齿、精灵低帧率、原则 1-10、虎鲨护栏——这些要么正是 Stardew 味道的来源,要么和渲染无关。
+**三个 localStorage key 本来就是 `xiaoaixin`,拼写从一开始就是对的。** 拼错的只是项目名、仓库名、部署名这一层。所以这次改名**零存档迁移风险**——代码一行没动,童童的存档不受任何影响。这是运气好,但先查一遍才敢下手。
 
-**松绑的同时加了四条新约束**,防止「允许 canvas」滑坡成「重写成游戏引擎」:不装第三方引擎(Phaser/PixiJS 仍要先问)、高频状态放 ref 不进 React state、reduced-motion 必须遵守、rAF 循环只负责画不结算数值(成长/熟悉度仍走事件驱动)。松绑不是放弃纪律,是把纪律挪到对的位置。
+**第二步是先做外部改名,再改文件。** 因为 GitHub 仓库名和 Vercel 项目名的改名结果决定了 package.json 和 CLAUDE.md 里该写什么地址。反过来做的话,万一 `xiaoaixin` 这个名字在 Vercel 上被占了,文件就得改两遍。
 
-**部署**:宪法写的是 Cloudflare Pages,但本机没有 Cloudflare 凭证(wrangler 未登录、无 API token),要走浏览器 OAuth;而 Vercel CLI 已经登录着。这是个你才能拍板的分叉,所以问了你,你选了 Vercel。现在:
+实际改了这些:
 
-- **正式地址:https://xiaoaixing.vercel.app**(生产环境,已 Ready)
-- 项目 link 到 team `heiyu` 下的 `xiaoaixing`,以后重新发布就一句 `vercel deploy --prod`
-- 宪法 §三 部署行已同步改成 Vercel
+| 位置 | 动作 |
+|---|---|
+| GitHub 仓库 | `gh repo rename` → github.com/jakewqj/**xiaoaixin** |
+| 本地 git remote | `git remote set-url` 指向新仓库 |
+| Vercel 项目 | `vercel project rename` → heiyu/**xiaoaixin** |
+| Vercel 域名 | 新增 xiaoaixin.vercel.app,删掉 3 个 xiaoaixing.* 旧 alias |
+| package.json | name / repository / bugs / homepage 四处 |
+| CLAUDE.md | §三 部署行的地址和项目名 |
+| `.vercel/project.json` | projectName(本地 link 配置,gitignored) |
+
+**正式地址现在是 https://xiaoaixin.vercel.app**
 
 ## 考虑过的替代方案
 
-- **让你敲 `! npx wrangler login` 走 Cloudflare**:符合宪法原文,但多一步交互。列成选项让你选了,没替你决定。
-- **只在 §二十 后面追加补记而不动原文**:§二十的做法。这次没这么做,因为被作废的是**技术禁令**而不是美术数值——下次任何人(包括未来的我)读到「不引入 canvas 游戏循环」这行,如果原地没有作废标记,就会照旧执行。禁令类规则必须原地划掉。
+- **新建一个 Vercel 项目叫 xiaoaixin,把旧的删掉**:能达到一样的效果,但会丢掉部署历史和回滚能力。`vercel project rename` 是原地改,项目 ID 不变,历史全留着,明显更好。
+- **只改 package.json,不动 GitHub 仓库名**:那 package.json 的 repository 字段就在撒谎,`npm` 系工具和 GitHub 页面上的链接都会指向不存在的地址。改名这种事要么不做,要么做干净。
+- **顺手把存档 key 也统一**:一度想过"是不是该把所有名字统一成一种写法"。**幸好没做**——那三个 key 已经是对的,而且就算不对也不该动:改 localStorage key 等于把童童已有的存档变成孤儿。数据键的命名一旦上线就该冻结,难看也认了。
 
 ## 做出的取舍
 
-- **精灵调色板 16 色放宽到 32 色,而不是不设限**:Stardew 单精灵确实常超 16 色,但完全放开会滑向渐变喷枪,像素味就没了。32 是够用又守得住的数。
-- **缩放(zoom)继续禁**:Stardew 有 zoom 选项,但那是整数倍渲染架构下的。我们的 DOM+canvas 混合结构下做 zoom 很容易滑进非整数缩放,毁像素。这半句特意标了「仍有效」。
-- **部署默认发了生产而不是 preview**:CLI 直接把这次部署标成了 production target(新项目首次 CLI 部署的行为)。对这个项目正好——给童童玩的地址就该是稳定的正式地址,preview 那种带 hash 的链接反而没用。
+- **删掉旧 alias,而不是留着做重定向**。这是本轮最需要想清楚的一条。Vercel 的 `.vercel.app` alias 删掉就是 404,不是 301 跳转,所以"留着更安全"的直觉在这里是错的——**留着的后果是两个地址都能玩,但存档不互通**(localStorage 按域名隔离)。童童在旧地址存的进度,在新地址看不见,反过来也一样。这种"两个平行世界"对 6 岁孩子是纯粹的伤害。宁可旧地址干脆打不开。
+- **保留旧的那次 deployment 记录**(`xiaoaixing-9mkhn80mq-...`)。它的 URL 带旧名,但那是带 hash 的历史快照 URL,没人会去访问,留着是回滚资产。
+- **FORJake.md 整篇重写而不是追加**。按你的规矩每轮任务生成一份,上一轮的内容 git 里有。
 
 ## 遇到的坑
 
-1. **`vercel link --repo --yes` 静默失败**:repo 模式在非交互终端下没法选「创建新项目」,输出一句 "No Projects were selected" 就退出了。退回标准 `vercel link --yes` 才自动建了项目。
-2. **GitHub 仓库自动连接失败**:link 时报 "Failed to connect jakewqj/xiaoaixing to project"——你的 GitHub 账号没装 Vercel GitHub App(或没授权这个仓库)。**后果:git push 不会自动触发部署,每次要手动 `vercel deploy --prod`。** 想要 push 即发布,去 Vercel 项目设置里连一次 GitHub 就行,一次性的事。
+1. **`vercel project rename` 不会改主域名。** 项目改完名了,`xiaoaixing.vercel.app` 还稳稳地指着新部署——因为那个域名是作为独立 alias 挂在项目上的,rename 只改项目标识。必须手动 `vercel alias set` 加新的、`vercel alias rm` 删旧的。**如果我只跑了 rename 就收工,你会看到项目叫 xiaoaixin 但网址还是 xiaoaixing,而且完全没有报错提示。**
+2. **`vercel project rename` 不认 `--yes`**,加了直接报 unknown option。Vercel CLI 各子命令的 flag 支持度不统一。
+3. **`gh repo rename` 成功后本地 remote 不会自动更新。** GitHub 那边会做旧名重定向(push 还能用),所以这个坑不会立刻报错,但 remote 里留着旧名迟早出事,要手动 `git remote set-url`。
+4. **`vercel alias ls` 是团队级的**,会把 heiyu 下所有项目的 alias 都列出来(blast-donner、coverageclip、next-app…),得自己 grep 过滤。
+
+## 你需要自己做的两件事
+
+这两件我做不了,不是偷懒:
+
+1. **本地目录还叫 `D:\xiaoaixing`。** 它是当前工作目录,Windows 会锁住正在使用的目录,而且改了会当场切断这个会话。你自己改的话:关掉编辑器和终端 → 重命名成 `D:\xiaoaixin` → 重新打开。git 仓库不受影响,`.git` 跟着走。
+2. **改完目录名后,Claude Code 的记忆目录也要跟着改。** 它按项目路径建目录:`C:\Users\jakew\.claude\projects\D--xiaoaixing\` → 改成 `D--xiaoaixin`。不改的话下次在新路径打开,记忆是空的(旧记忆没丢,只是找不到)。
+
+## 一个要留意的风险
+
+**如果这 9 小时里有人在旧地址 `xiaoaixing.vercel.app` 上玩过并产生了存档,那份存档现在够不着了**(alias 已删)。localStorage 绑域名,换域名等于换了个世界。
+
+不是不可逆——把旧 alias 加回来就能重新访问:
+
+```
+vercel alias set xiaoaixin-3txvhuszz-heiyu.vercel.app xiaoaixing.vercel.app --scope heiyu
+```
+
+但从时间线看风险很低:旧地址是上一轮会话结尾才发布的,你当时的反应是继续让我 commit,没提测试过。如果童童还没碰过,就当无事发生。
 
 ## 可迁移的经验
 
-- **给规则松绑前,先把目标拆成构成要素再逐条比对**。「Stardew = 低帧精灵 + 平滑位移 + 光照层」这一步想清楚了,哪条规则该死、哪条该留就一目了然,不会一激动全放开。
-- **两件遗留事项**:① CLAUDE.md 的修订和这份文件都还没 commit(你的规矩是不叫不 commit);② `public/assets/npc/` 里的 AI 原始参考图和 ada.zip 跟着这次上线**已经公开可访问了**,下次发布前值得清一下。
+- **改名任务的第一步永远是分清"标识符"和"数据键"。** 标识符(项目名、仓库名、域名)随便改;数据键(localStorage key、数据库表名、缓存前缀)改了就是数据迁移,要单独设计。这次先 grep 一遍 `src/` 才动手,是最值的那 30 秒。
+- **改名平台的行为不一致,不能类推**:GitHub 改仓库名会自动保留旧名重定向,Vercel 改项目名不动域名、删域名也不给重定向。每个平台的"改名"到底改了什么,要单独确认,不能假设。
+- **删东西之前先问"留着会不会更糟"。** 这次删 alias 是对的,因为留着会造成存档分裂——一个比 404 更隐蔽也更伤人的后果。
