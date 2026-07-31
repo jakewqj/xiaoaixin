@@ -27,3 +27,5 @@ wiki
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
