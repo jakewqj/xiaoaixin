@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Background Parallax Test</title>
+<style>
+  body { background-color: #14495C; padding: 24px; font-family: sans-serif; color: white; }
+  h1 { font-size: 20px; }
+  canvas {
+    display: block;
+    width: 960px; height: 540px;
+    image-rendering: pixelated;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: #000;
+  }
+  .controls { display: flex; gap: 20px; margin: 12px 0; font-size: 14px; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .legend { font-size: 12px; opacity: 0.75; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>Background · 三层视差测试(480×270,×2 显示)</h1>
+<div class="controls">
+  <label><input type="checkbox" id="pan" checked> 镜头自动横移</label>
+  <label><input type="checkbox" id="meadow" checked> 海草/珊瑚前景</label>
+</div>
+<canvas id="stage" width="480" height="270"></canvas>
+<div class="legend">背景层(天空/远景)应几乎不动,中景水体半速,前景海草珊瑚全速。海草应绕根部 2 帧交替摆动,相位错开。</div>
+<script type="module">
+  import { Background } from '/src/gfx/Background.js'
+
+  const canvas = document.getElementById('stage')
+  const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingEnabled = false
+
+  const bg = new Background({ worldWidth: 960 })
+  await bg.load()
+
+  const ui = {
+    pan: document.getElementById('pan'),
+    meadow: document.getElementById('meadow'),
+  }
+
+  const t0 = performance.now()
+
+  function frame(now) {
+    const t = now - t0
+    const cameraX = ui.pan.checked
+      ? (Math.sin(t / 6000) * 0.5 + 0.5) * (960 - 480)
+      : 0
+
+    ctx.clearRect(0, 0, 480, 270)
+    bg.drawMid(ctx, cameraX, t)
+    bg.drawSky(ctx, cameraX)
+    if (ui.meadow.checked) bg.drawFore(ctx, cameraX, t)
+
+    requestAnimationFrame(frame)
+  }
+  requestAnimationFrame(frame)
+</script>
+</body>
+</html>

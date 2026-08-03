@@ -1,0 +1,93 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>DugongSprite Canvas Test</title>
+<style>
+  body { background-color: #14495C; padding: 24px; font-family: sans-serif; color: white; }
+  h1 { font-size: 20px; }
+  h2 { font-size: 14px; font-weight: normal; opacity: 0.9; }
+  canvas {
+    display: block;
+    width: 960px; height: 540px; /* 480x270 逻辑分辨率 @2x */
+    image-rendering: pixelated;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: #2E8B9B;
+  }
+  .controls { display: flex; gap: 20px; margin: 12px 0; font-size: 14px; align-items: center; }
+  .controls label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .legend { font-size: 12px; opacity: 0.75; margin-top: 8px; }
+</style>
+</head>
+<body>
+<h1>DugongSprite · canvas 渲染测试(480×270 逻辑分辨率,×2 显示)</h1>
+<div class="controls">
+  <label><input type="checkbox" id="facing"> 朝左游</label>
+  <label><input type="checkbox" id="buoyancy" checked> 正弦浮力</label>
+  <label><input type="checkbox" id="anchors" checked> 显示锚点</label>
+  <label><input type="checkbox" id="fast"> 8 倍速(测试用)</label>
+</div>
+<canvas id="stage" width="480" height="270"></canvas>
+<div class="legend">红点是 pet.json 的五个锚点。气泡应从嘴部锚点冒出、向上漂移并淡出;身体应有缓慢的正弦上下浮动与半频左右漂移。</div>
+<script type="module">
+  import { DugongSprite } from '/src/gfx/DugongSprite.js'
+
+  const spec = await fetch('/assets/pet/pet.json').then((r) => r.json())
+  const anchors = spec.锚点
+  const skinDir = spec.皮肤?.pixel?.路径 ?? '/assets/pet/pixel/'
+
+  const canvas = document.getElementById('stage')
+  const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingEnabled = false
+
+  // 小爱心锚定在舞台中间偏下,和 Pet.tsx 的 top:70% 大致一个位置
+  const ORIGIN_X = (480 - 192) / 2
+  const ORIGIN_Y = 150
+
+  const pet = new DugongSprite({ skinDir, animFile: 'swim.png', anchors })
+  pet.load()
+
+  const ui = {
+    facing: document.getElementById('facing'),
+    buoyancy: document.getElementById('buoyancy'),
+    anchors: document.getElementById('anchors'),
+    fast: document.getElementById('fast'),
+  }
+
+    let last = performance.now()
+
+  function frame(now) {
+    const dt = Math.min(100, now - last)
+    last = now
+
+    pet.facingLeft = ui.facing.checked
+    pet.buoyancy.amplitude = ui.buoyancy.checked ? 4 : 0
+    pet.buoyancy.swayAmplitude = ui.buoyancy.checked ? 2 : 0
+    pet.update(ui.fast.checked ? dt * 8 : dt)
+
+    // 水色三段:浅滩 → 中层 → 深水,和 CLAUDE.md 的调色板一致
+    ctx.fillStyle = '#7FD1D8'
+    ctx.fillRect(0, 0, 480, 60)
+    ctx.fillStyle = '#2E8B9B'
+    ctx.fillRect(0, 60, 480, 140)
+    ctx.fillStyle = '#14495C'
+    ctx.fillRect(0, 200, 480, 70)
+
+    pet.draw(ctx, ORIGIN_X, ORIGIN_Y)
+
+    if (ui.anchors.checked) {
+      const [bx, by] = pet.buoyancyOffset()
+      ctx.fillStyle = 'red'
+      for (const [ax, ay] of Object.values(anchors)) {
+        const x = pet.facingLeft ? 1 - ax : ax
+        ctx.fillRect(Math.round(ORIGIN_X + bx + x * 192) - 1, Math.round(ORIGIN_Y + by + ay * 64) - 1, 3, 3)
+      }
+    }
+
+    requestAnimationFrame(frame)
+  }
+  requestAnimationFrame(frame)
+</script>
+</body>
+</html>
+

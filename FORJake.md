@@ -1,75 +1,294 @@
-# FORJake · 全项目改名 xiaoaixing → xiaoaixin
+# FORJake · 九宫格 UI 层进 canvas(2026-08-03)
 
-> 上一轮(宪法 §21 渲染松绑 + 首次上线)的复盘在 git 历史里,commit `afc5f24`。
+> 上一轮(全项目改名)的复盘在 git 历史里,commit `bc17ae0`。
+
+## ⚠️ 三条等你点头的宪法修订
+
+这轮有三个决定推翻了 CLAUDE.md 的现有条款(二十一·4、十六、四)。按十九·3「不要自己修订宪法」,**我没有改 `CLAUDE.md`**,拟稿放在这里,你同意了我再写进去。
+
+### 修订一 · 二十一·4(HUD 进 canvas)
+
+> **二十一 · 4 修订(2026-08-03,用户授权)**
+>
+> 原文「HUD 仍然是最上层 DOM,不进 canvas」**已作废**。HUD 现在走 canvas 绘制,附带两条不可省的配套约束:
+>
+> 1. **UI canvas 的后备缓冲区必须是设备分辨率**(`480n × 270n` + `ctx.scale(n)`),不是 480×270。世界层的逻辑分辨率整数倍放大是为了像素画,同样做法用在中文文字上会把笔画糊成马赛克。九宫格框和图标仍关闭平滑、整数倍最近邻,像素感不变。
+> 2. **canvas 上方必须铺一层透明 DOM 热区**,每个可点元素一个 `<button>`,带 `aria-label`,进 Tab 顺序,焦点可见。canvas 出像素,DOM 出语义 —— 宪法四「键盘焦点可见」不因为 canvas 化而失效。
+>
+> 例外:`AdminPanel` / `AdminGate`(爸爸的控制后台)继续用 DOM。
+
+### 修订二 · 十六(常驻贝壳 HUD)+ 四(字体)
+
+> **十六 修订(2026-08-03,用户决定)**
+>
+> 原文「❌ 常驻金钱 HUD(贝币只在「换一换」界面内显示)」**已作废**。贝壳数量常驻显示在顶部栏。
+>
+> 保留的底线:**价格永不波动、不做讨价还价、不做负数、不可交易物永远标「这个不换」**(原十六其余各条与 S5 计划不变)。取消的只是「不许常驻显示」这一句。
+>
+> **四 · 字体 修订(2026-08-03,用户决定)**
+>
+> 原文「标题/对话:站酷快乐体;正文:霞鹜文楷」+「不要自行更换」**部分作废**。HUD 全量改用像素字体 **Zpix(最像素)**,字体文件落在 `public/fonts/zpix.woff2`(943KB,不走 CDN,国内直连 + PWA 离线要用)。
+>
+> 遗留约束:Zpix 是 **12px 点阵字体**,字号必须取 12 的整数倍,否则笔画被重采样成灰边。这条直接限制了 HUD 的布局尺寸(见下面「踩到的坑」)。
+
+**没动的**:原则 1–10、虎鲨护栏、双存储、九层图层、24px 对话文字最小值、`DialoguePanel` 等童童面向组件的字体(仍是站酷快乐体)。
+
+---
 
 ## 我做了什么、为什么这么做
 
-**第一步是确认"哪些名字动了会丢数据"。** 改名任务最怕的不是漏改,是改到了当数据键用的字符串。所以我先 grep 了 `src/`:
+你给的三条任务里,有两条和已确立的事实对不上,我先把事实摆出来问了你,再照你的决定做。
 
-```
-src/hooks/useSave.ts:5        const SAVE_KEY = 'xiaoaixin_save'
-src/hooks/useConfig.ts:30     const OVERRIDE_KEY = 'xiaoaixin_config'
-src/hooks/useDialogueLog.ts:3 const LOG_KEY = 'xiaoaixin_log'
-```
+**第一条,`src/ui/HUD.js`。** 项目是 TypeScript(宪法三),我直接做成 `.tsx`,这条没问 —— 没有需要你权衡的地方。
 
-**三个 localStorage key 本来就是 `xiaoaixin`,拼写从一开始就是对的。** 拼错的只是项目名、仓库名、部署名这一层。所以这次改名**零存档迁移风险**——代码一行没动,童童的存档不受任何影响。这是运气好,但先查一遍才敢下手。
+**第二条,「金币改为贝壳」。** 代码里从来没有金币。`icon_shell.png` 是 `ActionBar` 里一个灰着的占位格,`seas.ts` 的 `shells` 是海底散落装饰。所以这不是"改",是"新增一个宪法禁止的常驻 HUD 元素",而且你两轮前刚确认过"金币和心情不加"。这种自相矛盾我不会替你猜,问了,你说就要,那就做。
 
-**第二步是先做外部改名,再改文件。** 因为 GitHub 仓库名和 Vercel 项目名的改名结果决定了 package.json 和 CLAUDE.md 里该写什么地址。反过来做的话,万一 `xiaoaixin` 这个名字在 Vercel 上被占了,文件就得改两遍。
+**第三条,Zpix。** 宪法四指定了字体并写明"不要自行更换",宪法三要求装依赖前先问。同样问了。Zpix 不在 npm 上(`zpix` / `@fontsource/zpix` 都是 404),只有 GitHub 发布。jsDelivr 上 `zpix.ttf` 是 7MB,`zpix.woff2` 是 943KB —— 取 woff2 并**落进仓库**,不在运行时依赖第三方 CDN。
 
-实际改了这些:
+架构上我把东西分了两处:
 
-| 位置 | 动作 |
+* `src/render/` —— `assets.ts`(预载+缓存+降级)、`nineSlice.ts`、`text.ts`。这三样阶段 1/2 做世界层时还要用,不该埋在 HUD 里。
+* `src/ui/` —— `HUD.tsx`、`layout.ts`、`draw.ts`、`types.ts`、`hud-store.ts`。你点名的路径。
+
+「订阅模式」我写了个 30 行的 `hudStore`,不是状态库(宪法三仍禁 Redux/Zustand)。它不持有游戏状态,只是把 React 那边的真值搬过来的一面镜子,唯一真值仍在 `useSave`。它存在的理由只有一个:**canvas 的重绘代价和 React 的重渲染频率无关。** App 每渲染一次就重画一遍设备分辨率的全屏 UI 是纯浪费。store 做一次浅比较,值真的变了才通知,于是"HUD 重绘次数 = HUD 内容变化次数"。
+
+## 考虑过但没采用的方案
+
+**HUD 整体用逻辑分辨率缓冲区(480×270)。** 和世界层一致,最省事。否掉的理由是文字:`DialoguePanel` 的正文是 24 逻辑 px,卡在宪法四的底线上。480×270 缓冲区画完再最近邻放大 2–4 倍,中文笔画会碎成马赛克。童童正在识字,这个不能忍。改成设备分辨率缓冲区 + `ctx.scale(n)`,代码里仍写逻辑坐标,木框和图标照样最近邻 —— Stardew 自己就是这么干的,UI 分辨率高于世界分辨率。
+
+**角标数字用四向描边。** 试过,在浅色图标(海草)上仍然糊。换成垫一块深色底板,任何图标上都读得出来。
+
+**把 Zpix 全站铺开。** 只在 HUD 用。`--font-pixel` 变量已经加进 `@theme`,想推到对话面板改一行就行,但那会重塑整个 app 的观感,不该混在"重构 HUD"这一轮里。
+
+**直接删掉 `GameHud.tsx` / `ActionBar.tsx`。** 留着了,`?hud=dom` 可以退回去对比。REFACTOR_PLAN 阶段 4「拆掉旧渲染」时再一起删。
+
+## 取舍
+
+| 取了 | 舍了 |
 |---|---|
-| GitHub 仓库 | `gh repo rename` → github.com/jakewqj/**xiaoaixin** |
-| 本地 git remote | `git remote set-url` 指向新仓库 |
-| Vercel 项目 | `vercel project rename` → heiyu/**xiaoaixin** |
-| Vercel 域名 | 新增 xiaoaixin.vercel.app,删掉 3 个 xiaoaixing.* 旧 alias |
-| package.json | name / repository / bugs / homepage 四处 |
-| CLAUDE.md | §三 部署行的地址和项目名 |
-| `.vercel/project.json` | projectName(本地 link 配置,gitignored) |
+| 设备分辨率缓冲区,文字清晰 | 缓冲区内存大 n² 倍(只有 UI 一层,可接受) |
+| 事件驱动重绘 | 多写一个 store 和一次浅比较 |
+| 透明 DOM 热区层 | 多一层 DOM,位置要跟着画出来的热区同步 |
+| Zpix 落仓库 | 首屏多 943KB。`font-display: swap` 兜底,没下完先用系统字,不留白 |
+| 贝壳条加高到 17px(参考图是 14) | 和参考图不完全一致。14px 装不下 12px 的 Zpix,数字底部被切 |
 
-**正式地址现在是 https://xiaoaixin.vercel.app**
+## 踩到的坑
 
-## 考虑过的替代方案
+**1. Zpix 的 12px 反过来定死了布局。** 第一版顶部栏照参考图实测值做的(面板高 36),结果第二行中文直接压到木框上、溢出面板。原因是参考图那两行是英文,比中文矮。两行 Zpix 要 12+1+12=25,加 plate 的 3px 边框 = 31,加 panel 的 4px 边框 = 39 —— 面板必须 40 高。**参考图的尺寸不能照抄,得按自己的字体重算。**
 
-- **新建一个 Vercel 项目叫 xiaoaixin,把旧的删掉**:能达到一样的效果,但会丢掉部署历史和回滚能力。`vercel project rename` 是原地改,项目 ID 不变,历史全留着,明显更好。
-- **只改 package.json,不动 GitHub 仓库名**:那 package.json 的 repository 字段就在撒谎,`npm` 系工具和 GitHub 页面上的链接都会指向不存在的地址。改名这种事要么不做,要么做干净。
-- **顺手把存档 key 也统一**:一度想过"是不是该把所有名字统一成一种写法"。**幸好没做**——那三个 key 已经是对的,而且就算不对也不该动:改 localStorage key 等于把童童已有的存档变成孤儿。数据键的命名一旦上线就该冻结,难看也认了。
+**2. 空占位格生成了一个没有名字的按钮。** 第一排只有 4 个道具(宪法十六:道具栏不超过 4 格),第 5 格是空的。我一开始给它也生成了热区,读屏器会念出一个光秃秃的"按钮"——那比没有更糟。加了 `empty` 标记:只画空框,不进 Tab 顺序。
 
-## 做出的取舍
+**3. 无头浏览器截图截不到 HUD。** 首屏是初次见面对话,而 HUD 在 `!panelContent` 时才显示。没有 CDP、没装 ws 库,最后用了个同源种子页:往 `public/__seed.html` 放一个写 `localStorage` 再 `location.replace('/')` 的页面,vite 服务它 → 同源 → 能写存档。验完删掉了。
 
-- **删掉旧 alias,而不是留着做重定向**。这是本轮最需要想清楚的一条。Vercel 的 `.vercel.app` alias 删掉就是 404,不是 301 跳转,所以"留着更安全"的直觉在这里是错的——**留着的后果是两个地址都能玩,但存档不互通**(localStorage 按域名隔离)。童童在旧地址存的进度,在新地址看不见,反过来也一样。这种"两个平行世界"对 6 岁孩子是纯粹的伤害。宁可旧地址干脆打不开。
-- **保留旧的那次 deployment 记录**(`xiaoaixing-9mkhn80mq-...`)。它的 URL 带旧名,但那是带 hash 的历史快照 URL,没人会去访问,留着是回滚资产。
-- **FORJake.md 整篇重写而不是追加**。按你的规矩每轮任务生成一份,上一轮的内容 git 里有。
+## 顺带发现的 sw.js bug(已按你的要求修掉)
 
-## 遇到的坑
-
-1. **`vercel project rename` 不会改主域名。** 项目改完名了,`xiaoaixing.vercel.app` 还稳稳地指着新部署——因为那个域名是作为独立 alias 挂在项目上的,rename 只改项目标识。必须手动 `vercel alias set` 加新的、`vercel alias rm` 删旧的。**如果我只跑了 rename 就收工,你会看到项目叫 xiaoaixin 但网址还是 xiaoaixing,而且完全没有报错提示。**
-2. **`vercel project rename` 不认 `--yes`**,加了直接报 unknown option。Vercel CLI 各子命令的 flag 支持度不统一。
-3. **`gh repo rename` 成功后本地 remote 不会自动更新。** GitHub 那边会做旧名重定向(push 还能用),所以这个坑不会立刻报错,但 remote 里留着旧名迟早出事,要手动 `git remote set-url`。
-4. **`vercel alias ls` 是团队级的**,会把 heiyu 下所有项目的 alias 都列出来(blast-donner、coverageclip、next-app…),得自己 grep 过滤。
-
-## 你需要自己做的两件事
-
-这两件我做不了,不是偷懒:
-
-1. **本地目录还叫 `D:\xiaoaixing`。** 它是当前工作目录,Windows 会锁住正在使用的目录,而且改了会当场切断这个会话。你自己改的话:关掉编辑器和终端 → 重命名成 `D:\xiaoaixin` → 重新打开。git 仓库不受影响,`.git` 跟着走。
-2. **改完目录名后,Claude Code 的记忆目录也要跟着改。** 它按项目路径建目录:`C:\Users\jakew\.claude\projects\D--xiaoaixing\` → 改成 `D--xiaoaixin`。不改的话下次在新路径打开,记忆是空的(旧记忆没丢,只是找不到)。
-
-## 一个要留意的风险
-
-**如果这 9 小时里有人在旧地址 `xiaoaixing.vercel.app` 上玩过并产生了存档,那份存档现在够不着了**(alias 已删)。localStorage 绑域名,换域名等于换了个世界。
-
-不是不可逆——把旧 alias 加回来就能重新访问:
+`public/sw.js` 原来控制台刷一片:
 
 ```
-vercel alias set xiaoaixin-3txvhuszz-heiyu.vercel.app xiaoaixing.vercel.app --scope heiyu
+Uncaught (in promise) TypeError: Failed to execute 'clone' on 'Response':
+Response body is already used     sw.js:29 / sw.js:41
 ```
 
-但从时间线看风险很低:旧地址是上一轮会话结尾才发布的,你当时的反应是继续让我 commit,没提测试过。如果童童还没碰过,就当无事发生。
+原因是 `caches.open(CACHE).then((cache) => cache.put(request, response.clone()))` —— `caches.open()` 是异步的,轮到它的 `.then` 执行时,`response` 已经被 `return` 出去、body 被浏览器消费掉了。`clone()` 必须**同步**在 return 之前调。
+
+**后果比控制台报错严重得多:`cache.put` 从来没成功过,离线缓存一直是空的。** 也就是说第 5 周做的那个 PWA,离线其实一次都没工作过。这一点是靠 Node 测试量出来的(见下),光看控制台只会以为"就是有点吵"。
+
+修法是抽一个 `cacheAndReturn(event, request, response)`,三件事:
+
+1. `const copy = response.clone()` —— 同步 clone,这是本体
+2. `if (!response.ok) return response` —— 只缓存成功的响应。404/500 存进去,离线时会被当正经内容返回
+3. `event.waitUntil(...)` —— 写缓存是异步的,不挂在 event 上 SW 可能在写完前就被回收;末尾 `.catch()` 兜住配额写满,失败也不打扰
+
+### 怎么验的
+
+无头 Chrome 验不了这个:`--virtual-time-budget` 不驱动 CacheStorage 的异步 I/O,探针页永远停在"检查中…"。改成在 Node 里用 `vm` 跑 sw.js 的 fetch handler,拿 Node 内建的 `Response` 复现浏览器时序 —— respondWith 拿到的响应先被消费,cache 那一段在之后的 microtask 里跑。
+
+第一版测试**在老代码上也通过了**,说明测试本身没用。原因是我的假 `caches.open()` 瞬间 resolve,老代码的 `clone()` 抢在 body 被消费之前跑完了。真的 `caches.open()` 要碰磁盘。补了 10ms 延迟之后:
+
+| | 老版本(HEAD) | 新版本 |
+|---|---|---|
+| cache.put 成功次数 | **0** | 1(1234 字节,完整) |
+| event.waitUntil 挂载 | 0 | 1 |
+| 未捕获 Promise 拒绝 | 1 (`Body has already been consumed`) | 0 |
+
+另外单测了 404 不进缓存(`cache.put` 0 次)。浏览器端两次加载(第一次注册 SW、第二次走 SW)控制台已经干净,只剩 vite HMR、React DevTools 提示,和一条既有的 `apple-mobile-web-app-capable` 弃用警告。
+
+## oxlint → ESLint(本轮最后一件事)
+
+项目原本用的是 oxlint(`package.json` 的 `lint` 脚本),没有任何 ESLint 配置或依赖。你说换,就换了:`eslint@10` + `typescript-eslint` + `react-hooks` + `react-refresh`,flat config,**接了 tsconfig 做类型感知**——不接的话"类型错误"一条都查不出来,只剩语法检查,那没意义。oxlint 已移除。
+
+**37 → 27 个问题。**修掉的都在渲染侧:`HUD.tsx` 的浮空 Promise、`ScreenFrame.tsx` 的组件/函数混合导出(`stageScale` 挪去 `src/render/stage.ts`)、`usePetSwim.ts` 在渲染期间写 ref、两个素材脚本的未用变量、5 处多余类型断言。
+
+**下调为 warn 的 8 条是记账,不是修好。** `react-hooks/purity` × 2 和 `set-state-in-effect` × 6 都是 react-hooks v7 带来的 React Compiler 新规则。purity 命中的是事件处理器里的 `Math.random()`(规则无法证明它不在渲染期间跑);set-state-in-effect 命中的是"跟着 props 同步状态"和定时器收气泡——**改对 = 重构对话触发状态机**,那是游戏逻辑,`REFACTOR_PLAN` §四闸 4 明说渲染重构期间不碰。理由写在 `eslint.config.js` 里了。
+
+**剩下 19 个 error 全在数据层,故意没动。** 根源都是 `res.json()` / `JSON.parse()` 返回 `any` 直接进了 state。这是真的类型安全缺口(JSON schema 漂了不会被发现),但既不是渲染相关,又在闸 1 冻结的状态层。
+
+## 我造成又收拾掉的一次事故
+
+为了验证改动跑了 `node draw-dolly.mjs`,结果它**把仓库里已提交的素材覆盖了**。不是我那行改的——是脚本早就和素材不同步了(脚本产出 384×40,仓库里是 672×48)。接着我 `rm -rf public/assets/npc/ada/` 想删自己生成的 3 个文件,又误删了该目录下已被 git 跟踪的参考图和 V1/V3 素材。
+
+两次都用 `git checkout` 还原了,已逐像素核对与 HEAD 一致。
+
+教训两条,都挺贵:
+
+1. **产物已提交的生成脚本,不能拿"跑一遍"当验证。** 它不是只读操作。
+2. **`rm -rf` 之前先看清目录里有什么。** 我以为那目录只有我刚生成的三个文件。
 
 ## 可迁移的经验
 
-- **改名任务的第一步永远是分清"标识符"和"数据键"。** 标识符(项目名、仓库名、域名)随便改;数据键(localStorage key、数据库表名、缓存前缀)改了就是数据迁移,要单独设计。这次先 grep 一遍 `src/` 才动手,是最值的那 30 秒。
-- **改名平台的行为不一致,不能类推**:GitHub 改仓库名会自动保留旧名重定向,Vercel 改项目名不动域名、删域名也不给重定向。每个平台的"改名"到底改了什么,要单独确认,不能假设。
-- **删东西之前先问"留着会不会更糟"。** 这次删 alias 是对的,因为留着会造成存档分裂——一个比 404 更隐蔽也更伤人的后果。
+**参考图给的是比例和颜色,不是尺寸。** 上一轮我从参考图实测出「边框 4px、格子 20×20、面板高 36」,这轮真拿去用,面板高度当场就不够。参考素材的数值要过一遍自己的约束(字体、语言、控件),不能直接落地。
+
+**canvas 化最容易悄悄丢掉的是语义,不是像素。** 画得像不像一眼就看得出来;`aria-label` 没了、Tab 进不去、焦点框不见了,要过很久才发现。所以我把热区做成绘制的副产物 —— `drawHud()` 画完直接返回热区列表,像素和热区从同一份数据出来,不可能对不上。
+
+**验证要验到能证伪的粒度。** `npm run build` 过了只说明能编译。这轮真正有用的三次验证是:截图看排版(抓到文字溢出)、`--dump-dom` 数 aria-label(抓到无名按钮)、看 canvas 的 `width` 属性是 1440 而 CSS 是 480(证明设备分辨率缓冲区真的生效了)。第三条尤其关键 —— 它是这次架构决定的全部意义,但肉眼在截图上看不出来。
+
+---
+
+# 交接
+
+## 一、必须你先决定的三件事
+
+| # | 事情 | 卡在哪 |
+|---|---|---|
+| 1 | **三条宪法修订** | 拟稿在本文件最上面。我没改 `CLAUDE.md`(十九·3)。你点头我写进去,或者你自己贴 |
+| 2 | **全部改动没有 git commit** | 见下面「二」——这是最大的风险项 |
+| 3 | `draw-dolly.mjs` 和已提交素材不同步 | 要我查是脚本旧了、还是素材后来手工改过? |
+
+## 二、git 状态(最大风险)
+
+`CLAUDE.md` 里写着「S0.5 全部 + S1 全部还没 commit 过」。**那批之上,又叠了本轮这些,全都只在工作区。**
+
+```
+ M .gitignore  CLAUDE.md  FORJake.md  ROADMAP.md
+ M draw-ada.mjs  draw-dolly.mjs
+ M package.json  package-lock.json  public/sw.js
+ M src/App.tsx  src/components/ScreenFrame.tsx  src/index.css
+ M src/hooks/useConfig.ts  src/hooks/usePetSwim.ts  src/hooks/useSave.ts
+?? REFACTOR_PLAN.md  eslint.config.js
+?? public/assets/world/ui/sv/  public/fonts/
+?? src/render/  src/ui/  tools/
+```
+
+`.gitignore` 和 `CLAUDE.md` 的修改**不是我改的**,进这轮之前就在那儿了。
+
+建议尽快分几个 commit 落盘(渲染重构 / sw 修复 / lint 迁移 / 工具与参考素材)。要我来做说一声。
+
+## 三、当前能跑的状态
+
+* `npm run dev` → HUD 是 canvas 版;`?hud=dom` 退回旧 DOM 版
+* `npm run build` ✅ / `npx tsc -b` ✅
+* `npm run lint` → 19 error + 8 warning,**全部已知**,见上一节
+* 存档:新增 `shells` 字段,老存档缺这个字段按 0 处理,不作废。`SAVE_VERSION` 仍是 2
+
+## 四、下一轮从哪接
+
+`REFACTOR_PLAN.md` 的阶段 1(背景层进 canvas)。前置已经全部就绪:
+
+* `src/render/assets.ts`(预载/缓存/降级)、`nineSlice.ts`、`text.ts`、`stage.ts` 都写好了,阶段 1 直接用
+* `wiki/graphic/palette.json` 有量化取样的真色值,含 `createLinearGradient` 直接可用的色标
+* **注意**:实测参考图水下是**实心 `#07838B`,没有渐变**,深浅靠剪影层做。现行 `seas.ts` 是三段渐变,要 95% 还原得改这里
+* **注意**:实测沙地占画面高 **21.4%**,`Scene.tsx` 的 `SAND_H=40` 是 14.8%
+
+阶段 1 的验收标准是「画面像素级不变」,别顺手加视差——视差在阶段 5。
+
+## 五、几个容易再踩的坑
+
+1. **参考图给的是比例和颜色,不是尺寸。** 照抄参考图的 36px 面板高,中文第二行直接溢出。
+2. **Zpix 是 12px 点阵字,字号只能取 12 的整数倍。** 它反过来约束布局,不是布局约束它。
+3. **无头 Chrome 的 `--virtual-time-budget` 不驱动 CacheStorage。** 验 SW 缓存得换 Node 跑 handler。
+4. **假 mock 要模拟真实延迟。** 验 `sw.js` 的第一版测试在老代码上也通过,因为我的假 `caches.open()` 瞬间 resolve;补上 10ms 才复现出 bug。
+5. **生成脚本不是只读的。** 见上面那次事故。
+
+---
+
+# FORJake · gfx 渲染层:小爱心精灵类 + 三层视差背景(2026-08-03)
+
+> 本轮两个任务:把 `DugongSprite` 和 `Background` 两个 Canvas 渲染类立起来,配上可在浏览器里直接看的测试页。
+> 这是 `REFACTOR_PLAN` 里「世界层进 canvas」的准备动作 —— 类先做纯、可独立验,后面再考虑替换现有 DOM 渲染。
+
+## 我做了什么、为什么这么做
+
+**`src/gfx/DugongSprite.js`** — 小爱心(儒艮)的 Canvas 渲染类。
+
+你要求「8 帧循环」,但 `pet.json` 和素材里 `swim.png` 是 **6 帧**。这两件事对不上,我没有装没看见也没有擅自改素材,采取的折中是:帧序列 `[0,1,2,3,4,5,4,2]`,把 6 帧映射成 8 帧的往复序列。划水和尾鳍拍打本来就是往复动作,乒乓序列在循环首尾不会回跳,视觉上比硬截 6 帧或重复最后两帧都连贯。如果你其实想要的是「真的 8 帧素材」,那要改的是 `pet.json` 和图,不是这个类。
+
+`BubbleParticle` 是从 `pet.json` 的 `mouth` 锚点冒泡(不是 `blowhole`),因为任务写的是「嘴部」。气泡是 2–4px 的像素方块,不是正圆 —— 和世界素材的像素风一致,也是「微小像素气泡」的字面意思。上升时加速、正弦横漂、末尾淡出,上限 24 颗防长挂机堆粒子。转身时锚点 x 镜像,规则和现有 `Bubbles.tsx` 完全一致。
+
+正弦浮力是 `buoyancyOffset()`:垂直振幅 4px、周期 3.2s,**水平漂移用半频** —— 上下浮两次才左右晃一个来回,更接近被水流慢慢推的感觉,不是左右抽搐。偏移在 `draw()` 里取整,保持像素对齐。
+
+**`src/gfx/Background.js`** — 三层视差背景。
+
+- 背景(0.15x):`sky.png` + `far.png` 远景 + `surface.png` 水面线
+- 中景(0.5x):三段硬切水体(浅滩/中层/深水)+ 波光光斑。光斑是 `alpha = maxAlpha * (0.5 + 0.5*sin(phase))` 的呼吸叠加,中心随另一条正弦游走,行间相位错开
+- 前景(1.0x):`sand.png` + 海草/珊瑚 tilemap。布局用固定种子的 mulberry32,每次进来海草长在同一个地方,不是每次刷新随机换
+
+摆动是 2 帧交替,但**不是整体平移**:用 `ctx.transform(1, 0, dx/height, 1, 0, 0)` 做切变,草尖动、根部贴住沙底不动。整体平移的草像插在地上的纸板,切变才像被水流推。每个 tile 带独立相位,错开后有的草摆有的草停,不是集体木偶。
+
+**两个测试页**:`public/test_dugong_sprite.html` 和 `public/test_background.html`,挂 Vite dev server 直接看。都放了开关:转身/浮力/锚点/倍速、镜头横移/前景,方便逐项验。
+
+## 考虑过但没采用的方案
+
+**气泡挂在嘴部锚点上跟随身体。** 否掉。真实气泡离嘴后就留在原地上升,跟着嘴晃会显得是粘在脸上的装饰。实现上气泡只记出生时的世界坐标,`draw()` 里加的是**当帧**浮力偏移算出的嘴部位置做出生点,出生后就独立。
+
+**tilemap 用随机布局每次刷新换。** 否掉。家海草床是「家」,布局该稳定。种子固定为 `20260803`(今天),要换布局改种子就行。
+
+**水体用 `createLinearGradient` 平滑渐变。** 否掉。三段硬切是刻意的,和现有 `Scene.tsx` 的像素风一致。`wiki/graphic/palette.json` 里其实存了渐变方案,但那是上一轮 HUD 参考图的取样,**实测那张图水下是实心 `#07838B` 没有渐变**(见上轮交接),所以这里走三段硬切,深浅靠色带分界。
+
+## 我修掉的一个自己造成的问题
+
+第一版水体三段是按**整屏高度**分的(h1=0.36, h2=0.6),浅水带占得太满,导致长在 0.82 处的海草全站在深水色带里,沙底的颜色层次不对。改成以沙底线(0.82)为界往上分:浅水 35%、中层到 75%、深水贴沙底。截图对比在 `D:\tmp\bg-*.png`。
+
+## 验证方式
+
+`npx eslint` 两个文件都过。`npx tsc -b` 过(这两个是 `.js`,但 `tsconfig` 的 `include: ["src"]` 会扫到)。
+
+真正有用的是 **Playwright 截图**,不是编译:
+- 小爱心渲染正常、锚点红点与 `pet.json` 吻合、8 倍速下能看到一串气泡轨迹(证明气泡留在原地上升而不是跟嘴)、朝左镜像正确、无 JS 错误
+- 背景三层速度差可见、光斑位置在动、海草相位错开
+
+截图存在 `D:\tmp\dugong-sprite-*.png` / `bg-*.png` / `dugong-left.png`。
+
+**注意**:控制台曾报一条 404,我专门复测确认是 **favicon**,页面本身的资源(JS / pet.json / 素材)全部 200,不是代码问题。
+
+## 踩到的坑
+
+1. **PowerShell 的 `-replace` 是正则,`?` 是元字符。** 我想改测试页 label「8 倍速(测试用)」,括号没转义匹配不上;更糟的是另一次 `-replace 'const h1 = Math\.Round'` 手滑把占位符写进了代码,`PLACEHOLDER is not defined` 当场炸。最后改成按行号重写段落。**改代码别用正则替换,用行号或重新生成。**
+2. **`Set-Content` 的默认超时不够。** 两个测试页第一次写入都超时被截断,文件根本没落盘。长 heredoc 要加 `timeout_ms`。
+3. **无头截图里「在动」这件事要两张图对比才看得出来。** 单张截图只能证明「画出来了」,光斑游走和海草摆动得靠时间差对比。
+
+---
+
+# 交接
+
+## 一、git 状态(仍是最大风险)
+
+本轮新增的文件,全部只在工作区:
+
+```
+?? public/test_dugong_sprite.html
+?? public/test_background.html
+?? src/gfx/
+```
+
+它们叠在上一轮交接里已经列出的那一大批未 commit 改动之上(`src/render/`、`src/ui/`、`REFACTOR_PLAN.md`、sw.js 修复等等)。**整个项目现在有大量工作没有任何 commit 保护**,建议尽快分 commit 落盘。
+
+## 二、这两个类现在没被任何地方引用
+
+`src/gfx/` 是独立模块,现有游戏渲染仍走 `Pet.tsx` / `Scene.tsx` 的 DOM 方案。**我没有把它们接进 app**,因为任务只要求实现类,而接进 app 意味着替换现有渲染 —— 那是 `REFACTOR_PLAN` 阶段 1/2 的事,动的是游戏主画面,不该混在这轮。
+
+如果你下一轮的意图是「让游戏画面真的用上这两个类」,那需要一次明确的接入任务,并且要先想清楚:canvas 的可访问性语义怎么补(上轮 HUD 的经验:画得像容易,`aria-label` / Tab 顺序容易悄悄丢)。
+
+## 三、下一轮从哪接
+
+按 `REFACTOR_PLAN`,阶段 1 是「背景层进 canvas,验收标准是像素级不变」。`Background.js` 已经是一个可用的起点,但要注意:
+
+- 它现在**不是像素级还原 `Scene.tsx`**,是重新设计的三层视差。视差在 REFACTOR_PLAN 里属于**阶段 5**,我提前做了是因为你的任务明确要视差。如果阶段 1 要严格「像素级不变」地搬现有 DOM,这个类得往回收到和 `Scene.tsx` 一致,视差先关掉
+- `Background` 默认 `worldWidth: 960`,`App.tsx` 实际按 `slotCount * STAGE_WIDTH` 算,接入时要传真的 worldWidth
+- 海草/珊瑚的素材清单(`CORALS`)是我挑的 5 种,`assets/world/` 里还有更多,接真场景时可能要按 `world.json` 的「特征」分海域换
+
+## 四、几个容易再踩的坑
+
+1. **`pet.json` 的 `swim.png` 是 6 帧,不是 8 帧。** 8 帧循环是代码层的往复映射。哪天素材真出了 8 帧版,`FRAME_SEQUENCE` 要改回 `0..7` 直通。
+2. **`FRAME_SEQUENCE` 依赖 `swim.png` 的帧数。** 如果素材帧数变了,这个映射关系就不成立,类和 `pet.json` 要一起看。
+3. **种子决定海草布局。** `Background` 的种子是字面量 `20260803`,改了就换一片海草床。要分海域做不同布局,种子应该来自 `world.json` 的海域 id,不是写死。
+4. **测试页依赖 dev server。** `test_*.html` 是 `<script type="module">` 从 `/src/` import,必须走 Vite,双击文件打不开。
