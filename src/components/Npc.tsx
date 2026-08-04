@@ -48,7 +48,7 @@ function Npc({ npc, leftPx, reacting = false, onTapSprite, canGift = false, onGi
           type="button"
           onClick={onGift}
           aria-label={`送海草给${npc.名字}`}
-          className="ui-slot pointer-events-auto absolute -top-8 -right-2 flex cursor-pointer items-center justify-center shadow-sm transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
+          className="ui-slot pointer-events-auto absolute -top-8 -right-2 flex cursor-pointer items-center justify-center transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
         >
           <img src="/assets/world/ui/icon_sprout.png" alt="" aria-hidden="true" />
         </button>

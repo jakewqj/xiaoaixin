@@ -1,15 +1,15 @@
 @import 'tailwindcss';
 
-/* 像素画的边一旦被平滑插值就毁了,canvas 也要加。见 CLAUDE.md 十二/十三 */
-img,
-canvas,
-video {
+/* 像素画的边一旦被平滑插值就毁了。见 CLAUDE.md 十二/十三。
+   image-rendering 是可继承属性,所以钉在根上一次就够:<img>/<canvas> 之外,
+   div 的 background-image 也一起覆盖到 —— 原来只写 img/canvas/video 时,
+   Scene.tsx 里四层平铺背景图(sky/surface/far/sand)是漏掉的,整数倍放大时被双线性插值糊掉 */
+:root {
   image-rendering: pixelated;
 }
 
-/* Sprite 组件用 div 的背景图切帧,不是 <img>,像素渲染要单独补上 */
+/* Sprite 组件用 div 的背景图切帧,不是 <img> */
 .sprite-frames {
-  image-rendering: pixelated;
   background-repeat: no-repeat;
   background-position-x: 0;
   animation-name: sprite-play;
@@ -41,7 +41,7 @@ video {
 /* 配色来自 CLAUDE.md 视觉规范,不要自行更换 */
 @theme {
   /* 点阵字体,原生格 12px。字号取 12 的整数倍笔画才对得上像素格 */
-  --font-pixel: 'Zpix', 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-pixel: 'Zpix', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
   --color-water-shallow: #7fd1d8;
   --color-water-mid: #2e8b9b;
@@ -60,9 +60,25 @@ video {
   --color-wood-dark: #6b4226;
   --color-parchment: #f3e1b8;
 
-  /* 标题和对话用站酷快乐体,英文小字用霞鹜文楷。字体没加载出来时先用系统字顶上,不留白 */
-  --font-kuaile: 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-wenkai: 'LXGW WenKai', 'PingFang SC', 'Microsoft YaHei', serif;
+  /* 2026-08-04 用户决议「字体全量换」:kuaile / wenkai 两个变量一起指向 Zpix,
+     13 个组件里的 font-kuaile / font-wenkai 类名不用动就全变成像素字。
+     CLAUDE.md 四「标题用站酷快乐体、正文用霞鹜文楷」由此正式作废。
+
+     配套硬约束:凡是吃这两个变量的地方,字号必须落在 12 的整数倍(12 / 24 / 36),
+     否则点阵会被字体引擎重采样、像素点糊成灰边 —— 本次已把各组件的 text-* 一并改掉 */
+  --font-kuaile: 'Zpix', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-wenkai: 'Zpix', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
+  /* 爸爸的控制后台不吃像素字:343 行表单、字号杂、还有数字输入框,
+     Zpix 在非 12 倍数下会发虚。REFACTOR_PLAN §〇 已把后台排除在像素化范围外,字体同理 */
+  --font-admin: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+/* 后台的字体豁免。写在 layer 外面 —— 无层样式优先级高于 @layer utilities 里的
+   Tailwind 工具类,所以不用 !important 也能盖住子元素上的 font-kuaile / font-wenkai */
+.admin-ui,
+.admin-ui * {
+  font-family: var(--font-admin);
 }
 
 /* 上下浮的同时身体轻轻俯仰,复刻纪录片里儒艮靠尾鳍推进时慢慢摇的泳姿 */
@@ -255,25 +271,67 @@ video {
 
 /* ---- 像素 HUD:深棕木底 + 金棕边 + 奶白字(参考图的面板语言) ---- */
 
-/* 九宫格木框面板。border-image 的切片和边宽 1:1(6px),保证边框不被非整数缩放 */
+/* 九宫格木框面板。2026-08-04 用户决议「边框规格统一到 4px」:
+   切片 6px + panel.png 换成 4px + sv/frame_panel.png —— 后者是照 wiki/graphic/hud-9slice.json
+   的参考图实测值(1408px ÷ 480 = 2.933 换算)重绘的,canvas HUD 一直用的就是它。
+   至此 DOM 和 canvas 两套 UI 共用同一张纹理、同一个切片数,画面上不再有两种边框。
+
+   中段必须 repeat:木纹用 stretch 会被拉糊(hud-9slice.json textures[0].middle_mode_说明)。
+   image-rendering 由 :root 继承下来,这里不用再写 */
 .hud-panel {
   border-style: solid;
-  border-width: 6px;
-  border-image: url('/assets/world/ui/panel.png') 6 fill;
-  image-rendering: pixelated;
+  border-width: 4px;
+  border-image: url('/assets/world/ui/sv/frame_panel.png') 4 fill repeat;
 }
 
-/* 道具格:26x26 整张背景图,图标由组件放进来 */
+/* 面板里内嵌的奶白文字板(对话正文底、知识卡)。中段是纯色,stretch 就够 */
+.sv-plate {
+  border-style: solid;
+  border-width: 3px;
+  border-image: url('/assets/world/ui/sv/plate_cream.png') 3 fill stretch;
+}
+
+/* 全屏弹层(图鉴 / 相册 / 换一片海)渲染在 <ScreenFrame> 外面,是真实视口像素 ——
+   同一张 4px 木框贴图,在舞台里被 transform 放大 n 倍,在这里却只有 4px 发丝边,
+   同屏摆一起一眼看得出两套边框(截图实测:HUD 8px vs 弹层 4px)。
+   这里把边宽按舞台倍数乘回去:4px 切片画进 8px 边框 = 2 倍最近邻,
+   像素颗粒和舞台内完全一致。--ui-scale 由 ScreenFrame 写在 :root 上 */
+.hud-panel-lg {
+  border-style: solid;
+  border-width: calc(4px * var(--ui-scale, 2));
+  border-image: url('/assets/world/ui/sv/frame_panel.png') 4 fill repeat;
+}
+
+.sv-plate-lg {
+  border-style: solid;
+  border-width: calc(3px * var(--ui-scale, 2));
+  border-image: url('/assets/world/ui/sv/plate_cream.png') 3 fill stretch;
+}
+
+/* 全屏弹层的字号。和边框同理:弹层在舞台缩放之外,写死 24px 只在 ×2 那一档
+   恰好等于舞台里的 12 逻辑px,换到 ×3 ×4 就对不上了。乘 --ui-scale 之后,
+   任何缩放档位下弹层的字和舞台里的对话都是同一个观感大小。
+   12 是 Zpix 的原生点阵格,乘整数倍仍然零重采样 —— 别改成别的基数 */
+.ui-text {
+  font-size: calc(12px * var(--ui-scale, 2));
+  line-height: calc(16px * var(--ui-scale, 2));
+}
+
+/* 单行用(英文小字、日期):行高压到和字号一样,不留额外行间 */
+.ui-text-tight {
+  font-size: calc(12px * var(--ui-scale, 2));
+  line-height: calc(12px * var(--ui-scale, 2));
+}
+
+/* 道具格:20x20(参考图实测),和 canvas HUD 的 HOTBAR.slot 同一个数 */
 .ui-slot {
-  width: 26px;
-  height: 26px;
-  background-image: url('/assets/world/ui/slot.png');
-  image-rendering: pixelated;
+  width: 20px;
+  height: 20px;
+  background-image: url('/assets/world/ui/sv/slot.png');
 }
 
-.ui-slot-active {
-  background-image: url('/assets/world/ui/slot_red.png');
-}
+/* `.ui-slot-active`(红框选中格)随 ActionBar 一起删了 —— 现在 hotbar 全在 canvas 里,
+   高亮由 draw.ts 直接 drawImage(slot_active.png) 处理。`.ui-slot` 保留:NPC 的送礼按钮还在用 */
 
 @media (prefers-reduced-motion: reduce) {
   .scene-cloud,

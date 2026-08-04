@@ -97,7 +97,7 @@ function AdminPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-30 overflow-y-auto bg-sand">
+    <div className="admin-ui fixed inset-0 z-30 overflow-y-auto bg-sand">
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-sand/95 px-4 py-3 backdrop-blur-sm">
         <p className="font-kuaile text-lg text-ink">控制后台</p>
         <button

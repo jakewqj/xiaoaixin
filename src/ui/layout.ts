@@ -25,6 +25,11 @@ export const COLOR = {
   inkDim: '#85360F',
   cream: '#F4DEB9',
   numeral: '#8E1B0A',
+  /** 饱食度:亮着的格子是海草绿(和原来 FullnessMeter 的 --color-seagrass 同一个色),
+   *  空格子用 goldbar 纹理自己的暗棕。**永远不用红色** —— 饿了不是失败(CLAUDE.md 原则 1) */
+  meterFull: '#6FA84B',
+  meterFullTop: '#A8CC72',
+  meterEmpty: '#C76F16',
 } as const
 
 /** 顶部栏。参考图是「时钟盘压住面板左端 + 右边两行文字 + 下方计数条」
@@ -40,15 +45,22 @@ export const TOP = {
   /** 两行文字在 plate 内的起点。行距 13 = 12px 字 + 1px 间隙 */
   line1: { x: 38, y: 10 },
   line2: { x: 38, y: 23 },
-  /** 贝壳计数条。顶部 3px 掖在面板下面,参考图就是这么叠的。
-   *  高 17 而不是参考图的 14:Zpix 最小 12px,14px 的条会把数字底部切掉 */
-  shellBar: { x: 20, y: 39, w: 72, h: 17 },
-  shellIcon: { x: 24, y: 43, size: 9 },
-  /** 数字右对齐,左边露出来的格子当背景 —— 参考图就是这个排法 */
-  shellTextRight: 88,
-  shellTextY: 42,
   /** 长按 5 秒进控制后台的热区 = 整个面板 */
   titleHold: { x: 2, y: 2, w: 124, h: 40 },
+} as const
+
+/** 饱食度条。2026-08-04 用户决议:原来贴在海底中央的海草计量条(FullnessMeter)
+ *  搬到顶部,顶掉原来的贝壳计数条。贝壳数不再常驻显示 —— 顺带解掉
+ *  CLAUDE.md 十六「❌ 常驻金钱 HUD」那条一直挂着的冲突
+ *
+ *  沿用 goldbar.png 这张纹理:它是 24x17,threeSliceX 按原图高度画,所以条高恒为 17。
+ *  纹理内边距实测(逐像素 dump):木框占外圈 3px,中间 x3..x20 / y3..y13 是奶白格底。
+ *  格子区就摆在这块奶白里,再往里让 1px 免得压到斜面高光
+ */
+export const METER = {
+  bar: { x: 20, y: 39, w: 72 },
+  /** span 是 5 格 + 4 条缝的总宽;单格宽由 max 反算,MAX_FULLNESS 改了这里不用跟着改 */
+  cells: { x: 24, y: 43, span: 64, h: 9, gap: 1 },
 } as const
 
 /** 底部快捷栏。两排,每排 5 格,格子 20x20(参考图实测值) */

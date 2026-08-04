@@ -3,7 +3,7 @@
 // UI canvas 的后备缓冲区是设备分辨率(见 src/ui/HUD.tsx),所以这里画出来的字
 // 是按原生分辨率栅格化的,不会被最近邻放大成马赛克
 
-export const PIXEL_FONT = '"Zpix", "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif'
+export const PIXEL_FONT = '"Zpix", "PingFang SC", "Microsoft YaHei", sans-serif'
 
 // Zpix 是 12px 点阵字体。字号取 12 的整数倍笔画才对得上像素格,
 // 取 9、10、11 这种会被字体引擎重采样,像素点变成灰边

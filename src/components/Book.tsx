@@ -24,31 +24,28 @@ function Book({ cards, onClose }: BookProps) {
         <button
           type="button"
           onClick={onClose}
-          className="hud-panel flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
+          className="hud-panel-lg flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
         >
-          <span className="text-3xl leading-none" aria-hidden="true">
+          <span className="ui-text-tight" aria-hidden="true">
             🌊
           </span>
-          <span className="font-kuaile text-2xl text-[#f8e8c8]">回海里</span>
+          <span className="ui-text font-kuaile text-[#f8e8c8]">回海里</span>
         </button>
       </div>
 
       <div className="mx-auto flex max-w-2xl flex-col gap-7 px-5 pt-2 pb-16">
         {groups.map((group) => (
           <section key={group.subject} className="flex flex-col gap-3">
-            <h2 className="font-kuaile text-xl text-wood-dark/80">{group.subject}</h2>
+            {/* 标题和正文同字号,靠颜色分层级 —— 和对话面板里「说话人 vs 台词」一个做法。
+                Zpix 只有 12 的整数倍是锐的,再大一档就是 24×scale,在列表里过大 */}
+            <h2 className="ui-text font-kuaile text-wood-dark/80">{group.subject}</h2>
             {group.list.map((card) => (
-              <article
-                key={card.id}
-                className="rounded-xl border-2 border-wood-dark/50 bg-white/60 px-6 py-4 shadow-sm"
-              >
-                <p className="font-kuaile text-2xl leading-snug whitespace-pre-line text-ink">
+              <article key={card.id} className="sv-plate-lg px-6 py-4">
+                <p className="ui-text font-kuaile whitespace-pre-line text-ink">
                   {card.childText}
                 </p>
                 {card.en && (
-                  <p className="font-wenkai mt-1 text-base leading-snug text-ink/50">
-                    {card.en}
-                  </p>
+                  <p className="ui-text-tight font-wenkai mt-1 text-ink/50">{card.en}</p>
                 )}
               </article>
             ))}

@@ -28,8 +28,10 @@ export interface HudSnapshot {
   season: string
   moonPhase: string
   tide: string
-  /** 贝壳数量。常驻显示是 2026-08-03 用户明确要求的,见 CLAUDE.md 待修订项 */
-  shells: number
+  /** 饱食度 0–max。只画格子,**永远不显示数字或百分比、永远不变红**
+   *  (CLAUDE.md 原则 1「没有失败态」+ 原 FullnessMeter 的注释) */
+  fullness: number
+  maxFullness: number
   slots: readonly SlotSpec[]
   /** 灰格子被点后的提示文字,自己会消失 */
   tip: string | null

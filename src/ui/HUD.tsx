@@ -128,6 +128,9 @@ function HUD({ snapshot, onSlotTap, onHoldTitle }: HudProps) {
         className="pointer-events-none absolute inset-0"
         style={{ width: STAGE_WIDTH, height: STAGE_HEIGHT, imageRendering: 'pixelated' }}
       />
+      {/* 饱食度条现在画在 canvas 上,canvas 没有语义。补一个只给读屏器看的节点,
+          role 和 label 与它取代的 FullnessMeter 保持一致。它不可点,所以不进 Tab 顺序 */}
+      <div className="sr-only" role="img" aria-label="小爱心的肚子" />
       {/* 透明热区层:canvas 出像素,这里出语义。opacity-0 而不是 hidden ——
           hidden 会让读屏器也读不到,那就白铺了 */}
       {hotspots.map((spot) =>

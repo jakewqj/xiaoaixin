@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ScreenFrame, { STAGE_WIDTH } from './components/ScreenFrame'
 import Scene from './components/Scene'
-import GameHud from './components/GameHud'
 import Pet, { EAT_MS } from './components/Pet'
 import type { PoseName } from './components/Pet'
 import DialoguePanel from './components/DialoguePanel'
 import type { PanelContent } from './components/DialoguePanel'
-import FullnessMeter from './components/FullnessMeter'
 import KnowledgeCard from './components/KnowledgeCard'
 import SeagrassBed from './components/Seagrass'
 import Book from './components/Book'
 import Album from './components/Album'
-import ActionBar from './components/ActionBar'
 import SeaPicker from './components/SeaPicker'
 import {
   BED_LIMIT,
@@ -49,14 +46,9 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const WELCOME_BACK_DAYS = 3
 
 // 由条件触发的场景。greet_reply 是顺着选项的 next 过来的,不在这里。
-// 饿了/要换气不再走这里的文字气泡——分别换成了 FullnessMeter 和小爱心自己的「屏息」姿势,
+// 饿了/要换气不再走这里的文字气泡——分别换成了 HUD 顶部的饱食度条和小爱心自己的「屏息」姿势,
 // 靠视觉就看得出来,不用再读一句话
 const TRIGGERED = ['greet_first', 'handdrawn', 'welcome_back', 'grow_up']
-
-// 新旧 HUD 双轨:默认走 canvas 九宫格层,加 ?hud=dom 退回旧的 DOM 版对比。
-// REFACTOR_PLAN 阶段 4「拆掉旧渲染」时把这个开关和旧组件一起删掉
-const legacyHud =
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('hud') === 'dom'
 
 // 选中一个选项之后開心一下的时长。没有 happy 动画的邻居就不会有这个反应
 const NPC_REACT_MS = 1800
@@ -444,11 +436,12 @@ function App() {
       season: '夏天',
       moonPhase: '满月',
       tide: '涨潮',
-      shells: save.shells,
+      fullness: save.fullness,
+      maxFullness: MAX_FULLNESS,
       slots,
       tip: hudTip,
     }
-  }, [save.daysPlayed, save.shells, grownCount, breath.phase, hudTip])
+  }, [save.daysPlayed, save.fullness, grownCount, breath.phase, hudTip])
 
   const handleSlotTap = useCallback(
     (id: string) => {
@@ -598,42 +591,11 @@ function App() {
               {/* 对话面板从底部滑上来的时候,饱腹度条和 HUD 会被它盖住/撞在一起——
                   说话的时候先让它们让开,面板收起再回来 */}
               {page === 'sea' && !panelContent && (
-                <>
-                  {legacyHud ? (
-                    <GameHud
-                      day={save.daysPlayed}
-                      moonPhase="满月"
-                      tide="涨潮中"
-                      stage={stage}
-                      onHoldTitle={() => setAdminGateOpen(true)}
-                    />
-                  ) : (
-                    <HUD
-                      snapshot={hudSnapshot}
-                      onSlotTap={handleSlotTap}
-                      onHoldTitle={() => setAdminGateOpen(true)}
-                    />
-                  )}
-                  {/* 换气(镜头在水面)时藏起来:计量条长得像海草,浮在水面画面里
-                      会被当成"种的海草跟着浮上来了" */}
-                  {!breath.atSurface && (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-5 flex justify-center">
-                      <FullnessMeter value={save.fullness} />
-                    </div>
-                  )}
-                  {legacyHud && (
-                    <ActionBar
-                      grownSeagrass={grownCount}
-                      breathWaiting={breath.phase === 'waiting'}
-                      onFeed={feed}
-                      onPlant={plant}
-                      onOpenSea={() => setSeaPickerOpen(true)}
-                      onOpenAlbum={() => setPage('album')}
-                      onOpenBook={() => setPage('book')}
-                      onBreathe={handleBreathe}
-                    />
-                  )}
-                </>
+                <HUD
+                  snapshot={hudSnapshot}
+                  onSlotTap={handleSlotTap}
+                  onHoldTitle={() => setAdminGateOpen(true)}
+                />
               )}
             </>
           }

@@ -49,18 +49,18 @@ function Album({
         <button
           type="button"
           onClick={onClose}
-          className="hud-panel flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
+          className="hud-panel-lg flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
         >
-          <span className="text-3xl leading-none" aria-hidden="true">
+          <span className="ui-text-tight" aria-hidden="true">
             🌊
           </span>
-          <span className="font-kuaile text-2xl text-[#f8e8c8]">回海里</span>
+          <span className="ui-text font-kuaile text-[#f8e8c8]">回海里</span>
         </button>
       </div>
 
       <div className="mx-auto flex max-w-2xl flex-col gap-7 px-5 pt-2 pb-16">
         <section className="flex flex-col gap-3">
-          <h2 className="font-kuaile text-xl text-wood-dark/80">{titles.成长}</h2>
+          <h2 className="ui-text font-kuaile text-wood-dark/80">{titles.成长}</h2>
           {/* 顶对齐:有的阶段有日期有的没有,底对齐会让照片高低不齐 */}
           <div className="flex flex-wrap items-start gap-4">
             {stages.map((stage, index) => {
@@ -71,7 +71,9 @@ function Album({
               const scale = (stage.体型 / biggest) * ((112 * 0.92) / FRAME_WIDTH)
               return (
                 <figure key={stage.id} className="flex flex-col items-center gap-1">
-                  <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-wood-dark/50 bg-water-shallow/60 shadow-sm">
+                  {/* 原来是 rounded-full 的圆相框:圆角在像素风里没法成立(边缘必然抗锯齿),
+                      改成方形奶白板 —— 参考图的相框本来也都是方的 */}
+                  <div className="sv-plate-lg flex h-28 w-28 items-center justify-center overflow-hidden bg-water-shallow/60">
                     {anim && (
                       <Sprite
                         src={anim.src}
@@ -85,11 +87,11 @@ function Album({
                     )}
                   </div>
                   <figcaption className="text-center">
-                    <p className="font-kuaile text-xl text-ink">{stage.名字}</p>
+                    <p className="ui-text font-kuaile text-ink">{stage.名字}</p>
                     {stage.en && (
-                      <p className="font-wenkai text-sm text-ink/50">{stage.en}</p>
+                      <p className="ui-text-tight font-wenkai text-ink/50">{stage.en}</p>
                     )}
-                    {day && <p className="font-wenkai text-sm text-ink/40">{day}</p>}
+                    {day && <p className="ui-text-tight font-wenkai text-ink/40">{day}</p>}
                   </figcaption>
                 </figure>
               )
@@ -99,26 +101,22 @@ function Album({
 
         {shown.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h2 className="font-kuaile text-xl text-wood-dark/80">{titles.回忆}</h2>
+            <h2 className="ui-text font-kuaile text-wood-dark/80">{titles.回忆}</h2>
             {shown.map((memory) => (
               <article
                 key={memory.id}
-                className="flex items-center gap-4 rounded-xl border-2 border-wood-dark/50 bg-white/60 px-5 py-4 shadow-sm"
+                className="sv-plate-lg flex items-center gap-4 px-5 py-4"
               >
-                <span className="text-4xl leading-none" aria-hidden="true">
+                <span className="ui-text-tight" aria-hidden="true">
                   {memory.icon}
                 </span>
                 <div className="min-w-0">
-                  <p className="font-kuaile text-2xl leading-snug text-ink">
-                    {memory.text}
-                  </p>
+                  <p className="ui-text font-kuaile text-ink">{memory.text}</p>
                   {memory.en && (
-                    <p className="font-wenkai text-base leading-snug text-ink/50">
-                      {memory.en}
-                    </p>
+                    <p className="ui-text-tight font-wenkai text-ink/50">{memory.en}</p>
                   )}
                 </div>
-                <p className="font-wenkai ml-auto shrink-0 text-base text-ink/40">
+                <p className="ui-text-tight font-wenkai ml-auto shrink-0 text-ink/40">
                   {dayLabel(events[memory.id])}
                 </p>
               </article>

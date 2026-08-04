@@ -29,7 +29,7 @@ function AdminGate({ password, onUnlock, onClose }: AdminGateProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/80">
+    <div className="admin-ui fixed inset-0 z-30 flex items-center justify-center bg-ink/80">
       <div className="flex w-72 flex-col items-center gap-4 rounded-3xl bg-sand px-6 py-6 shadow-lg">
         <p className="font-kuaile text-lg text-ink/70">爸爸的密码</p>
         <div className="flex gap-3">

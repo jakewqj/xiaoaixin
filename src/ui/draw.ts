@@ -7,7 +7,7 @@
 import * as assets from '../render/assets'
 import { nineSlice, threeSliceX } from '../render/nineSlice'
 import { drawText, measure, SIZES } from '../render/text'
-import { COLOR, HOTBAR, SLICE, TEX, TIP, TOP, UI_DIR } from './layout'
+import { COLOR, HOTBAR, METER, SLICE, TEX, TIP, TOP, UI_DIR } from './layout'
 import type { HudSnapshot, Hotspot, SlotSpec } from './types'
 
 const STAGE_W = 480
@@ -22,7 +22,31 @@ function icon(ctx: CanvasRenderingContext2D, src: string, x: number, y: number, 
   ctx.globalAlpha = 1
 }
 
-/** 顶部栏:时钟盘 + 两行文字(第几天/季节、月相/潮汐)+ 贝壳计数条 */
+/**
+ * 饱食度的格子。先用暗棕整格垫底,盖掉 goldbar 纹理自带的金币格纹 ——
+ * 那道 5px 一格的纹路和这里的 5 格对不上,不盖掉两套格子会打架。
+ * 亮着的格子顶上再压 1px 浅绿当斜面高光,像素画的立体感全靠这一条边
+ */
+function drawMeter(ctx: CanvasRenderingContext2D, value: number, max: number): void {
+  const { x, y, span, h, gap } = METER.cells
+  const n = Math.max(1, max)
+  const w = Math.floor((span - gap * (n - 1)) / n)
+  if (w <= 0) return
+
+  for (let i = 0; i < n; i++) {
+    const cx = x + i * (w + gap)
+    ctx.fillStyle = COLOR.meterEmpty
+    ctx.fillRect(cx, y, w, h)
+    if (i < value) {
+      ctx.fillStyle = COLOR.meterFull
+      ctx.fillRect(cx, y, w, h)
+      ctx.fillStyle = COLOR.meterFullTop
+      ctx.fillRect(cx, y, w, 1)
+    }
+  }
+}
+
+/** 顶部栏:时钟盘 + 两行文字(第几天/季节、月相/潮汐)+ 饱食度条 */
 function drawTopBar(ctx: CanvasRenderingContext2D, snap: HudSnapshot, spots: Hotspot[]): void {
   const panel = assets.get(TEX.panel)
   const plate = assets.get(TEX.plate)
@@ -47,13 +71,11 @@ function drawTopBar(ctx: CanvasRenderingContext2D, snap: HudSnapshot, spots: Hot
   x += 12
   drawText(ctx, snap.tide, x, TOP.line2.y, COLOR.ink, SIZES.normal)
 
-  // 贝壳计数条。数字右对齐,左边空出来的格子当背景
+  // 饱食度条:5 格,亮着的就是还有的。没有数字、没有百分比、没有图标 ——
+  // 它接替的是原来贴在海底那排海草叶片,语义靠「海草绿」这个颜色延续下来
   const bar = assets.get(TEX.bar)
-  if (bar) threeSliceX(ctx, bar, TOP.shellBar.x, TOP.shellBar.y, TOP.shellBar.w, SLICE.bar)
-  icon(ctx, TEX.shell, TOP.shellIcon.x, TOP.shellIcon.y)
-  const shells = String(snap.shells)
-  const shellW = measure(ctx, shells, SIZES.normal)
-  drawText(ctx, shells, TOP.shellTextRight - shellW, TOP.shellTextY, COLOR.numeral, SIZES.normal)
+  if (bar) threeSliceX(ctx, bar, METER.bar.x, METER.bar.y, METER.bar.w, SLICE.bar)
+  drawMeter(ctx, snap.fullness, snap.maxFullness)
 
   spots.push({
     id: '__title',

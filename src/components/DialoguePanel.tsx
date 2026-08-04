@@ -52,33 +52,40 @@ function DialoguePanel({ content }: { content: PanelContent | null }) {
       className="dialogue-panel pointer-events-none absolute inset-x-0 bottom-0 flex justify-center"
       style={{ transform: open ? 'translateY(0)' : 'translateY(100%)' }}
     >
-      <div className="hud-panel pointer-events-auto w-full max-w-[420px] px-1 pt-0.5 pb-1 shadow-lg">
-        <p className="font-wenkai mb-1 text-[9px] leading-none text-[#f8e8c8]/85">{shown.speaker}</p>
+      <div className="hud-panel pointer-events-auto w-full max-w-[420px] px-1 pt-0.5 pb-1">
+        <p className="font-wenkai mb-0.5 text-xs leading-none text-[#f8e8c8]/85">{shown.speaker}</p>
         <button
           type="button"
           onClick={handleTextTap}
-          className="w-full rounded-md border-2 border-wood-dark bg-parchment px-3 py-1.5 text-left"
+          className="sv-plate w-full px-3 py-1 text-left"
         >
-          <p className="font-kuaile text-2xl leading-snug whitespace-pre-line text-ink">
+          {/* 2026-08-04 用户决议:对话文字 24px → 12px,推翻 CLAUDE.md 四「对话文字最小 24px」。
+              我提过这条撞宪法、也提过童童正在识字,用户确认照做。
+              12px 是 Zpix 的原生点阵格,零重采样,笔画反而比 24px 锐。
+              行距 16px(整数,留 4px 行间)—— 半像素行高会把基线推歪,点阵字必发虚 */}
+          <p className="font-kuaile text-xs leading-[16px] whitespace-pre-line text-ink">
             {shown.text}
           </p>
+          {/* 正文降到 12px 之后,英文副标题没法再更小(12 是 Zpix 下限),
+              §九 说的「小字」现在只靠颜色区分:正文 text-ink,英文 text-ink/50 */}
           {shown.en && (
-            <p className="font-wenkai mt-0.5 text-base leading-snug text-ink/50">{shown.en}</p>
+            <p className="font-wenkai mt-0.5 text-xs leading-none text-ink/50">{shown.en}</p>
           )}
         </button>
         {shown.options.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap justify-center gap-1.5">
+          <div className="mt-1 flex flex-wrap justify-center gap-1">
             {shown.options.map((option) => (
               <button
                 key={option.label}
                 type="button"
                 onClick={option.onSelect}
-                className="flex min-h-9 cursor-pointer items-center gap-1 rounded-md border-2 border-wood-dark bg-parchment px-2 py-1 shadow-sm transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
+                className="sv-plate flex min-h-6 cursor-pointer items-center gap-1 px-2 py-0.5 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
               >
-                <span className="text-lg leading-none" aria-hidden="true">
+                {/* 图标跟着标签一起降到 12px。它要是留在 24px,选项那一排的高度就没省下来 */}
+                <span className="text-xs leading-none" aria-hidden="true">
                   {option.icon}
                 </span>
-                <span className="font-kuaile text-lg leading-tight text-ink">{option.label}</span>
+                <span className="font-kuaile text-xs leading-none text-ink">{option.label}</span>
               </button>
             ))}
           </div>

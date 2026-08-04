@@ -35,21 +35,21 @@ function SeaPicker({ seas, current, onPick, onClose }: SeaPickerProps) {
               type="button"
               onClick={() => onPick(sea.id)}
               aria-label={sea.name}
-              className={`hud-panel flex min-h-36 w-28 cursor-pointer flex-col items-center gap-2 px-3 py-4 shadow-lg transition-transform active:scale-95 focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart ${
+              className={`hud-panel-lg flex min-h-36 w-28 cursor-pointer flex-col items-center gap-2 px-3 py-4 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart ${
                 isCurrent ? '' : 'opacity-80'
               }`}
             >
-              <span
-                className="h-8 w-8 rounded-full shadow-inner"
-                style={{
-                  background: `linear-gradient(to bottom, ${sea.shallow}, ${sea.deep})`,
-                }}
-                aria-hidden="true"
-              />
-              <span className="text-3xl leading-none" aria-hidden="true">
+              {/* 原来是圆形渐变色球:渐变和圆角都是像素风做不出来的东西。
+                  改成三条硬边色带,直接把这片海的浅/中/深三色摆出来 —— 信息量还更大 */}
+              <span className="flex h-8 w-8 flex-col overflow-hidden" aria-hidden="true">
+                <span className="flex-1" style={{ background: sea.shallow }} />
+                <span className="flex-1" style={{ background: sea.mid }} />
+                <span className="flex-1" style={{ background: sea.deep }} />
+              </span>
+              <span className="ui-text-tight" aria-hidden="true">
                 {SEA_ICONS[sea.id] ?? '🌊'}
               </span>
-              <span className="font-kuaile text-xl text-[#f8e8c8]">{sea.name}</span>
+              <span className="ui-text font-kuaile text-[#f8e8c8]">{sea.name}</span>
             </button>
           )
         })}
