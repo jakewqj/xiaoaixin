@@ -1,4 +1,5 @@
 import type { SeaTheme } from '../lib/seas'
+import PixelIcon from './PixelIcon'
 
 const SEA_ICONS: Record<string, string> = {
   redsea: '🪸',
@@ -46,9 +47,7 @@ function SeaPicker({ seas, current, onPick, onClose }: SeaPickerProps) {
                 <span className="flex-1" style={{ background: sea.mid }} />
                 <span className="flex-1" style={{ background: sea.deep }} />
               </span>
-              <span className="ui-text-tight" aria-hidden="true">
-                {SEA_ICONS[sea.id] ?? '🌊'}
-              </span>
+              <PixelIcon emoji={SEA_ICONS[sea.id] ?? '🌊'} scaled />
               <span className="ui-text font-kuaile text-[#f8e8c8]">{sea.name}</span>
             </button>
           )

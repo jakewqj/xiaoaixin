@@ -1,4 +1,5 @@
 import type { KnowledgeCardData } from '../hooks/useKnowledge'
+import PixelIcon from './PixelIcon'
 
 const SUBJECT_ORDER = ['生物', '自然', '数学', '历史', '百科']
 
@@ -26,9 +27,7 @@ function Book({ cards, onClose }: BookProps) {
           onClick={onClose}
           className="hud-panel-lg flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
         >
-          <span className="ui-text-tight" aria-hidden="true">
-            🌊
-          </span>
+          <PixelIcon emoji="🌊" scaled />
           <span className="ui-text font-kuaile text-[#f8e8c8]">回海里</span>
         </button>
       </div>

@@ -1,4 +1,5 @@
 import Sprite from './Sprite'
+import PixelIcon from './PixelIcon'
 import { FRAME_HEIGHT, FRAME_WIDTH, toneFilter } from '../lib/pet'
 import type { GrowthStage } from '../lib/pet'
 import type { usePet } from '../hooks/usePet'
@@ -51,9 +52,7 @@ function Album({
           onClick={onClose}
           className="hud-panel-lg flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
         >
-          <span className="ui-text-tight" aria-hidden="true">
-            🌊
-          </span>
+          <PixelIcon emoji="🌊" scaled />
           <span className="ui-text font-kuaile text-[#f8e8c8]">回海里</span>
         </button>
       </div>
@@ -107,9 +106,7 @@ function Album({
                 key={memory.id}
                 className="sv-plate-lg flex items-center gap-4 px-5 py-4"
               >
-                <span className="ui-text-tight" aria-hidden="true">
-                  {memory.icon}
-                </span>
+                <PixelIcon emoji={memory.icon} scaled />
                 <div className="min-w-0">
                   <p className="ui-text font-kuaile text-ink">{memory.text}</p>
                   {memory.en && (

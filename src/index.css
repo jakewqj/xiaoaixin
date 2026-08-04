@@ -317,6 +317,13 @@
   line-height: calc(16px * var(--ui-scale, 2));
 }
 
+/* 全屏弹层里的 16x16 像素图标。同样要乘 --ui-scale,否则大屏下图标跟不上字 */
+.ui-icon {
+  width: calc(16px * var(--ui-scale, 2));
+  height: calc(16px * var(--ui-scale, 2));
+  flex-shrink: 0;
+}
+
 /* 单行用(英文小字、日期):行高压到和字号一样,不留额外行间 */
 .ui-text-tight {
   font-size: calc(12px * var(--ui-scale, 2));

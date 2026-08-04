@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { speak } from '../lib/speech'
+import PixelIcon from './PixelIcon'
 
 export interface PanelOption {
   icon: string
@@ -81,10 +82,7 @@ function DialoguePanel({ content }: { content: PanelContent | null }) {
                 onClick={option.onSelect}
                 className="sv-plate flex min-h-6 cursor-pointer items-center gap-1 px-2 py-0.5 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-heart"
               >
-                {/* 图标跟着标签一起降到 12px。它要是留在 24px,选项那一排的高度就没省下来 */}
-                <span className="text-xs leading-none" aria-hidden="true">
-                  {option.icon}
-                </span>
+                <PixelIcon emoji={option.icon} />
                 <span className="font-kuaile text-xs leading-none text-ink">{option.label}</span>
               </button>
             ))}
