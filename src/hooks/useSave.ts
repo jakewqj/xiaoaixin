@@ -38,6 +38,10 @@ export interface SaveData {
   familiarityLastAt: Record<string, string>
   // 送礼:邻居 id → 上次送礼的那天。每个邻居每天只能送 1 次
   giftedAt: Record<string, string>
+  // 贝壳数量。2026-08-03 用户明确要求常驻 HUD 显示 —— 这一条与 CLAUDE.md 十六
+  // 「❌ 常驻金钱 HUD(贝币只在「换一换」界面内显示)」冲突,宪法待修订,拟稿见 FORJake.md。
+  // 捡贝壳/花贝壳的机制是 S5「贝壳当钱用」的事,这里只存数,不做任何加减规则
+  shells: number
 }
 
 function createSave(): SaveData {
@@ -58,6 +62,7 @@ function createSave(): SaveData {
     familiarity: {},
     familiarityLastAt: {},
     giftedAt: {},
+    shells: 0,
   }
 }
 
@@ -139,24 +144,27 @@ function parseSave(raw: string | null): SaveData | null {
         : [],
       knowledgeSeen:
         typeof s.knowledgeSeen === 'object' && s.knowledgeSeen !== null
-          ? (s.knowledgeSeen as Record<string, string>)
+          ? s.knowledgeSeen
           : {},
       // 海域是后来加的字段。旧存档没有就默认回红海浅滩,不因此作废整份档
       sea: typeof s.sea === 'string' ? s.sea : 'redsea',
       // 熟悉度是 S1 才加的字段,老存档没有就当作谁都还没升过级
       familiarity:
         typeof s.familiarity === 'object' && s.familiarity !== null
-          ? (s.familiarity as Record<string, number>)
+          ? s.familiarity
           : {},
       familiarityLastAt:
         typeof s.familiarityLastAt === 'object' && s.familiarityLastAt !== null
-          ? (s.familiarityLastAt as Record<string, string>)
+          ? s.familiarityLastAt
           : {},
       // 送礼也是 S1 才加的字段,老存档没有就当作谁都还没送过
       giftedAt:
         typeof s.giftedAt === 'object' && s.giftedAt !== null
-          ? (s.giftedAt as Record<string, string>)
+          ? s.giftedAt
           : {},
+      // 贝壳是后加的字段。老存档没有就当作 0,不因此把整份档判成损坏 ——
+      // 童童现在存档里的天数、海草、相册、熟悉度必须原样继承
+      shells: isCount(s.shells) ? Math.max(0, Math.floor(s.shells)) : 0,
       ...withBed(s),
     }
   } catch {

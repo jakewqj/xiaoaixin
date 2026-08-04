@@ -144,8 +144,8 @@ function renderToGrid(grid, mask, offsetX, offsetY, rotation = 0) {
     }
   }
 
-  // 画描边
-  for(let [k, col] of pxs.entries()) {
+  // 画描边(只用得到坐标,颜色是上一趟填的)
+  for(const k of pxs.keys()) {
     let [x,y] = k.split(',').map(Number);
     for(let dy=-1; dy<=1; dy++) {
        for(let dx=-1; dx<=1; dx++) {

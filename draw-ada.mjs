@@ -66,17 +66,6 @@ const SHELL = [
 ]
 
 // Marginal scutes: amber rim, two rows thick along the shell edge.
-const SCALLOP = [
-  [13, 21, 23],
-  [15, 15, 16],
-  [17, 12, 12],
-  [19, 9, 9],
-  [19, 68, 69],
-  [17, 65, 67],
-  [15, 61, 63],
-  [13, 53, 55],
-]
-
 const MARGINAL = [
   [11, 33, 40],
   [12, 27, 29],

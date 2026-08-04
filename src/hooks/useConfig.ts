@@ -40,7 +40,7 @@ function readOverride(): ConfigOverride {
     const raw = localStorage.getItem(OVERRIDE_KEY)
     if (!raw) return {}
     const parsed: unknown = JSON.parse(raw)
-    return typeof parsed === 'object' && parsed !== null ? (parsed as ConfigOverride) : {}
+    return typeof parsed === 'object' && parsed !== null ? parsed : {}
   } catch {
     return {}
   }

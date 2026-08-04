@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { stageScale } from '../render/stage'
 
 // 逻辑分辨率:以后所有游戏坐标都基于这个,不是 CSS 像素。见 CLAUDE.md 十二
 export const STAGE_WIDTH = 480
@@ -58,8 +59,7 @@ function ScreenFrame({ children }: { children: ReactNode }) {
     )
   }
 
-  // 绝不用非整数缩放去填满屏幕,宁可留边
-  const scale = Math.max(1, Math.floor(Math.min(width / STAGE_WIDTH, height / STAGE_HEIGHT)))
+  const scale = stageScale(width, height)
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-ink">

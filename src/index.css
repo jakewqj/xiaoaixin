@@ -27,8 +27,22 @@ video {
   }
 }
 
+/* 像素字体 Zpix(最像素)。2026-08-03 用户决议全量换用,推翻 CLAUDE.md 四的字体规定。
+   落在仓库里而不是走 CDN:国内访问直连,第 5 周做 PWA 时也要能离线用。
+   swap = 字体没下完之前先用系统字顶上,不留白 */
+@font-face {
+  font-family: 'Zpix';
+  src: url('/fonts/zpix.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* 配色来自 CLAUDE.md 视觉规范,不要自行更换 */
 @theme {
+  /* 点阵字体,原生格 12px。字号取 12 的整数倍笔画才对得上像素格 */
+  --font-pixel: 'Zpix', 'ZCOOL KuaiLe', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+
   --color-water-shallow: #7fd1d8;
   --color-water-mid: #2e8b9b;
   --color-water-deep: #14495c;

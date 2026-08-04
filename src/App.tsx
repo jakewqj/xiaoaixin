@@ -39,6 +39,9 @@ import AdminGate from './components/AdminGate'
 import AdminPanel from './components/AdminPanel'
 import { useDialogueLog } from './hooks/useDialogueLog'
 import { playSfx } from './lib/sfx'
+import HUD from './ui/HUD'
+import { UI_DIR } from './ui/layout'
+import type { HudSnapshot, SlotSpec } from './ui/types'
 
 const POSE_MS = 2500
 const CARD_MS = 15000
@@ -49,6 +52,11 @@ const WELCOME_BACK_DAYS = 3
 // 饿了/要换气不再走这里的文字气泡——分别换成了 FullnessMeter 和小爱心自己的「屏息」姿势,
 // 靠视觉就看得出来,不用再读一句话
 const TRIGGERED = ['greet_first', 'handdrawn', 'welcome_back', 'grow_up']
+
+// 新旧 HUD 双轨:默认走 canvas 九宫格层,加 ?hud=dom 退回旧的 DOM 版对比。
+// REFACTOR_PLAN 阶段 4「拆掉旧渲染」时把这个开关和旧组件一起删掉
+const legacyHud =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('hud') === 'dom'
 
 // 选中一个选项之后開心一下的时长。没有 happy 动画的邻居就不会有这个反应
 const NPC_REACT_MS = 1800
@@ -403,6 +411,76 @@ function App() {
     setSceneId(null)
   }
 
+  // ---- 新 HUD(canvas 九宫格层)----------------------------------------
+  // 灰格子的提示。自己会消失,不用她点第二下
+  const [hudTip, setHudTip] = useState<string | null>(null)
+  useEffect(() => {
+    if (!hudTip) return
+    const timer = setTimeout(() => setHudTip(null), 2200)
+    return () => clearTimeout(timer)
+  }, [hudTip])
+
+  // 推给 canvas 的一份快照。季节/月相/潮汐还没有真的算,先占位;
+  // 天数、贝壳、海草棵数是存档里现成的真数据。见 ROADMAP S4「潮汐与月亮」
+  const hudSnapshot: HudSnapshot = useMemo(() => {
+    const slots: SlotSpec[] = [
+      // 第一排 = 道具栏,永远不超过 4 格(CLAUDE.md 十六)
+      { id: 'shell', icon: `${UI_DIR}/icon_shell.png`, label: '贝壳(长大了才有)', locked: true, tip: '长大了才有' },
+      { id: 'gift', icon: `${UI_DIR}/icon_gift.png`, label: '礼物(长大了才有)', locked: true, tip: '长大了才有' },
+      { id: 'backpack', icon: `${UI_DIR}/icon_backpack.png`, label: '背包(长大了才有)', locked: true, tip: '长大了才有' },
+      { id: 'book', icon: `${UI_DIR}/icon_book.png`, label: '图鉴' },
+      { id: 'pad', icon: '', label: '', empty: true },
+      // 第二排 = 常用动作
+      grownCount > 0
+        ? { id: 'feed', icon: `${UI_DIR}/icon_sprout.png`, label: '喂海草', badge: grownCount }
+        : { id: 'feed', icon: `${UI_DIR}/icon_sprout.png`, label: '海草还没长成', locked: true, tip: '还没有长成的海草' },
+      { id: 'plant', icon: `${UI_DIR}/icon_seagrass.png`, label: '种海草' },
+      { id: 'sea', icon: `${UI_DIR}/icon_map.png`, label: '换一片海' },
+      { id: 'album', icon: `${UI_DIR}/icon_camera.png`, label: '相册' },
+      { id: 'breathe', icon: `${UI_DIR}/icon_bubble.png`, label: '帮小爱心换气', glow: breath.phase === 'waiting' },
+    ]
+    return {
+      day: save.daysPlayed,
+      season: '夏天',
+      moonPhase: '满月',
+      tide: '涨潮',
+      shells: save.shells,
+      slots,
+      tip: hudTip,
+    }
+  }, [save.daysPlayed, save.shells, grownCount, breath.phase, hudTip])
+
+  const handleSlotTap = useCallback(
+    (id: string) => {
+      const slot = hudSnapshot.slots.find((s) => s.id === id)
+      if (slot?.tip) {
+        setHudTip(slot.tip)
+        return
+      }
+      switch (id) {
+        case 'book':
+          setPage('book')
+          break
+        case 'feed':
+          feed()
+          break
+        case 'plant':
+          plant()
+          break
+        case 'sea':
+          setSeaPickerOpen(true)
+          break
+        case 'album':
+          setPage('album')
+          break
+        case 'breathe':
+          handleBreathe()
+          break
+      }
+    },
+    [hudSnapshot.slots, feed, plant, handleBreathe],
+  )
+
   const scene = sceneId ? scenes[sceneId] : undefined
   const talkingNpc = npcTalk ? npcs?.[npcTalk.npcId] : undefined
 
@@ -515,20 +593,27 @@ function App() {
           }
           hud={
             <>
-              {/* 月相和潮汐还没有真的算,先占位;第几天、体长体重是存档/成长阶段里现成的真数据。见 S4「时间系统」 */}
-              <GameHud
-                day={save.daysPlayed}
-                moonPhase="满月"
-                tide="涨潮中"
-                stage={stage}
-                onHoldTitle={() => setAdminGateOpen(true)}
-              />
               {card && <KnowledgeCard card={card} onDismiss={() => setCard(null)} />}
               <DialoguePanel content={panelContent} />
-              {/* 对话面板从底部滑上来的时候,饱腹度条和按钮区会被它盖住/撞在一起——
+              {/* 对话面板从底部滑上来的时候,饱腹度条和 HUD 会被它盖住/撞在一起——
                   说话的时候先让它们让开,面板收起再回来 */}
               {page === 'sea' && !panelContent && (
                 <>
+                  {legacyHud ? (
+                    <GameHud
+                      day={save.daysPlayed}
+                      moonPhase="满月"
+                      tide="涨潮中"
+                      stage={stage}
+                      onHoldTitle={() => setAdminGateOpen(true)}
+                    />
+                  ) : (
+                    <HUD
+                      snapshot={hudSnapshot}
+                      onSlotTap={handleSlotTap}
+                      onHoldTitle={() => setAdminGateOpen(true)}
+                    />
+                  )}
                   {/* 换气(镜头在水面)时藏起来:计量条长得像海草,浮在水面画面里
                       会被当成"种的海草跟着浮上来了" */}
                   {!breath.atSurface && (
@@ -536,16 +621,18 @@ function App() {
                       <FullnessMeter value={save.fullness} />
                     </div>
                   )}
-                  <ActionBar
-                    grownSeagrass={grownCount}
-                    breathWaiting={breath.phase === 'waiting'}
-                    onFeed={feed}
-                    onPlant={plant}
-                    onOpenSea={() => setSeaPickerOpen(true)}
-                    onOpenAlbum={() => setPage('album')}
-                    onOpenBook={() => setPage('book')}
-                    onBreathe={handleBreathe}
-                  />
+                  {legacyHud && (
+                    <ActionBar
+                      grownSeagrass={grownCount}
+                      breathWaiting={breath.phase === 'waiting'}
+                      onFeed={feed}
+                      onPlant={plant}
+                      onOpenSea={() => setSeaPickerOpen(true)}
+                      onOpenAlbum={() => setPage('album')}
+                      onOpenBook={() => setPage('book')}
+                      onBreathe={handleBreathe}
+                    />
+                  )}
                 </>
               )}
             </>

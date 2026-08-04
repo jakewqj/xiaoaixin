@@ -15,8 +15,12 @@ export function usePetSwim(worldWidth: number) {
   const [x, setX] = useState(STAGE_WIDTH / 2)
   const [facingLeft, setFacingLeft] = useState(false)
   const [target, setTarget] = useState<number | null>(null)
+  // 给 swimTo 读当前位置用。必须在 effect 里写,不能在渲染期间直接赋值 ——
+  // 并发渲染下渲染函数可能被跑多次或中途丢弃,那时改 ref 会读到撕裂的值
   const xRef = useRef(x)
-  xRef.current = x
+  useEffect(() => {
+    xRef.current = x
+  }, [x])
 
   const swimTo = useCallback(
     (rawX: number) => {

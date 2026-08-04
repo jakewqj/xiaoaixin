@@ -404,6 +404,33 @@ content/
 
 ---
 
+### 渲染重构 · 阶段 0–3 前置（2026-08-03，一整轮）
+
+不属于任何 Season，是把渲染层从 DOM 换到 canvas 的准备与第一块落地。全过程记在 `REFACTOR_PLAN.md`，复盘和宪法修订拟稿在 `FORJake.md`。
+
+| # | 做了什么 | 产物 |
+|---|---|---|
+| 1 | 盘代码、写重构方案 | `REFACTOR_PLAN.md`（五阶段，含 State 100% 不变的四道闸） |
+| 2 | 从参考图提取 HUD 规格 | `wiki/graphic/hud-9slice.json`、`palette.json`、`hud-prototype.html`、`ui-proto/` |
+| 3 | 精灵表处理工具 | `tools/process_sprites.py` |
+| 4 | **九宫格 UI 层进 canvas**（阶段 3 主体） | `src/render/`、`src/ui/` |
+| 5 | 修 `sw.js` 缓存 bug | 离线缓存此前从未生效过 |
+| 6 | oxlint → ESLint | `eslint.config.js` |
+
+**关键决定（用户 2026-08-03 拍板，三条都推翻了原有条款，宪法待修订）**
+
+* **HUD 进 canvas** —— 推翻二十一·4「HUD 不进 canvas」。配套两条不可省：UI canvas 用**设备分辨率**后备缓冲区（否则中文糊成马赛克）；canvas 上方铺**透明 DOM 热区**（否则 `aria-label`／焦点框／Tab 全丢）
+* **常驻贝壳 HUD** —— 推翻十六「❌ 常驻金钱 HUD」。`SaveData` 新增 `shells`，这同时打破了 `REFACTOR_PLAN` §四闸 2「一个字段都不加」
+* **全量换 Zpix 像素字体** —— 推翻四的字体规定。Zpix 是 12px 点阵字，字号必须取 12 的整数倍，**这条反过来定死了 HUD 的布局尺寸**
+
+**没做的（阶段 1／2／4／5）**：世界背景层、角色层、位移搬出 React、拆旧渲染、视差与光照。世界仍是原来的 DOM 九层，`Scene.tsx` 一行没动。
+
+**双轨开关**：`?hud=dom` 退回旧的 `GameHud` + `ActionBar`，两个旧组件都还留着，阶段 4 再删。
+
+**验收**：无头 Chrome 实测——canvas `width="1440"` 而 CSS `width:480px`（设备分辨率缓冲区生效）、10 个热区全带 `aria-label`、控制台零报错。
+
+---
+
 ### S3 · 红海全开（2–3 周）
 
 **交付**：珊瑚花园、沙地浅滩、老沉船 + 4 个 NPC + 图鉴系统 + 委托

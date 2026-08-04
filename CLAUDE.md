@@ -62,7 +62,8 @@
 |存档|~~localStorage 单个 JSON key:`xiaoaixin\_save`~~ **【已作废,见十四、双存储】**|
 |路由|**不使用路由库**。页面切换用状态变量控制|
 |后端|**无**。零服务器、零 API(第 6 周的 AI 对话除外,届时另行讨论)|
-|部署|~~Cloudflare Pages~~ **Vercel**(2026-07-31 用户确认改),静态构建。正式地址 https://xiaoaixin.vercel.app ,CLI 已 link 到 heiyu/xiaoaixin,`vercel deploy --prod` 发布|
+|部署|~~Cloudflare Pages~~ ~~Vercel~~ **腾讯云 EdgeOne Pages 国内版**(2026-07-31 用户确认改,原因:Vercel 国内要翻墙),静态构建。**必须是国内版控制台** https://console.cloud.tencent.com/edgeone ,不是国际版 edgeone.ai —— 两套独立账号,别混。**接 Git 自动构建**:控制台导入 `github.com/jakewqj/xiaoaixin`,push 到 `main` 自动发布,本地不跑发布命令。构建设置:框架 Vite / 构建命令 `npm run build` / 输出目录 `dist` / 根目录 `/` / 生产分支 `main` / Node **22**(Vite 8 要求 ≥20.19,默认版本偏低会构建失败)/ 加速区域**全球(含中国大陆)**。默认域名国内直连、**不需要备案**;只有绑自有域名才要备案。**Vercel 保留不动**作为境外备份(https://xiaoaixin.vercel.app ,`vercel deploy --prod`),两边并行|
+|部署 · 踩过的坑|**① 国内版必须先实名认证。** 没实名时 CLI/控制台建项目会报 `Zone is not active`,`global` 和 `overseas` 两个区域报同一个错,不是区域问题。**② 国际版(edgeone.ai)此路不通。** 免实名免绑卡,但加速区域只能选「Global(不含中国大陆)」,而该区域下**默认域名在中国大陆访问直接返回 401**,官方解法是绑自有域名(该区域绑域名免备案)。实测 `xiaoaixin.edgeone.dev` 从广州和从境外都 401 —— 平台分配的 `.edgeone.dev` 是**有效期 3 小时的临时预览地址**,不是生产域名,过期即 401。**③ CLI 用不上。** `npm i -g edgeone` + `edgeone makers deploy` 只能推「直接上传」类型的项目,和 Git 自动构建互斥,选了 Git 就别装|
 |屏幕|~~手机/平板**竖屏优先**~~ **【已作废,见十二、屏幕与渲染:横屏锁定】**|
 
 **依赖包能不装就不装。** 每次想 `npm install` 新东西之前,先问我。
