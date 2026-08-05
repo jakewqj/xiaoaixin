@@ -81,21 +81,12 @@
   font-family: var(--font-admin);
 }
 
-/* 上下浮的同时身体轻轻俯仰,复刻纪录片里儒艮靠尾鳍推进时慢慢摇的泳姿 */
-@keyframes pet-bob {
-  from {
-    transform: translateY(-8px) rotate(1.8deg);
-  }
-  to {
-    transform: translateY(10px) rotate(-2.4deg);
-  }
-}
-
-@keyframes pet-tap {
-  50% {
-    transform: scale(1.08);
-  }
-}
+/* 世界层(背景九层 + 小爱心 + 邻居 + 海草床 + 气泡)的动画全部搬进了 canvas,
+   见 src/render/。原来那一批 keyframes —— pet-bob / pet-tap / pet-dip / bubble-rise /
+   scene-cloud-drift / scene-surface-drift / scene-sway / scene-bubble-rise,以及
+   .pet-swim / .pet-turn / .camera-world 三条 transition —— 连同 Scene.tsx 一起退役了。
+   数值没丢,照抄进了 render/world-data.ts 的 MOTION;缓动函数在 render/easing.ts。
+   减弱动态效果也跟着搬进运行时(WorldRenderer 的 reduced),CSS 媒体查询管不着 canvas。 */
 
 /* 竖屏提示图标:轻轻转一下再转回来,不停顿 */
 @keyframes rotate-hint {
@@ -105,59 +96,6 @@
   }
   50% {
     transform: rotate(-90deg);
-  }
-}
-
-.pet-tap {
-  animation: pet-tap 300ms ease-in-out;
-}
-
-/* 转身用的 500ms;体色是长大带来的变化,慢慢渗上去,不要像开关一样啪地一下 */
-.pet-turn {
-  transition:
-    transform 500ms ease-in-out,
-    filter 1500ms ease-in-out;
-}
-
-/* 上浮和下沉。时长由组件用 --swim-duration 传进来,保证 JS 计时和动画不会对不上。
-   width 是长大时变的,和体色一个节奏 */
-.pet-swim {
-  transition:
-    top var(--swim-duration, 8000ms) ease-in-out,
-    width 1500ms ease-in-out;
-}
-
-/* 进食:沉向海草床啃一会儿再自己浮回来,复刻纪录片里贴着海底吃海草的动作。
-   时长由组件用 --dip-duration 传进来,和姿势计时保持一致 */
-@keyframes pet-dip {
-  0% {
-    transform: translateY(0);
-  }
-  25%,
-  78% {
-    transform: translateY(40px);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
-
-.pet-dip {
-  animation: pet-dip var(--dip-duration, 4200ms) ease-in-out;
-}
-
-/* 换气泡泡 */
-@keyframes bubble-rise {
-  0% {
-    transform: translate(-50%, -50%) scale(0.3);
-    opacity: 0;
-  }
-  20% {
-    opacity: 0.95;
-  }
-  100% {
-    transform: translate(-50%, calc(-50% - 70px)) scale(1);
-    opacity: 0;
   }
 }
 
@@ -177,96 +115,9 @@
   animation: card-in 400ms ease-out;
 }
 
-/* 散开时整层一起淡出:泡泡各自上升到哪就在哪消失,不会跳回鼻孔重来一遍 */
-.bubbles {
-  transition: opacity var(--pop-duration, 600ms) ease-out;
-}
-
-.bubble {
-  position: absolute;
-  aspect-ratio: 1;
-  border-radius: 9999px;
-  background: rgb(255 255 255 / 0.42);
-  border: 1px solid rgb(255 255 255 / 0.75);
-  transform: translate(-50%, -50%);
-  animation: bubble-rise 3.2s ease-out infinite;
-}
-
-.pet-bob {
-  animation: pet-bob 4s ease-in-out infinite alternate;
-}
-
-/* 换气镜头摇移。ROADMAP §1.3:镜头运动是唯一允许的连续运动,平滑 300–500ms,取中间值 */
-.camera-world {
-  transition: transform 400ms ease-in-out;
-}
-
 /* 对话面板从底部滑上来/滑下去。时长和 DialoguePanel.tsx 里卸载的延时对上 */
 .dialogue-panel {
   transition: transform 320ms ease-in-out;
-}
-
-/* ---- Scene.tsx 九层真素材(draw-world.mjs 生成)---- */
-
-/* 天上的云,离得最远,飘得最慢。素材是 img,这里只管飘 */
-.scene-cloud {
-  position: absolute;
-  animation: scene-cloud-drift 46s linear infinite;
-}
-
-@keyframes scene-cloud-drift {
-  from {
-    transform: translateX(-40px);
-  }
-  to {
-    transform: translateX(520px);
-  }
-}
-
-/* 水面白沫横向漂移:96px 一循环,steps 硬切成 4px 一跳,像素风不做平滑滚动 */
-.scene-surface-tile {
-  animation: scene-surface-drift 3s steps(24) infinite;
-}
-
-@keyframes scene-surface-drift {
-  from {
-    background-position-x: 0;
-  }
-  to {
-    background-position-x: 96px;
-  }
-}
-
-/* 中景海带/高海草的摇摆,根部固定 */
-.decor-sway {
-  transform-origin: bottom center;
-  animation: scene-sway 5s ease-in-out infinite alternate;
-}
-
-@keyframes scene-sway {
-  from {
-    transform: rotate(-4deg);
-  }
-  to {
-    transform: rotate(4deg);
-  }
-}
-
-/* 环境气泡(描边气泡精灵),慢慢升起淡出 */
-.scene-bubble {
-  position: absolute;
-  animation: scene-bubble-rise 3.6s ease-in infinite;
-}
-
-@keyframes scene-bubble-rise {
-  from {
-    transform: translateY(0);
-    opacity: 0.95;
-  }
-  to {
-    transform: translateY(-70px);
-    opacity: 0;
-  }
 }
 
 /* ---- 像素 HUD:深棕木底 + 金棕边 + 奶白字(参考图的面板语言) ---- */
@@ -340,33 +191,17 @@
 /* `.ui-slot-active`(红框选中格)随 ActionBar 一起删了 —— 现在 hotbar 全在 canvas 里,
    高亮由 draw.ts 直接 drawImage(slot_active.png) 处理。`.ui-slot` 保留:NPC 的送礼按钮还在用 */
 
+/* 世界层的减弱动态效果已经搬进渲染运行时(WorldRenderer:粒子停、镜头瞬移、精灵停在第一帧,
+   换气泡泡照旧画出来只是不动 —— 它是「该换气了」的唯一提示,不能一起关掉)。
+   这里只剩还活在 DOM 里的那几样 */
 @media (prefers-reduced-motion: reduce) {
-  .scene-cloud,
-  .scene-surface-tile,
-  .decor-sway,
-  .scene-bubble,
-  .sprite-frames {
-    animation: none;
-  }
-
-  .pet-bob,
-  .pet-tap,
-  .pet-dip,
+  .sprite-frames,
   .knowledge-card {
     animation: none;
   }
 
-  .pet-turn,
-  .pet-swim,
   .sea-picker,
-  .bubbles,
-  .camera-world,
   .dialogue-panel {
     transition-property: none;
-  }
-
-  /* 泡泡不动,但必须还看得见 —— 这是「该换气了」的唯一提示,不能一起关掉 */
-  .bubble {
-    animation: none;
   }
 }

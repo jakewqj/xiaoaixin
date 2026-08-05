@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ScreenFrame, { STAGE_WIDTH } from './components/ScreenFrame'
-import Scene from './components/Scene'
-import Pet, { EAT_MS } from './components/Pet'
-import type { PoseName } from './components/Pet'
+import WorldCanvas from './components/WorldCanvas'
+import { EAT_MS } from './render/world'
+import type { NpcView, PetView, WorldSnapshot } from './render/world'
 import DialoguePanel from './components/DialoguePanel'
 import type { PanelContent } from './components/DialoguePanel'
 import KnowledgeCard from './components/KnowledgeCard'
-import SeagrassBed from './components/Seagrass'
 import Book from './components/Book'
 import Album from './components/Album'
 import SeaPicker from './components/SeaPicker'
@@ -17,10 +16,10 @@ import {
   plantSeagrass,
 } from './lib/seagrass'
 import { SEAS, seaById, SEA_CARD_EVENTS } from './lib/seas'
-import { currentStage, isHanddrawn, stagesReached } from './lib/pet'
+import { currentStage, isHanddrawn, stagesReached, toneFilter } from './lib/pet'
 import { useSave, MAX_FULLNESS, HUNGER_STEP_MS } from './hooks/useSave'
 import { usePet } from './hooks/usePet'
-import { useBreath } from './hooks/useBreath'
+import { useBreath, POP_MS, SWIM_MS } from './hooks/useBreath'
 import { useDialogue } from './hooks/useDialogue'
 import type { DialogueOption } from './hooks/useDialogue'
 import { useKnowledge } from './hooks/useKnowledge'
@@ -28,10 +27,8 @@ import type { KnowledgeCardData } from './hooks/useKnowledge'
 import { useAlbum } from './hooks/useAlbum'
 import { useWorld } from './hooks/useWorld'
 import { useConfig } from './hooks/useConfig'
-import { useNpcs, unlockedTopics } from './hooks/useNpcs'
+import { useNpcs, unlockedTopics, frameSizeOf } from './hooks/useNpcs'
 import type { NpcSpec, NpcTopic } from './hooks/useNpcs'
-import { usePetSwim } from './hooks/usePetSwim'
-import Npc from './components/Npc'
 import AdminGate from './components/AdminGate'
 import AdminPanel from './components/AdminPanel'
 import { useDialogueLog } from './hooks/useDialogueLog'
@@ -39,6 +36,8 @@ import { playSfx } from './lib/sfx'
 import HUD from './ui/HUD'
 import { UI_DIR } from './ui/layout'
 import type { HudSnapshot, SlotSpec } from './ui/types'
+
+type PoseName = 'idle' | 'happy' | 'eating' | 'sleeping'
 
 const POSE_MS = 2500
 const CARD_MS = 15000
@@ -104,11 +103,9 @@ function App() {
   // 假定 config 里开放的地点是 world.json 地点列表的一段前缀,这是当前唯一一份内容数据的实际排法
   const lockedBeyondEnd = openSpots.length > 0 && allSpots.length > openSpots.length
 
-  // 世界横条:一格一个地点。地点切换没有按钮了——点哪游哪,她自己游过去,镜头跟着
+  // 世界横条:一格一个地点。地点切换没有按钮了——点哪游哪,她自己游过去,镜头跟着。
+  // 位置和镜头都在渲染层(src/render),不在这里 —— 那是每帧都变的量,进 React 就是每帧全树重渲染
   const slotCount = Math.max(1, openSpots.length)
-  const worldWidth = slotCount * STAGE_WIDTH
-  const petSwim = usePetSwim(worldWidth)
-  const cameraX = Math.max(0, Math.min(worldWidth - STAGE_WIDTH, petSwim.x - STAGE_WIDTH / 2))
 
   const npcs = useNpcs()
   const { entries: logEntries, log: logDialogue } = useDialogueLog(config?.后台.对话日志上限)
@@ -524,66 +521,110 @@ function App() {
     [save.sea, save.knowledgeSeen, update, remember, showCard, knowledge],
   )
 
+  // ---- 推给渲染层的世界快照 --------------------------------------------
+  // 换气浮上来(rising)/吐泡泡(popping)用 surfacing 那套上浮动作;
+  // 到了水面等着(waiting)换成 holding——腮帮鼓起、嘴巴闭紧地安静漂着,
+  // 不再靠头顶那句「我要换口气」的文字气泡提示,靠这个姿势本身就能看出她在等你
+  const animKey =
+    pose === 'eating'
+      ? 'eating'
+      : pose === 'sleeping'
+        ? 'sleeping'
+        : breath.phase === 'waiting'
+          ? 'holding'
+          : breath.atSurface
+            ? 'surfacing'
+            : 'swim'
+  const petAnim = pet.animFor(animKey)
+
+  const petView: PetView = {
+    anim: petAnim,
+    scale: stage.体型,
+    tone: toneFilter(stage.体色),
+    anchors: pet.spec?.锚点 ?? {},
+    anchorNames: knowledge.anchors,
+    atSurface: breath.atSurface,
+    eating: pose === 'eating',
+    showBubbles: breath.phase === 'waiting' || breath.phase === 'popping',
+    popping: breath.phase === 'popping',
+    popMs: POP_MS,
+    tapLabel: breath.phase === 'waiting' ? '帮小爱心换气' : '摸摸小爱心',
+  }
+
+  // 邻居按住的地点落位。有 happy 动画的话,选中选项/收到礼物后短暂切过去演一下
+  const npcViews: NpcView[] = placedNpcs.flatMap(({ id, npc, spotIndex }) => {
+    const key = reactingNpc === id && npc.动画.happy ? 'happy' : 'idle'
+    const anim = npc.动画[key]
+    if (!anim) return []
+    const [frameWidth, frameHeight] = frameSizeOf(npc)
+    return [
+      {
+        id,
+        name: npc.名字,
+        leftPx: spotIndex * STAGE_WIDTH + STAGE_WIDTH * 0.65,
+        src: `${npc.精灵}${anim.文件}`,
+        frameWidth,
+        frameHeight,
+        frameCount: anim.帧数,
+        fps: anim.fps,
+        canGift: grownCount > 0 && save.giftedAt[id] !== new Date().toDateString(),
+      },
+    ]
+  })
+  // 每次 App 重渲染都重新组一份推下去。这不贵 —— 重构之后 App 已经不再每帧重渲染了,
+  // 位置和镜头都在渲染层的实例字段里(REFACTOR_PLAN §六:每帧 React 重渲染 60 次 → 0 次)
+  const worldSnapshot: WorldSnapshot = {
+    sea,
+    clarity,
+    surfaced: breath.atSurface,
+    slotCount,
+    lockedBeyondEnd,
+    lockedBeforeStart: false,
+    pet: petView,
+    seagrass: save.seagrass,
+    npcs: npcViews,
+    swimMs: SWIM_MS,
+  }
+
+  // 在水面等着的时候点她 = 帮她换气;其余时候点她 = 摸摸她
+  const tapPet = useCallback(() => {
+    if (breath.phase === 'waiting') {
+      handleBreathe()
+      return
+    }
+    playSfx('tap')
+  }, [breath.phase, handleBreathe])
+
+  // 点身体部位。这张卡还在冷却里就当作普通的摸一摸 —— 点下去永远要有反应
+  const tapAnchor = useCallback(
+    (name: string) => {
+      if (breath.phase === 'waiting') {
+        handleBreathe()
+        return
+      }
+      if (showCard(knowledge.pickByAnchor(name, save.knowledgeSeen))) return
+      playSfx('tap')
+    },
+    [breath.phase, handleBreathe, showCard, knowledge, save.knowledgeSeen],
+  )
+
   return (
     <>
       <ScreenFrame>
-        <Scene
-          sea={sea}
-          clarity={clarity}
-          surfaced={breath.atSurface}
-          slotCount={slotCount}
-          cameraX={cameraX}
-          onWorldTap={petSwim.swimTo}
-          lockedBeyondEnd={lockedBeyondEnd}
-          actors={
-            // 所有角色都用世界坐标摆放。海草床固定长在第一格「家海草床」,不跟她走
-            <>
-              <div className="absolute inset-y-0" style={{ left: 0, width: STAGE_WIDTH }}>
-                <SeagrassBed
-                  bed={save.seagrass}
-                  onTap={() => showCard(knowledge.pickByEvent('点海草', save.knowledgeSeen))}
-                />
-              </div>
-              {placedNpcs.map(({ id, npc, spotIndex }) => {
-                const cap = config?.开放NPC.find((n) => n.id === id)?.熟悉度上限 ?? 5
-                const canGift =
-                  grownCount > 0 && save.giftedAt[id] !== new Date().toDateString()
-                const level = save.familiarity[id] ?? 0
-                return (
-                  <Npc
-                    key={id}
-                    npc={npc}
-                    leftPx={spotIndex * STAGE_WIDTH + STAGE_WIDTH * 0.65}
-                    reacting={reactingNpc === id}
-                    onTapSprite={() => handleNpcTapSprite(id, npc, level)}
-                    canGift={canGift}
-                    onGift={() => handleNpcGift(id, npc, cap)}
-                  />
-                )
-              })}
-              {/* 白天投在沙地上的影子,跟着她游动移动(参考图沙地中间那块深色)。
-                  体型长大影子跟着变大 */}
-              <img
-                src="/assets/world/shadow.png"
-                alt=""
-                className="pointer-events-none absolute -translate-x-1/2"
-                style={{ left: petSwim.x, bottom: 30, width: 170 * stage.体型 }}
-              />
-              <Pet
-                pet={pet}
-                stage={stage}
-                pose={pose}
-                breath={breath.phase}
-                worldX={petSwim.x}
-                facingLeft={petSwim.facingLeft}
-                anchors={knowledge.anchors}
-                onBreathe={handleBreathe}
-                onAnchorTap={(anchor) =>
-                  showCard(knowledge.pickByAnchor(anchor, save.knowledgeSeen))
-                }
-              />
-            </>
-          }
+        <WorldCanvas
+          snapshot={worldSnapshot}
+          onTapPet={tapPet}
+          onTapAnchor={tapAnchor}
+          onTapBed={() => showCard(knowledge.pickByEvent('点海草', save.knowledgeSeen))}
+          onTapNpc={(id) => {
+            const npc = npcs?.[id]
+            if (npc) handleNpcTapSprite(id, npc, save.familiarity[id] ?? 0)
+          }}
+          onTapGift={(id) => {
+            const npc = npcs?.[id]
+            const cap = config?.开放NPC.find((n) => n.id === id)?.熟悉度上限 ?? 5
+            if (npc) handleNpcGift(id, npc, cap)
+          }}
           hud={
             <>
               {card && <KnowledgeCard card={card} onDismiss={() => setCard(null)} />}

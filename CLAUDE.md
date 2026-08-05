@@ -157,6 +157,15 @@
   * 全程用 CDP 起真实浏览器实测(不是看代码猜):字体真的生效、四层背景真的最近邻、点击坐标零误差映射回 480×270、三个弹层逐个截图比对。最后跑了 17 项冒烟(开场对话→HUD→种海草→知识卡→喂食→换气→图鉴→相册→换海),全过、零控制台错误。`npm run build` 通过;`npm run lint` 27 problems 与本轮开工前完全一致,一条没新增。仍未 git commit。
   * **测试踩的坑,记下来免得下次再撞**:别用「种海草」验知识卡。那条走 `pickByEvent`,主动触发概率只有 0.15(`useKnowledge.ts:68`,对应宪法十「偶尔,不是每次」),连试 4 次不出的概率有 52%。要确定性地验知识卡,点小爱心身上的**锚点**——`pickByAnchor` 是「一定给卡」。
 
+> **上面几条里的「仍未 git commit」已经过期。** 2026-08-04 全部提交并推到 `main`(`bc17ae0..605754a`),EdgeOne 的 Git 自动构建就是在那次触发的。
+
+* [x] 渲染重构 阶段 1–2:整个世界进 canvas(2026-08-04)。背景六层 + 角色层全部搬进 canvas,小爱心的位移和镜头搬出 React。**一条游戏机制都没碰,`SaveData` 一个字段都没加,`src/hooks/` 全程只读**(REFACTOR_PLAN §四 四道闸)。新增 `src/render/{easing,world-data,swim,camera,world,types}.ts` + `render/layers/{background,actors}.ts` + `components/WorldCanvas.tsx`;删掉 `Scene.tsx` `Pet.tsx` `Npc.tsx` `Seagrass.tsx` `Bubbles.tsx` `usePetSwim.ts`。逐条经过和三处偏离原计划的说明见 `REFACTOR_PLAN.md` §九。
+  * 数据:游动时 App 重渲染 **60 次/秒 → 0 次**;画面与旧渲染差 0.664% / 0.408%,逐块扫 dx/dy 全是 (0,0) 最吻合(**没有任何一处偏了哪怕 1px**,剩下的差异全是旋转/矢量描边/非整数缩放的光栅化);巡游速度仍是 90.1 逻辑px/秒。
+  * `prefers-reduced-motion` 从 CSS 媒体查询搬进运行时(`WorldRenderer`)。世界离开 DOM 之后媒体查询就管不着它了,不当场实现就是功能倒退。换气泡泡照旧画出来只是不动 —— 那条例外从 `index.css` 继承下来,它是「该换气了」的唯一提示。
+  * **两个只有起浏览器逐像素比才发现的坑,都是「CSS 默认值和直觉不一样」**:① `background-position: bottom` 展开是 `50% 100%`,横向那个 50% 会把 repeat-x 的平铺起点挪到 `(容器宽-图宽)/2`,不是 0 —— 水下远景剪影整体错了 120px。② **`<button>` 会把内容垂直居中**,这是 Blink 对按钮的固有行为,不是哪条 CSS 写的;`min-h-14`(56px 触摸下限)把按钮撑得比精灵高时,多出来的那截上下平分 —— Dolly 因此高了 4px,修掉之后她那块是 0.00% 差异。
+  * **比对手法记下来,阶段 5 还要用**:项目里的 CSS 动画大量用负 delay,用 CDP 的 `Animation.seekAnimations` 把它们 seek 到 `currentTime=0`,就会停在 `|delay|` 那个**确定**进度上,不是当前时间;canvas 那边加一个开发构建限定的 `window.__renderFreeze(0)` 把主循环时钟钉死。两边算出同一相位,才谈得上逐像素比。**改渲染之前先把旧画面的截图存成基线** —— 这次没建 `?canvas=1` 双轨,二分定位靠的就是它。
+  * 冒烟 18 项(开场对话→HUD→种海草→喂食→点锚点出知识卡→换气→图鉴→相册→换海→游到潟湖→点 Dolly→送礼→长按进后台→减弱动态效果),**开发构建和生产构建各跑一遍**,18/18 全过、控制台零报错。`npm run build` 通过;`npm run lint` 27 → 24 problems,`src/render/**` 和 `WorldCanvas.tsx` 零问题。
+
 ---
  
 ## 八、学习伴侣定位

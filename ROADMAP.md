@@ -431,6 +431,33 @@ content/
 
 ---
 
+### 渲染重构 · 阶段 1–2：整个世界进 Canvas（2026-08-04）
+
+背景六层和角色层全部搬进 canvas，小爱心的位移和镜头搬出 React。`Scene.tsx` 那套 DOM 九层退役。
+
+| 层 | 从哪来 | 到哪去 |
+|---|---|---|
+| z0–z5 天空/远岛/水面/水下远景/中景/沙底 | `Scene.tsx` 六个函数 | `render/layers/background.ts` |
+| z6–z7 小爱心/影子/海草床/邻居/环境气泡 | `Pet` `Npc` `Seagrass` `Bubbles` | `render/layers/actors.ts` |
+| 位移与镜头 | `usePetSwim`（每帧 setX）+ `App.tsx` 的 cameraX | `render/swim.ts` `render/camera.ts`（实例字段） |
+| CSS keyframes × 8 + transition × 3 | `index.css` | `render/world-data.ts` 的 MOTION + `render/easing.ts` |
+
+**结果**：游动时 App 重渲染 **60 次/秒 → 0 次**；画面与旧渲染差 **0.4–0.7%**，且逐块扫描
+无任何位置偏差（剩下的全是旋转/矢量/非整数缩放的光栅化差异）；巡游速度仍是 90 逻辑px/秒。
+功能冒烟 18 项在开发和生产两套构建上各跑一遍，18/18，控制台零报错。
+
+**顺带**：`prefers-reduced-motion` 从 CSS 媒体查询改成运行时开关（世界离开 DOM 之后媒体查询管不着它了）；
+`Scene.tsx` `Pet.tsx` `Npc.tsx` `Seagrass.tsx` `Bubbles.tsx` `usePetSwim.ts` 六个文件删除。
+
+**逐像素比对逮到的两个坑**（都是「CSS 默认值和直觉不一样」，看代码发现不了）：
+`background-position: bottom` 展开是 `50% 100%`，横向那个 50% 让 repeat-x 的起点挪到了
+`(容器宽-图宽)/2`，剪影层因此整体错 120px；`<button>` 会把内容垂直居中（Blink 固有行为，
+不是哪条 CSS 写的），`min-h-14` 撑高按钮时精灵要跟着往下让，Dolly 因此高了 4px。
+
+细节、验收数据和三处偏离原计划的说明见 `REFACTOR_PLAN.md` §九。**只剩阶段 5（视差与光照）。**
+
+---
+
 ### S3 · 红海全开（2–3 周）
 
 **交付**：珊瑚花园、沙地浅滩、老沉船 + 4 个 NPC + 图鉴系统 + 委托

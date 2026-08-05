@@ -37,12 +37,6 @@ export interface HudSnapshot {
   tip: string | null
 }
 
-/** 画完之后交出来的可点区域。HUD.tsx 据此摆透明 <button> */
-export interface Hotspot {
-  id: string
-  x: number
-  y: number
-  w: number
-  h: number
-  label: string
-}
+/** 画完之后交出来的可点区域。HUD.tsx 据此摆透明 <button>。
+ *  世界层和 HUD 层共用同一个形状,定义放在 render/types.ts */
+export type { Hotspot } from '../render/types'
