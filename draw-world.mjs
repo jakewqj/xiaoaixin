@@ -843,4 +843,139 @@ function icon16() {
   savePng(`${UI}/icon_weight.png`, g)
 }
 
+// ---- overlay 层素材(渲染重构阶段 5·2)---------------------------------
+// 前景礁 + 水下光柱。这两样都画在小爱心**前面**,是这一版唯一的深度信号。
+// 尺寸按参考图定:前景珊瑚丛比中景那批大一圈,而且被画面底边切掉一截。
+// 注意**不是**把中景素材放大 2 倍 —— 那样像素格会比全屏其它东西粗一倍,
+// 参考图里前景珊瑚和背景是同一个像素密度,只是形体更大。
+
+/** 把一张小图盖到大图上,透明处不覆盖 */
+function blit(dst, src, ox, oy) {
+  for (let y = 0; y < src.length; y++) {
+    for (let x = 0; x < src[0].length; x++) {
+      if (src[y][x]) set(dst, ox + x, oy + y, src[y][x])
+    }
+  }
+}
+
+// 前景礁 = 一堆珊瑚(静止)+ 几片高海带(会摇)。
+//
+// **不要把珊瑚生成器的尺寸参数硬调大。** 试过:staghorn 的枝粗上限是 3px、
+// 脑珊瑚的沟回间距是固定的 3.4px,尺寸翻倍之后细节密度跟不上,红枝变成一棵光秃秃的树、
+// 脑珊瑚变成一个巨大的粉团,难看。参考图里的前景珊瑚其实**也不比中景那批大多少**,
+// 是「多、挤、叠」才显得近。真正撑起高度的是海带 —— 细、高、不挡视线。
+//
+// **画布高 ≠ 内容高**:第一版按 H=140 画,内容顶只到第 47 行,上屏后礁顶停在 y=191,
+// 而小爱心的身体在 y 140–175,她从来不会从礁后面过。现在成图一律 crop 到内容边界,
+// PNG 的高度就是它的真实高度,摆位才算得准。
+function crop(g) {
+  let top = g.length, bot = -1, left = g[0].length, right = -1
+  for (let y = 0; y < g.length; y++) {
+    for (let x = 0; x < g[0].length; x++) {
+      if (!g[y][x]) continue
+      if (y < top) top = y
+      if (y > bot) bot = y
+      if (x < left) left = x
+      if (x > right) right = x
+    }
+  }
+  if (bot < 0) return g
+  return g.slice(top, bot + 1).map((row) => row.slice(left, right + 1))
+}
+
+// 一片海带叶。和 kelp.png 同一套画法,只是高度可调、起始相位可调
+function kelpBlade(H, phase, cols) {
+  const W = 30
+  const g = grid(W, H)
+  const [kelp, lite, edge] = cols
+  for (let i = 0; i < H - 4; i++) {
+    const y = H - 1 - i
+    const x = 14 + Math.round(7 * Math.sin(i * 0.075 + phase))
+    const w = i > H - 22 ? 3 : i > H * 0.55 ? 4 : 6
+    for (let k = 0; k < w; k++) set(g, x + k - (w >> 1), y, k === 0 ? lite : kelp)
+    if (i % 15 === 7 && i < H - 18) {
+      const side = i % 30 === 7 ? 1 : -1
+      fillEllipse(g, x + side * 7, y - 1, 6, 2.6, kelp)
+      set(g, x + side * 5, y - 1, lite)
+      set(g, x + side * 6, y - 2, lite)
+    }
+  }
+  outline(g, edge)
+  return crop(g)
+}
+const KELP_DARK = [[46, 108, 44, 255], [82, 152, 62, 255], [26, 62, 26, 255]]
+const KELP_MID = [[56, 124, 52, 255], [96, 172, 74, 255], [32, 76, 32, 255]]
+savePng(`${DIR}/fg_kelp_a.png`, kelpBlade(152, 0, KELP_DARK))
+savePng(`${DIR}/fg_kelp_b.png`, kelpBlade(134, 1.7, KELP_MID))
+savePng(`${DIR}/fg_kelp_c.png`, kelpBlade(166, 3.1, KELP_DARK))
+
+// 三丛珊瑚。尺寸和中景那批同一个量级,靠「多、挤、叠」显得近
+{
+  const W = 176
+  const H = 96
+  const base = (parts) => {
+    const g = grid(W, H)
+    for (const [src, x, lift = 0] of parts) blit(g, src, x, H - src.length - lift)
+    return crop(g)
+  }
+
+  savePng(`${DIR}/fg_reef_a.png`, base([
+    [rock(128, 46, [[30, 42, 30, 30], [70, 44, 36, 34], [104, 42, 24, 26]], [20, 60, 96]), 22],
+    [tubes(46, 58, [[156, 96, 196, 255], [196, 152, 226, 255], [78, 40, 110, 255], [92, 52, 128, 255]],
+      [34, 50, 40, 54, 28], 7), 2],
+    [brainCoral(52, 32, [240, 140, 160, 255], [194, 86, 112, 255], [252, 195, 206, 255], [142, 58, 80, 255]), 40],
+    [staghorn(46, 42, [224, 66, 52, 255], [244, 128, 96, 255], [128, 30, 24, 255],
+      [[22, Math.PI / 2, 18, 3], [9, Math.PI / 2 + 0.6, 13, 2], [37, Math.PI / 2 - 0.55, 14, 2]]), 86, 10],
+    [brainCoral(44, 28, [238, 152, 88, 255], [188, 96, 40, 255], [250, 198, 140, 255], [130, 64, 26, 255]), 124],
+    [tubes(38, 46, [[218, 90, 60, 255], [242, 142, 100, 255], [118, 40, 24, 255], [128, 46, 28, 255]],
+      [28, 40, 32, 20], 7), 136],
+  ]))
+
+  savePng(`${DIR}/fg_reef_b.png`, base([
+    [rock(104, 40, [[26, 36, 28, 26], [62, 38, 32, 30], [88, 36, 20, 22]], [18, 54]), 40],
+    [brainCoral(56, 34, [238, 152, 88, 255], [188, 96, 40, 255], [250, 198, 140, 255], [130, 64, 26, 255]), 4],
+    [staghorn(44, 40, [242, 122, 112, 255], [252, 182, 172, 255], [152, 52, 56, 255],
+      [[21, Math.PI / 2, 17, 3], [9, Math.PI / 2 + 0.55, 12, 2], [35, Math.PI / 2 - 0.5, 13, 2]]), 52, 8],
+    [tubes(44, 54, [[156, 96, 196, 255], [196, 152, 226, 255], [78, 40, 110, 255], [92, 52, 128, 255]],
+      [32, 48, 38, 50, 26], 7), 92],
+    [brainCoral(50, 30, [240, 140, 160, 255], [194, 86, 112, 255], [252, 195, 206, 255], [142, 58, 80, 255]), 126],
+  ]))
+
+  savePng(`${DIR}/fg_reef_c.png`, base([
+    [rock(140, 52, [[34, 48, 34, 32], [78, 50, 40, 38], [114, 48, 26, 28]], [24, 68, 106]), 14],
+    [staghorn(48, 44, [224, 66, 52, 255], [244, 128, 96, 255], [128, 30, 24, 255],
+      [[23, Math.PI / 2, 19, 3], [9, Math.PI / 2 + 0.58, 13, 2], [39, Math.PI / 2 - 0.52, 14, 2]]), 6, 12],
+    [tubes(48, 60, [[156, 96, 196, 255], [196, 152, 226, 255], [78, 40, 110, 255], [92, 52, 128, 255]],
+      [36, 52, 42, 56, 30], 7), 56],
+    [brainCoral(58, 36, [240, 140, 160, 255], [194, 86, 112, 255], [252, 195, 206, 255], [142, 58, 80, 255]), 108],
+    [tubes(36, 44, [[218, 90, 60, 255], [242, 142, 100, 255], [118, 40, 24, 255], [128, 46, 28, 255]],
+      [26, 38, 30, 18], 7), 140],
+  ]))
+}
+
+// 水下光柱:从水面斜插下来的一束光。像素风不做柔和羽化 —— 边缘用棋盘抖动收口,
+// 亮度按 alpha 分几档硬切,放大之后还是看得见格子
+{
+  const W = 64
+  const H = 190
+  const g = grid(W, H)
+  const TOP_A = 46
+  for (let y = 0; y < H; y++) {
+    const t = y / H
+    const cx = 44 - t * 30 // 往下往左斜
+    const half = 10 - t * 4.5 // 越往下越收
+    const a = Math.round(TOP_A * Math.pow(1 - t, 1.5))
+    if (a <= 1) continue
+    // alpha 量化成 4 档,免得出现连续渐变
+    const q = Math.max(1, Math.round(a / 4)) * 4
+    for (let x = Math.round(cx - half); x <= Math.round(cx + half); x++) {
+      const edge = Math.abs(x - cx) / half
+      if (edge > 0.9) continue
+      if (edge > 0.6 && (x + y) % 2 === 0) continue
+      set(g, x, y, [236, 250, 255, edge > 0.35 ? Math.round(q * 0.6) : q])
+    }
+  }
+  savePng(`${DIR}/light_shaft.png`, g)
+}
+
 console.log('World layer art v2 generated in ' + DIR + '/')

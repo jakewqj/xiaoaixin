@@ -9,7 +9,7 @@ import { STAGE_WIDTH } from '../components/ScreenFrame'
 // 点哪游哪的巡游速度:儒艮悠闲巡游约 5 km/h ≈ 1.4 m/s;
 // 游戏里成年体长 3m = 192 逻辑px,即 64px/m → 1.4 × 64 ≈ 90 逻辑px/秒。
 // 不做加速冲刺——她永远是纪录片里那种不紧不慢的游法
-const SWIM_SPEED = 90
+export const SWIM_SPEED = 90
 
 // 身体一半宽度左右的安全边距,免得头或尾巴探出世界边缘
 const EDGE_MARGIN = 80
@@ -17,6 +17,8 @@ const EDGE_MARGIN = 80
 export class Swim {
   x = STAGE_WIDTH / 2
   facingLeft = false
+  /** 这一帧的水平速度(逻辑px/秒,带正负)。停着就是 0。镜头的前瞻量读它 */
+  vx = 0
   private target: number | null = null
   private worldWidth = STAGE_WIDTH
 
@@ -43,14 +45,19 @@ export class Swim {
   }
 
   update(dt: number): void {
-    if (this.target === null) return
+    if (this.target === null) {
+      this.vx = 0
+      return
+    }
     const diff = this.target - this.x
     const move = SWIM_SPEED * dt
     if (Math.abs(diff) <= move) {
       this.x = this.target
       this.target = null
+      this.vx = 0
       return
     }
     this.x += Math.sign(diff) * move
+    this.vx = Math.sign(diff) * SWIM_SPEED
   }
 }

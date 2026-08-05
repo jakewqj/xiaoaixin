@@ -1,6 +1,7 @@
 // 渲染桥。React 只认识这一个组件 —— 它把状态快照推给渲染运行时,把语义事件收回来。
 //
-// 两块 canvas:背景层(z0–z5)和角色层(z6–z7),后备缓冲区都是 480x270 逻辑分辨率,
+// 三块 canvas:背景层(z0–z5)、角色层(z6–z7)、overlay 前景层(前景礁 + 水下光柱),
+// 后备缓冲区都是 480x270 逻辑分辨率,
 // 由 ScreenFrame 整数倍放大 —— 像素画要的就是这个(HUD 那块 canvas 不一样,它用设备分辨率,
 // 因为放大中文会糊,见 ui/HUD.tsx)。
 //
@@ -58,6 +59,7 @@ function WorldCanvas({
 }: WorldCanvasProps) {
   const bgRef = useRef<HTMLCanvasElement>(null)
   const actorRef = useRef<HTMLCanvasElement>(null)
+  const overlayRef = useRef<HTMLCanvasElement>(null)
   const [renderer] = useState(() => new WorldRenderer())
   const [spots, setSpots] = useState<Hotspot[]>([])
   const reduced = useReducedMotion()
@@ -65,8 +67,9 @@ function WorldCanvas({
   useEffect(() => {
     const bg = bgRef.current?.getContext('2d')
     const actors = actorRef.current?.getContext('2d')
-    if (!bg || !actors) return
-    renderer.attach(bg, actors)
+    const overlay = overlayRef.current?.getContext('2d')
+    if (!bg || !actors || !overlay) return
+    renderer.attach(bg, actors, overlay)
     renderer.onHotspotsChanged(setSpots)
     renderer.start()
     return () => renderer.stop()
@@ -157,6 +160,14 @@ function WorldCanvas({
         height={STAGE_HEIGHT}
         aria-hidden="true"
         className="absolute inset-0"
+        style={{ width: STAGE_WIDTH, height: STAGE_HEIGHT }}
+      />
+      <canvas
+        ref={overlayRef}
+        width={STAGE_WIDTH}
+        height={STAGE_HEIGHT}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
         style={{ width: STAGE_WIDTH, height: STAGE_HEIGHT }}
       />
       {/* 点哪游哪:铺满舞台的点击层,在热区之下 —— 点小爱心/邻居仍是他们自己的反应 */}
