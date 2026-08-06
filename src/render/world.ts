@@ -6,6 +6,7 @@
 // 重构前小爱心游动时每帧 setX 一次,即每帧 React 全树重渲染一次;重构后是 0 次。
 
 import { STAGE_HEIGHT, STAGE_WIDTH } from '../components/ScreenFrame'
+import { FRAME_HEIGHT, FRAME_WIDTH } from '../lib/pet'
 import type { SeaTheme } from '../lib/seas'
 import type { Seagrass as Plant } from '../lib/seagrass'
 import { Camera } from './camera'
@@ -14,9 +15,16 @@ import { drawBackground } from './layers/background'
 import { drawActors, EAT_MS } from './layers/actors'
 import type { ActorState, NpcView, PetView } from './layers/actors'
 import { drawOverlay } from './layers/overlay'
-import { Swim } from './swim'
+import { REST_Y, Swim } from './swim'
 import type { Hotspot } from './types'
-import { MOTION, WATER_LINE } from './world-data'
+import type { Furrow } from './layers/background'
+import { FURROW, GRAZE, MOTION, SAND_H, WATER_LINE } from './world-data'
+
+/** 她能游到的最浅处:水面线再往下留出半个身子,别把背露出水面 */
+const CEILING_PAD = 6
+
+/** 站着换气时鼻孔探出水面多少。露一点就够,整个头拔出水面就成了跃出海面 */
+const SURFACE_POKE = 2
 
 export type { NpcView, PetView }
 
@@ -59,7 +67,6 @@ export class WorldRenderer {
   private onSpots: ((spots: Hotspot[]) => void) | null = null
 
   // 一次性动画的起点。DOM 那边靠元素挂载/类名切换触发,这里显式记时刻
-  private dipAt: number | null = null
   private tapAt: number | null = null
   private bubblesAt: number | null = null
   private poppingAt: number | null = null
@@ -69,11 +76,35 @@ export class WorldRenderer {
   private flipFrom = 1
   private flipAt = -Infinity
 
-  // 换气上浮:top 从 70% 过渡到 30%,时长由 React 传进来
-  private petTop = 0.7 * (STAGE_HEIGHT + WATER_LINE)
-  private topFrom = this.petTop
-  private topTo = this.petTop
-  private topAt = -Infinity
+  // 换气的纵向由 useBreath 的节拍接管:上浮 / 下沉各走 swimMs,和状态机同一个时长。
+  // 其余时候纵向归 swim —— 点哪游哪现在是二维的,她自己就会上下游
+  private petTop = REST_Y
+  private breathFrom = REST_Y
+  private breathTo = REST_Y
+  private breathAt = -Infinity
+  private breathHold = false
+  /** 上浮前她在哪一层。换完气回原处,不会平白无故沉回默认深度 */
+  private restY = REST_Y
+
+  // 站姿进度 0→1:0 是平着游,1 是竖起来把鼻孔探出水面
+  private stand = 0
+  private standFrom = 0
+  private standTo = 0
+
+  // 进食(拟砂觅食)的三段:游过去 → 低头犁沙 → 抬头。null = 现在没在吃
+  private grazePhase: 'travel' | 'plough' | 'lift' | null = null
+  private grazeAt = 0
+  private grazeFrom = 0
+  private grazeTo = 0
+  private grazeY = REST_Y
+  /** 低头姿势的进度 0→1。犁沙时 bob 要按它压下去,不然吻会一上一下地跳出沙面 */
+  private graze = 0
+  /** 开犁那一刻记下 swim 的令牌数,中途变了就是童童点了别处 —— 让位给她 */
+  private grazeToken = 0
+  /** 正在犁的那一道(终点每帧往前长);犁完了移进 furrows */
+  private live: Furrow | null = null
+  private furrows: Furrow[] = []
+  private onEating: ((active: boolean) => void) | null = null
 
   get worldWidth(): number {
     return STAGE_WIDTH * Math.max(1, this.snap?.slotCount ?? 1)
@@ -81,6 +112,17 @@ export class WorldRenderer {
 
   get worldHeight(): number {
     return STAGE_HEIGHT + WATER_LINE
+  }
+
+  /** 她纵向能游的范围。上不出水面,下不钻进沙里;体型长大了范围跟着收。
+   *  **犁沙是唯一的例外**:吻要插进沙面以下,身体中心就得比平时的下限再低几像素 */
+  private swimBounds(): { minY: number; maxY: number } {
+    const half = (FRAME_HEIGHT * (this.snap?.pet.scale ?? 1)) / 2
+    const floor = this.worldHeight - SAND_H - half
+    return {
+      minY: WATER_LINE + half + CEILING_PAD,
+      maxY: this.grazePhase ? Math.max(floor, this.grazeY) : floor,
+    }
   }
 
   attach(
@@ -110,19 +152,22 @@ export class WorldRenderer {
     const prev = this.snap
     this.snap = next
     this.reduced = reduced
-    this.swim.setWorldWidth(this.worldWidth)
+    const bounds = this.swimBounds()
+    this.swim.setBounds(this.worldWidth, bounds.minY, bounds.maxY)
+    this.swim.reduced = reduced
     this.camera.reduced = reduced
 
     const now = this.now()
     if (!prev || prev.surfaced !== next.surfaced) {
       this.camera.setSurfaced(next.surfaced, now)
-      this.setPetTop(next, now)
+      this.startBreathMove(next, now)
     }
-    // 进食那一下:沉向海草床啃一会儿再浮回来。在水面换气时不沉
-    if (next.pet.eating && !next.pet.atSurface) {
-      if (!prev?.pet.eating) this.dipAt = now
-    } else if (!next.pet.eating) {
-      this.dipAt = null
+    // 进食:不管她这会儿在多深,先游到海草床、下潜到沙面,再低头往前犁。
+    // 在水面换气时不开吃 —— 那一下她正忙着呼吸,纵向还归换气动画管,两边会打架。
+    // 这种时候当场回一声「没在吃」,免得 React 那边的姿势一直挂到兜底定时器
+    if (next.pet.eating && !prev?.pet.eating) {
+      if (next.pet.atSurface) this.onEating?.(false)
+      else this.startGraze(now)
     }
     if (next.pet.showBubbles && !prev?.pet.showBubbles) this.bubblesAt = now
     if (!next.pet.showBubbles) this.bubblesAt = null
@@ -132,12 +177,146 @@ export class WorldRenderer {
     this.draw(now)
   }
 
-  private setPetTop(s: WorldSnapshot, now: number): void {
-    const target = (s.pet.atSurface ? 0.3 : 0.7) * this.worldHeight
-    if (target === this.topTo) return
-    this.topFrom = this.petTop
-    this.topTo = target
-    this.topAt = now
+  /** 换气的一上一下。上去的同时把身子立起来,下来的同时躺平,两件事同一段进度 */
+  private startBreathMove(s: WorldSnapshot, now: number): void {
+    this.breathFrom = this.petTop
+    this.standFrom = this.stand
+    if (s.pet.atSurface) {
+      this.restY = this.swim.y
+      this.breathTo = this.standTop(s)
+      this.standTo = 1
+      this.breathHold = true
+    } else {
+      this.breathTo = this.restY
+      this.standTo = 0
+    }
+    this.breathAt = now
+  }
+
+  /** 站着换气时身体中心该在哪:让鼻孔正好探出水面。
+   *  鼻孔位置读 pet.json 的 blowhole 锚点 —— 换手稿后鼻孔挪了,她站的高度自动跟着变(宪法五) */
+  private standTop(s: WorldSnapshot): number {
+    const ax = s.pet.anchors.blowhole?.[0]
+    if (ax === undefined) return 0.3 * this.worldHeight
+    // 立起来之后,精灵横向上离中心多远,就等于竖向上离中心多高
+    return WATER_LINE - SURFACE_POKE + (ax - 0.5) * FRAME_WIDTH * s.pet.scale
+  }
+
+  /** 犁沙时身体中心该在哪:让**吻部**(mouth 锚点)正好插到沙面以下 `GRAZE.dig` px。
+   *
+   *  锚点在精灵里的偏移转过低头角之后就是吻离身体中心的垂直距离。
+   *  朝左时锚点横向镜像、低头角也取反,两个负号抵消 —— 所以这个高度和朝向无关,只算一次。
+   *  鼻子位置来自 `pet.json`,换手稿后吻挪了,她低头的深浅自动跟着变(宪法五) */
+  private grazeCenterY(s: WorldSnapshot): number {
+    const scale = s.pet.scale
+    const [mx, my] = s.pet.anchors.mouth ?? [0.885, 0.7]
+    const drop =
+      Math.abs(mx - 0.5) * FRAME_WIDTH * scale * Math.sin(GRAZE.pitch) +
+      (my - 0.5) * FRAME_HEIGHT * scale * Math.cos(GRAZE.pitch)
+    return this.worldHeight - SAND_H + GRAZE.dig - drop
+  }
+
+  /** 开吃:先算好这一趟要犁哪一段,然后就当成一次普通的「游到这儿」交给 swim。
+   *  下潜是斜着游过去的,不是先横后竖 —— 二维游动本来就这样 */
+  private startGraze(now: number): void {
+    const s = this.snap
+    if (!s) return
+    this.grazeY = this.grazeCenterY(s)
+    // 海草床固定在第一格,所以犁痕的起止是绝对坐标,不跟她走
+    const a = GRAZE.fromRatio * STAGE_WIDTH
+    const b = GRAZE.toRatio * STAGE_WIDTH
+    // 从离她近的那头下嘴,往另一头犁 —— 不用为了「一律从左往右」多绕半张床
+    const nearB = Math.abs(this.swim.x - b) < Math.abs(this.swim.x - a)
+    this.grazeFrom = nearB ? b : a
+    this.grazeTo = nearB ? a : b
+    this.grazePhase = 'travel'
+    this.grazeAt = now
+    const bounds = this.swimBounds()
+    this.swim.setBounds(this.worldWidth, bounds.minY, bounds.maxY)
+    this.swim.swimTo(this.grazeFrom, this.grazeY)
+    this.grazeToken = this.swim.commands
+  }
+
+  /** 收摊。`interrupted` = 童童中途点了别处,那就把犁到一半的沟留在沙上就行 */
+  private endGraze(): void {
+    if (this.live) {
+      if (Math.abs(this.live.to - this.live.from) > 2) this.furrows.push(this.live)
+      this.live = null
+    }
+    this.grazePhase = null
+    this.graze = 0
+    const bounds = this.swimBounds()
+    this.swim.setBounds(this.worldWidth, bounds.minY, bounds.maxY)
+    this.onEating?.(false)
+  }
+
+  /** 每帧推进进食。返回这一帧的低头角(0 = 没在吃) */
+  private stepGraze(now: number): number {
+    if (!this.grazePhase) return 0
+    // 童童中途点了别处 → 她听童童的。犁到哪儿算哪儿,没有惩罚也没有「重来一次」
+    if (this.swim.commands !== this.grazeToken) {
+      this.endGraze()
+      return 0
+    }
+    const dir = this.grazeTo < this.grazeFrom ? -1 : 1
+    const span = Math.abs(this.grazeTo - this.grazeFrom)
+    const ploughMs = this.reduced ? 0 : (span / GRAZE.speed) * 1000
+
+    if (this.grazePhase === 'travel') {
+      if (this.swim.swimming) return 0
+      // 到床边了,开犁:转向犁的方向,记下这一道沟的起点
+      this.grazePhase = 'plough'
+      this.grazeAt = now
+      const facingLeft = dir < 0
+      if (facingLeft !== this.swim.facingLeft) {
+        this.swim.facingLeft = facingLeft
+        this.flipFrom = this.flip
+        this.flipAt = now
+      }
+      this.live = { from: this.grazeFrom, to: this.grazeFrom, at: now }
+      this.onEating?.(true)
+    }
+
+    if (this.grazePhase === 'plough') {
+      const p = ploughMs <= 0 ? 1 : Math.min(1, (now - this.grazeAt) / ploughMs)
+      const x = lerp(this.grazeFrom, this.grazeTo, p)
+      this.swim.holdAt(x, this.grazeY)
+      this.grazeToken = this.swim.commands
+      if (this.live) this.live.to = x
+      this.graze = this.reduced ? 1 : Math.min(1, (now - this.grazeAt) / GRAZE.easeMs)
+      if (p >= 1) {
+        this.grazePhase = 'lift'
+        this.grazeAt = now
+      }
+    } else if (this.grazePhase === 'lift') {
+      // 抬头:沟已经犁完了,这几百毫秒只是把姿势收回来,不再往前走。
+      // **纵向也要一起收**:犁沙时她比平时的下限还低几像素(吻要插进沙),
+      // 不在这儿收回来的话,收摊时 setBounds 会把她「啪」地往上弹那几像素
+      const p = this.reduced ? 1 : Math.min(1, (now - this.grazeAt) / GRAZE.easeMs)
+      const half = (FRAME_HEIGHT * (this.snap?.pet.scale ?? 1)) / 2
+      const floor = Math.min(this.grazeY, this.worldHeight - SAND_H - half)
+      this.swim.holdAt(this.grazeTo, lerp(this.grazeY, floor, p))
+      this.grazeToken = this.swim.commands
+      this.graze = 1 - p
+      if (p >= 1) {
+        this.endGraze()
+        return 0
+      }
+    }
+    // 低头角本身不带进度,进度在 draw() 里一次性插值 —— 免得两处各乘一遍
+    return GRAZE.pitch * (this.swim.facingLeft ? -1 : 1)
+  }
+
+  /** 犁痕会被水慢慢抚平。过期的直接扔掉,不留着白算 alpha */
+  private sweepFurrows(now: number): void {
+    if (!this.furrows.length) return
+    this.furrows = this.furrows.filter((f) => now - f.at < FURROW.fadeMs)
+  }
+
+  /** 进食动作真正开始/结束的时刻。React 靠它切「eating」那套精灵图 ——
+   *  游过去的路上还该是 swim,到了才是 eating */
+  onEatingChanged(cb: (active: boolean) => void): void {
+    this.onEating = cb
   }
 
   /** 点了她一下:放大回弹。在水面等着的时候点她 = 帮她换气,这层判断在 React 那边 */
@@ -146,9 +325,9 @@ export class WorldRenderer {
   }
 
   /** 世界坐标 → 让她游过去。转身有 500ms 的过渡,不是啪一下镜像 */
-  swimTo(worldX: number): void {
+  swimTo(worldX: number, worldY: number): void {
     const before = this.swim.facingLeft
-    this.swim.swimTo(worldX)
+    this.swim.swimTo(worldX, worldY)
     if (this.swim.facingLeft !== before) {
       this.flipFrom = this.flip
       this.flipAt = this.now()
@@ -194,6 +373,9 @@ export class WorldRenderer {
     this.clock = now
 
     const reduced = this.reduced
+    // 进食要先推:它可能这一帧就把她按到沙面上,镜头得看到落位之后的位置
+    const grazeTilt = this.stepGraze(now)
+    this.sweepFurrows(now)
     this.camera.update(now, this.swim.x, this.swim.vx, this.worldWidth)
 
     // 转身 / 上浮的连续过渡
@@ -204,12 +386,29 @@ export class WorldRenderer {
       const t = (now - this.flipAt) / MOTION.petTurnMs
       this.flip = t >= 1 ? facing : lerp(this.flipFrom, facing, EASE_IN_OUT(Math.max(0, t)))
     }
-    if (reduced || s.swimMs <= 0) {
-      this.petTop = this.topTo
+    // 纵向:换气那一上一下由换气动画接管,其余时候归 swim(点哪游哪是二维的)
+    if (this.breathHold) {
+      const t = reduced || s.swimMs <= 0 ? 1 : (now - this.breathAt) / s.swimMs
+      const e = EASE_IN_OUT(Math.max(0, t))
+      this.petTop = t >= 1 ? this.breathTo : lerp(this.breathFrom, this.breathTo, e)
+      this.stand = t >= 1 ? this.standTo : lerp(this.standFrom, this.standTo, e)
+      // 换气期间纵向不归她自己管,但横向还能点 —— 所以只按住 y
+      this.swim.holdY(this.petTop)
+      if (t >= 1 && !s.pet.atSurface) this.breathHold = false
     } else {
-      const t = (now - this.topAt) / s.swimMs
-      this.petTop = t >= 1 ? this.topTo : lerp(this.topFrom, this.topTo, EASE_IN_OUT(Math.max(0, t)))
+      this.petTop = this.swim.y
+      this.stand = 0
     }
+
+    // 身体俯仰:平时朝行进方向,换气时按站姿进度插到「立起来」,犁沙时按低头进度插到「低头」。
+    // 立起来 = 头朝上 90°,朝左时角度取反,镜像之后合成出来还是头朝上
+    const upright = (-Math.PI / 2) * facing
+    const tilt =
+      this.stand > 0
+        ? lerp(this.swim.pitch, upright, this.stand)
+        : this.graze > 0
+          ? lerp(this.swim.pitch, grazeTilt, this.graze)
+          : this.swim.pitch
 
     const common = {
       now,
@@ -227,6 +426,8 @@ export class WorldRenderer {
       clarity: s.clarity,
       lockedBeyondEnd: s.lockedBeyondEnd,
       lockedBeforeStart: s.lockedBeforeStart,
+      // 正在犁的那道也要画出来,不然沟是等她犁完才「啪」地出现
+      furrows: this.live ? [...this.furrows, this.live] : this.furrows,
     })
 
     const actorState: ActorState = {
@@ -234,10 +435,11 @@ export class WorldRenderer {
       petX: this.swim.x,
       flip: this.flip,
       petTop: this.petTop,
+      tilt,
+      graze: this.graze,
       pet: s.pet,
       seagrass: s.seagrass,
       npcs: s.npcs,
-      dipAt: this.dipAt,
       tapAt: this.tapAt,
       bubblesAt: this.bubblesAt,
       poppingAt: this.poppingAt,
@@ -272,10 +474,39 @@ export class WorldRenderer {
     return screenX + this.camera.x
   }
 
-  debug(): { x: number; facingLeft: boolean; camX: number; camY: number; clock: number } {
+  toWorldY(screenY: number): number {
+    return screenY + this.camera.y
+  }
+
+  debug(): {
+    x: number
+    y: number
+    facingLeft: boolean
+    pitch: number
+    stand: number
+    graze: number
+    grazePhase: string
+    anim: string
+    furrows: { from: number; to: number; age: number }[]
+    camX: number
+    camY: number
+    clock: number
+  } {
+    const all = this.live ? [...this.furrows, this.live] : this.furrows
     return {
       x: this.swim.x,
+      y: this.swim.y,
       facingLeft: this.swim.facingLeft,
+      pitch: this.swim.pitch,
+      stand: this.stand,
+      graze: this.graze,
+      grazePhase: this.grazePhase ?? 'none',
+      anim: this.snap?.pet.anim?.src.split('/').pop() ?? 'none',
+      furrows: all.map((f) => ({
+        from: Math.round(f.from),
+        to: Math.round(f.to),
+        age: Math.round(this.clock - f.at),
+      })),
       camX: this.camera.x,
       camY: this.camera.y,
       clock: this.clock,

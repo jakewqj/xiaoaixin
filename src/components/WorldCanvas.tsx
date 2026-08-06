@@ -23,6 +23,8 @@ interface WorldCanvasProps {
   onTapBed: () => void
   onTapNpc: (id: string) => void
   onTapGift: (id: string) => void
+  /** 她真的低头开吃 / 吃完抬头的那一刻。游去海草床的路上还不算「在吃」 */
+  onEatingChanged: (active: boolean) => void
   hud?: ReactNode
 }
 
@@ -55,6 +57,7 @@ function WorldCanvas({
   onTapBed,
   onTapNpc,
   onTapGift,
+  onEatingChanged,
   hud,
 }: WorldCanvasProps) {
   const bgRef = useRef<HTMLCanvasElement>(null)
@@ -102,6 +105,12 @@ function WorldCanvas({
     renderer.setSnapshot(snapshot, reduced)
   }, [renderer, snapshot, reduced])
 
+  // 进食的真正时长由渲染层决定(游过去多远它才知道),所以是它回头通知 React,
+  // 不是 React 定一个死时长
+  useEffect(() => {
+    renderer.onEatingChanged(onEatingChanged)
+  }, [renderer, onEatingChanged])
+
   // 开发构建里给截图脚本用:把时钟钉死,重构前后才能在同一相位比对
   useEffect(() => {
     if (!import.meta.env.DEV) return
@@ -111,10 +120,11 @@ function WorldCanvas({
   }, [renderer])
 
   // 点哪游哪整条链都不经过 React:点击层拿到坐标直接交给渲染层的 swim,
-  // 位置是实例字段,不会触发任何重渲染
+  // 位置是实例字段,不会触发任何重渲染。横竖两个坐标都给 —— 她朝着那个点游,不是只左右挪
   const handleWorldTap = useCallback(
     (event: React.MouseEvent) => {
-      renderer.swimTo(renderer.toWorldX(event.nativeEvent.offsetX))
+      const { offsetX, offsetY } = event.nativeEvent
+      renderer.swimTo(renderer.toWorldX(offsetX), renderer.toWorldY(offsetY))
     },
     [renderer],
   )

@@ -79,11 +79,14 @@ export interface ActorState {
   /** 转身是 500ms 的 scaleX 过渡,不是瞬间镜像,所以这里是 -1..1 的连续值 */
   flip: number
   petTop: number
+  /** 身体俯仰(弧度),朝向已经折进去了:0 平着游,-π/2 是换气时立起来的站姿 */
+  tilt: number
+  /** 低头犁沙的进度 0→1。吻插进沙里的时候身体不该再上下漂,所以 bob 按它压掉 */
+  graze: number
   pet: PetView
   seagrass: Plant[]
   npcs: NpcView[]
   /** 一次性动画的起点(ms)。null = 现在没在播 */
-  dipAt: number | null
   tapAt: number | null
   bubblesAt: number | null
   poppingAt: number | null
@@ -139,32 +142,32 @@ function petBox(s: ActorState): PetBox {
   return { w, h, cx: s.petX, cy: s.petTop, spriteH }
 }
 
-/** 把 ctx 变换到「小爱心盒子中心」,bob 摇摆和进食下潜都已经套好 */
+/** 把 ctx 变换到「小爱心盒子中心」,bob 摇摆已经套好 */
 function enterPetFrame(ctx: CanvasRenderingContext2D, s: ActorState, box: PetBox): void {
   ctx.translate(box.cx, box.cy)
-  if (!s.reduced) {
-    const t = EASE_IN_OUT(alternateProgress(s.now, MOTION.petBobSec))
-    ctx.translate(0, lerp(MOTION.petBobFrom.y, MOTION.petBobTo.y, t))
-    ctx.rotate((lerp(MOTION.petBobFrom.deg, MOTION.petBobTo.deg, t) * Math.PI) / 180)
-  } else {
-    ctx.translate(0, MOTION.petBobFrom.y)
-    ctx.rotate((MOTION.petBobFrom.deg * Math.PI) / 180)
+  const bob = bobAt(s)
+  ctx.translate(0, bob.y)
+  ctx.rotate((bob.deg * Math.PI) / 180)
+}
+
+/**
+ * 这一帧的 bob(上下漂 + 轻微转)。
+ *
+ * **犁沙时按 `graze` 压到 0**:吻已经插进沙里了,身子再上下漂 ±9px 就会一下下地
+ * 把脸拔出沙面,看着像在啄。压掉之后那段时间的「活气」交给 eating 那 4 帧精灵。
+ */
+function bobAt(s: ActorState): { y: number; deg: number } {
+  const k = 1 - s.graze
+  if (s.reduced) return { y: MOTION.petBobFrom.y * k, deg: MOTION.petBobFrom.deg * k }
+  const t = EASE_IN_OUT(alternateProgress(s.now, MOTION.petBobSec))
+  return {
+    y: lerp(MOTION.petBobFrom.y, MOTION.petBobTo.y, t) * k,
+    deg: lerp(MOTION.petBobFrom.deg, MOTION.petBobTo.deg, t) * k,
   }
-  ctx.translate(0, dipOffset(s))
 }
 
-// 进食:沉向海草床啃一会儿再自己浮回来。关键帧 0% / 25% / 78% / 100%,
-// CSS 的 animation-timing-function 是逐段生效的,所以两头各缓动一次,中间是平的
-function dipOffset(s: ActorState): number {
-  if (s.dipAt === null || s.reduced) return 0
-  const p = (s.now - s.dipAt) / EAT_MS
-  if (p <= 0 || p >= 1) return 0
-  if (p < 0.25) return lerp(0, MOTION.petDipY, EASE_IN_OUT(p / 0.25))
-  if (p < 0.78) return MOTION.petDipY
-  return lerp(MOTION.petDipY, 0, EASE_IN_OUT((p - 0.78) / 0.22))
-}
-
-/** 进食一次的时长:沉下去 → 贴底啃一会儿 → 浮回来 */
+/** 进食一次最长撑多久。真正的时长由渲染层按「游过去 + 犁完这一段」算,
+ *  这个数只是 React 那边的兜底 —— 万一渲染层没回话,姿势也不能永远卡住 */
 export const EAT_MS = 4200
 
 function tapScale(s: ActorState): number {
@@ -189,6 +192,8 @@ function drawPet(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[])
   // 精灵在按钮里是居中的,按钮又填满整个盒子 —— 两个中心重合,所以这里不用再挪
   ctx.save()
   const tap = tapScale(s)
+  // 俯仰在镜像**外面**转:朝左时 tilt 自己已经是反的,先转后镜像才合成出「头还是朝上」
+  ctx.rotate(s.tilt)
   ctx.scale(tap * (s.flip || 1e-6), tap)
   const frame = frameOf(s.now, anim.fps, anim.frameCount, s.reduced)
   const source = s.pet.tone ? tintedSheet(sheet, anim.src, s.pet.tone) : sheet
@@ -208,10 +213,15 @@ function drawPet(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[])
   if (s.pet.showBubbles) drawBreathBubbles(ctx, s, box)
   ctx.restore()
 
-  // 热区:本体一个 + 每个锚点一个。位置跟着 bob/dip 走,但不跟着转 ——
-  // 2 度的倾斜落到 56px 的方块上不到 1px,不值得给每个按钮上矩阵
+  // 热区:本体一个 + 每个锚点一个。位置跟着 bob/dip 和俯仰走,但不跟着 bob 那 2 度转 ——
+  // 2 度落到 56px 的方块上不到 1px。**俯仰要跟**:站起来换气时她是 64 宽 192 高,
+  // 还按平躺的 192×64 摆热区,「点她帮她换气」这条最要紧的交互就点不着了
   const shift = petShift(s)
-  pushSpot(spots, s, '__pet', s.pet.tapLabel, box.cx - box.w / 2 + shift.x, box.cy - box.h / 2 + shift.y, box.w, box.h)
+  const cos = Math.abs(Math.cos(s.tilt))
+  const sin = Math.abs(Math.sin(s.tilt))
+  const hitW = box.w * cos + box.h * sin
+  const hitH = box.w * sin + box.h * cos
+  pushSpot(spots, s, '__pet', s.pet.tapLabel, box.cx - hitW / 2 + shift.x, box.cy - hitH / 2 + shift.y, hitW, hitH)
 
   const size = Math.max(MIN_TOUCH, HOTSPOT_RATIO * box.w)
   for (const name of s.pet.anchorNames) {
@@ -220,29 +230,31 @@ function drawPet(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[])
     const [ax, ay] = point
     const px = (s.flip < 0 ? 1 - ax : ax) * box.w
     const py = ay * box.h
+    const off = spin(px - box.w / 2, py - box.h / 2, s.tilt)
     pushSpot(
       spots,
       s,
       `anchor:${name}`,
       ANCHOR_LABELS[name] ?? '小爱心',
-      box.cx - box.w / 2 + px - size / 2 + shift.x,
-      box.cy - box.h / 2 + py - size / 2 + shift.y,
+      box.cx + off.x - size / 2 + shift.x,
+      box.cy + off.y - size / 2 + shift.y,
       size,
       size,
     )
   }
 }
 
-/** bob + dip 带来的整体位移(转动不算进去,热区不跟着转) */
+/** 把一个相对身体中心的偏移量转过俯仰角。热区和泡泡出口都得跟着身子转 */
+function spin(x: number, y: number, angle: number): { x: number; y: number } {
+  if (!angle) return { x, y }
+  const c = Math.cos(angle)
+  const s = Math.sin(angle)
+  return { x: x * c - y * s, y: x * s + y * c }
+}
+
+/** bob 带来的整体位移(转动不算进去,热区不跟着转) */
 function petShift(s: ActorState): { x: number; y: number } {
-  const bob = s.reduced
-    ? MOTION.petBobFrom.y
-    : lerp(
-        MOTION.petBobFrom.y,
-        MOTION.petBobTo.y,
-        EASE_IN_OUT(alternateProgress(s.now, MOTION.petBobSec)),
-      )
-  return { x: 0, y: bob + dipOffset(s) }
+  return { x: 0, y: bobAt(s).y }
 }
 
 // 换气泡泡。位置来自 pet.json 的 blowhole 锚点,小爱心转身时 x 跟着镜像。
@@ -251,8 +263,14 @@ function drawBreathBubbles(ctx: CanvasRenderingContext2D, s: ActorState, box: Pe
   const anchor = s.pet.anchors.blowhole
   if (!anchor || s.bubblesAt === null) return
   const [ax, ay] = anchor
-  const originX = (s.flip < 0 ? 1 - ax : ax) * box.w - box.w / 2
-  const originY = ay * box.h - box.h / 2
+  // 泡泡从鼻孔冒出来,身子立起来鼻孔就跟着转到头顶去了;但泡泡本身仍然是垂直往上升
+  const origin = spin(
+    (s.flip < 0 ? 1 - ax : ax) * box.w - box.w / 2,
+    ay * box.h - box.h / 2,
+    s.tilt,
+  )
+  const originX = origin.x
+  const originY = origin.y
 
   // 散开时整层一起淡出:泡泡各自升到哪就在哪消失,不会跳回鼻孔重来一遍
   let layerAlpha = 1

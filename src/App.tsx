@@ -40,6 +40,9 @@ import type { HudSnapshot, SlotSpec } from './ui/types'
 type PoseName = 'idle' | 'happy' | 'eating' | 'sleeping'
 
 const POSE_MS = 2500
+/** 兜底定时器要多留出来的一段:够她从世界最远处游回海草床。
+ *  正常路径永远不会走到这儿 —— 渲染层犁完就通知了 */
+const GRAZE_TRAVEL_CAP_MS = 20000
 const CARD_MS = 15000
 const DAY_MS = 24 * 60 * 60 * 1000
 const WELCOME_BACK_DAYS = 3
@@ -71,6 +74,8 @@ function App() {
   const album = useAlbum()
 
   const [pose, setPose] = useState<PoseName>('idle')
+  // 「已经低头在啃了」。按下喂食到真的开吃中间隔着一段路 —— 那段路上她该是游泳的样子
+  const [grazing, setGrazing] = useState(false)
   const [sceneId, setSceneId] = useState<string | null>(null)
   // 邻居这边唯一的一份对话状态,和 sceneId 共用同一个道理:同一时刻只可能有一份内容在说话,
   // 从根上不会出现小爱心和邻居同时弹出两个对话框——见 ROADMAP 已知坑「对话没有互斥」
@@ -176,12 +181,23 @@ function App() {
     giveGift(id, cap)
   }
 
-  // 摆一会儿姿势就回到平时的样子。进食要沉下去啃一会儿,时间给得长一些
+  // 摆一会儿姿势就回到平时的样子。
+  //
+  // 进食是个例外:它要先游到海草床再低头犁一段,**总时长取决于她这会儿离床多远**,
+  // React 算不出来。所以进食由渲染层犁完之后回头通知(onEatingChanged(false)),
+  // 这里的定时器只当兜底 —— 万一那声通知没来,姿势也不能永远卡在啃。
   useEffect(() => {
     if (pose === 'idle') return
-    const timer = setTimeout(() => setPose('idle'), pose === 'eating' ? EAT_MS : POSE_MS)
+    const ms = pose === 'eating' ? EAT_MS + GRAZE_TRAVEL_CAP_MS : POSE_MS
+    const timer = setTimeout(() => setPose('idle'), ms)
     return () => clearTimeout(timer)
   }, [pose])
+
+  // 渲染层说「开吃了 / 吃完了」。吃完就把姿势收回来,不再等兜底定时器
+  const handleEatingChanged = useCallback((active: boolean) => {
+    setGrazing(active)
+    if (!active) setPose((p) => (p === 'eating' ? 'idle' : p))
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -526,7 +542,7 @@ function App() {
   // 到了水面等着(waiting)换成 holding——腮帮鼓起、嘴巴闭紧地安静漂着,
   // 不再靠头顶那句「我要换口气」的文字气泡提示,靠这个姿势本身就能看出她在等你
   const animKey =
-    pose === 'eating'
+    pose === 'eating' && grazing
       ? 'eating'
       : pose === 'sleeping'
         ? 'sleeping'
@@ -616,6 +632,7 @@ function App() {
           onTapPet={tapPet}
           onTapAnchor={tapAnchor}
           onTapBed={() => showCard(knowledge.pickByEvent('点海草', save.knowledgeSeen))}
+          onEatingChanged={handleEatingChanged}
           onTapNpc={(id) => {
             const npc = npcs?.[id]
             if (npc) handleNpcTapSprite(id, npc, save.familiarity[id] ?? 0)

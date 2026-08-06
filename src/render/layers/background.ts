@@ -15,6 +15,7 @@ import { indexRange, layer } from '../parallax'
 import { DUST_FAR, drawDust, drawSparkles } from './particles'
 import {
   DECOR_VARIANTS,
+  FURROW,
   LOCKED_HINT_COLOR,
   MAX_HAZE,
   MOTION,
@@ -26,6 +27,13 @@ import {
   WATER_LINE,
   WORLD_DIR,
 } from '../world-data'
+
+/** 她犁过的一段沙。`from`/`to` 是世界坐标 x(沙底层视差 1.0,所以直接就是世界坐标) */
+export interface Furrow {
+  from: number
+  to: number
+  at: number
+}
 
 export interface BgState {
   now: number
@@ -39,6 +47,7 @@ export interface BgState {
   lockedBeyondEnd: boolean
   lockedBeforeStart: boolean
   reduced: boolean
+  furrows: Furrow[]
 }
 
 function img(file: string): HTMLImageElement | null {
@@ -212,6 +221,8 @@ function drawSeabed(ctx: CanvasRenderingContext2D, s: BgState, ox: number, from:
   ctx.rect(ox, top, STAGE_WIDTH, SAND_H)
   ctx.clip()
   if (sand) tileX(ctx, sand, top, ox, ox + STAGE_WIDTH)
+  // 犁痕压在沙纹上、垫在贝壳石子下面 —— 沟是挖在沙里的,散落物是掉在沙上的
+  drawFurrows(ctx, s, ox, top)
 
   for (let i = from; i <= to; i++) {
     SCATTER.forEach((file, j) => {
@@ -223,6 +234,39 @@ function drawSeabed(ctx: CanvasRenderingContext2D, s: BgState, ox: number, from:
     })
   }
   ctx.restore()
+}
+
+/**
+ * 她拿吻犁出来的浅沟。一道沟 = 一条压暗的槽 + 紧贴下沿的一线反光,
+ * 深浅沿着长度轻微起伏(起伏是 x 的纯函数,不存数组、不随机 —— 和浮尘同一个路子)。
+ *
+ * **这是全项目第三处用 `fillRect` 而不是 `drawImage`**(前两处:海草床矢量描边、浮尘)。
+ * 理由和浮尘同一条:一道沟就是 2–3 个逻辑像素高,而**长度是每帧在变的**,
+ * 出不成一张固定 PNG;宪法五/十三 管的是**美术素材**,那些照旧全走 `/assets/` 路径。
+ */
+function drawFurrows(ctx: CanvasRenderingContext2D, s: BgState, ox: number, top: number): void {
+  if (!s.furrows.length) return
+  const left = ox - FURROW.step
+  const right = ox + STAGE_WIDTH + FURROW.step
+  for (const f of s.furrows) {
+    const fade = 1 - (s.now - f.at) / FURROW.fadeMs
+    if (fade <= 0) continue
+    const lo = Math.max(left, Math.min(f.from, f.to))
+    const hi = Math.min(right, Math.max(f.from, f.to))
+    if (hi <= lo) continue
+    const shade = `rgba(${FURROW.shade}, ${FURROW.shadeAlpha * fade})`
+    const rim = `rgba(${FURROW.rim}, ${FURROW.rimAlpha * fade})`
+    // 起点对齐到步长网格,镜头挪动时每一格的起伏才不会跟着画面滑
+    for (let x = Math.floor(lo / FURROW.step) * FURROW.step; x < hi; x += FURROW.step) {
+      const wob = Math.round(Math.sin(x * FURROW.wobbleFreq) * FURROW.wobble)
+      const y = top + 2 + wob
+      ctx.fillStyle = shade
+      ctx.fillRect(x, y, FURROW.step, FURROW.depth)
+      // 反光贴在沟的下沿:光从水面来,沟的向上那面才亮得起来
+      ctx.fillStyle = rim
+      ctx.fillRect(x, y + FURROW.depth, FURROW.step, 1)
+    }
+  }
 }
 
 // 水下光柱:从水面斜插下来。整束只是慢慢左右晃 + 明暗呼吸,不做形变
