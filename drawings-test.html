@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>双存储验证 · 小爱心</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #14495c;
+        color: #e8dcc0;
+        font: 14px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+      p.note {
+        margin: 0 0 16px;
+        color: #7fd1d8;
+      }
+      button {
+        padding: 8px 16px;
+        border: 1px solid #e8dcc0;
+        border-radius: 4px;
+        background: #2e8b9b;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      label {
+        margin-left: 12px;
+      }
+      pre {
+        margin: 16px 0 0;
+        padding: 12px;
+        max-height: 60vh;
+        overflow: auto;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.35);
+        white-space: pre-wrap;
+      }
+      #shelf {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      #shelf img {
+        border: 2px solid #e8dcc0;
+        border-radius: 2px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>双存储验证 · IndexedDB 存 20 张画</h1>
+    <p class="note">
+      这一页只在 dev 下存在（构建入口只有 index.html，不会上线）。它不碰
+      <code>xiaoaixin_save</code>，也不碰跑之前就存在的画。
+    </p>
+    <button id="run">跑一遍</button>
+    <label><input type="checkbox" id="keep" /> 跑完不清理（留在数据库里自己看）</label>
+    <div id="shelf"></div>
+    <pre id="out">点「跑一遍」开始。</pre>
+    <script type="module" src="/src/dev/drawings-test.ts"></script>
+  </body>
+</html>

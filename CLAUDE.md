@@ -159,7 +159,7 @@
 
 > **上面几条里的「仍未 git commit」已经过期。** 2026-08-04 全部提交并推到 `main`(`bc17ae0..605754a`),EdgeOne 的 Git 自动构建就是在那次触发的。
 >
-> 之后的渲染重构阶段 1–2(`94fde34`)和阶段 5(`b74c802`)提交在分支 `pixel-ui-2026-08-04` 上,**还没并回 `main`**,所以线上跑的还是 `605754a`。
+> 之后的渲染重构阶段 1–2(`94fde34`)和阶段 5(`b74c802`)提交在分支 `pixel-ui-2026-08-04` 上。**2026-08-07 已经 fast-forward 合进 `main` 并推送到 `0f3a446`**,EdgeOne 自动构建随之触发,线上不再落后。(这条原文写「线上还是 `605754a`」在合并前就已经不准了 —— 阶段 1–2 的 `94fde34` 当时已经在 `main` 上,落后的只有阶段 5 和后面两条。)
 
 * [x] 渲染重构 阶段 1–2:整个世界进 canvas(2026-08-04)。背景六层 + 角色层全部搬进 canvas,小爱心的位移和镜头搬出 React。**一条游戏机制都没碰,`SaveData` 一个字段都没加,`src/hooks/` 全程只读**(REFACTOR_PLAN §四 四道闸)。新增 `src/render/{easing,world-data,swim,camera,world,types}.ts` + `render/layers/{background,actors}.ts` + `components/WorldCanvas.tsx`;删掉 `Scene.tsx` `Pet.tsx` `Npc.tsx` `Seagrass.tsx` `Bubbles.tsx` `usePetSwim.ts`。逐条经过和三处偏离原计划的说明见 `REFACTOR_PLAN.md` §九。
   * 数据:游动时 App 重渲染 **60 次/秒 → 0 次**;画面与旧渲染差 0.664% / 0.408%,逐块扫 dx/dy 全是 (0,0) 最吻合(**没有任何一处偏了哪怕 1px**,剩下的差异全是旋转/矢量描边/非整数缩放的光栅化);巡游速度仍是 90.1 逻辑px/秒。
@@ -189,7 +189,14 @@
   * `FACING_DEADZONE = 12`:点她正上方/正下方不翻身。差几个像素就镜像一次会看着像在抽搐。
   * `prefers-reduced-motion`:俯仰**不做插值直接落到位** —— 实测每一帧的 pitch 都精确等于方向角 0.3709,零缓动;停下仍然回正到 0。速度仍是 90.0。
   * **测试环境上踩的三个坑,下次直接照做**:① **别用有头浏览器跑自动化实测** —— 我开的那个 Chrome 窗口就在用户桌面上,他真的在里面点,`isTrusted:true` 的点击混进来,害我两轮误判成「她会自己漂移」。另起一个 `--headless=new` 实例才干净(headless 那轮 167 秒零位移)。② **舞台几何运行时量,别写死** `left/top/scale`,headless 和有头的布局不一样。③ **点之前先 `elementsFromPoint` 确认那一点没被 DOM 挡住,目标要按当前镜头可视范围算** —— 镜头一跟随,世界坐标算出来的屏幕位置很容易跑到屏幕外(我有两次点到了 x=−228)。
-  * 冒烟:四象限俯仰 + 边界夹取 + 换气整套(上浮→站直→点她→下沉→回原深度)+ 减弱动态,**控制台全程零报错**。`npm run build` 通过;`npm run lint` **24 problems**,和阶段 5 收工时完全一致,改动的四个文件零问题。**尚未 git commit,只在分支 `pixel-ui-2026-08-04` 的工作区。**
+  * 冒烟:四象限俯仰 + 边界夹取 + 换气整套(上浮→站直→点她→下沉→回原深度)+ 减弱动态,**控制台全程零报错**。`npm run build` 通过;`npm run lint` **24 problems**,和阶段 5 收工时完全一致,改动的四个文件零问题。
+
+* [x] **S2-1 双存储落地(2026-08-07)。** 分支 `pixel-ui-2026-08-04` 已 fast-forward 合进 `main` 并推送(`94fde34..0f3a446`),EdgeOne 自动构建触发 —— 渲染重构和点哪游哪/犁沙这批改动到此才真的上线。随后新开分支 `s2-drawings` 做 S2 的第一步。
+  * 新增 `src/lib/drawings.ts`(save/load/delete/list 四个方法,DB `xiaoaixin` → store `xiaoaixin_drawings`,key `drawing_{毫秒}`,value 是 PNG blob 本体)、`drawings-test.html` + `src/dev/drawings-test.ts`(验证页,**只在 dev 下存在**:vite 构建入口只有 `index.html`,根目录其它 html 不进 dist,实测 `dist/` 里没有它)。`SaveData` 加 `drawings: string[]`,**只存 id**。
+  * **这是 REFACTOR_PLAN §四闸 2「SaveData 一个字段都不加」之后第一次加字段** —— 那条闸是渲染重构期间的约束,重构已收工;这个字段是 ROADMAP 2-1 明写要求的,不是顺手加的。
+  * 实测(无头 Chrome,独立 user-data-dir):17 项全过、控制台零报错。20 张 1024×768 的 PNG 共 16.6 MB,配额占 0.2%;删一张只少一张;收尾把造出来的全删干净,跑之前就有的一张没动。**降级路径是真跑过的**:把 `window.indexedDB` 拿掉再 import,四个方法返回 `null/null/false/[]`,一个错都没抛。老存档(没有 `drawings` 字段)实测原样继承。
+  * **四个坑**(逐条记在代码注释和 `ROADMAP.md` 2-1 小节):① 写成功不能只看 `req.onsuccess`,配额不够是在 `tx.onabort` 上才报的,一律等 `tx.oncomplete`;② `indexedDB.open()` 可能既不 success 也不 error 一直挂着(无痕模式),挂着比失败更糟,加 5 秒超时;③ id 不能直接用 `Date.now()`,同一毫秒连存两张会撞 key 把前一张盖掉(原则 10 画不许消失);④ 打不开数据库时不缓存那个失败结果,可能只是另一个标签页占着。
+  * `npm run build` 通过;`npm run lint` **24 problems**,与本轮开工前完全一致,三个新增/改动文件零问题。**尚未 git commit,只在分支 `pixel-ui-2026-08-04` 的工作区。**
 
 * [x] 进食改成「下潜到海草床犁沙」(2026-08-06)。原来点喂食是**就地**往下沉 40px 啃一会儿(`MOTION.petDipY`),她在上层水域时就等于**在半空中吃**,这是用户报的 bug。现在是一整套:游到海草床 → 下潜到沙面 → 低头把吻插进沙里往前犁一段 → 抬头,身后留一道浅坑。改了 `world-data.ts` `swim.ts` `world.ts` `layers/{actors,background}.ts` `WorldCanvas.tsx` `App.tsx`。**喂食的游戏机制一条没碰**(饱食度 +1 / 音效 / 知识卡仍在按下那一刻结算,`SaveData` 一个字段没加),动的只有动作表现。
   * **两个岔路口是用户当场拍板的**,不是我定的:① 她**先横着游回第一格的海草床**再开吃(不是就地下潜)—— 代价是隔着几格时要等她游过去,好处是犁痕一定落在真有海草的地方;② 犁痕**60 秒慢慢淡掉**,不进存档 —— 沙被水抚平,对应原则 6「变化永远可逆」。

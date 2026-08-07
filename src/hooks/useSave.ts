@@ -42,6 +42,11 @@ export interface SaveData {
   // 「❌ 常驻金钱 HUD(贝币只在「换一换」界面内显示)」冲突,宪法待修订,拟稿见 FORJake.md。
   // 捡贝壳/花贝壳的机制是 S5「贝壳当钱用」的事,这里只存数,不做任何加减规则
   shells: number
+  // 童童画的画:**这里只存 id**,图片本体在 IndexedDB(见 lib/drawings.ts)。
+  // CLAUDE.md 十四禁止 base64 图片进 localStorage —— 写爆是整份存档一起丢。
+  // 按画下来的先后排。IndexedDB 里读不到某个 id 时当「这张没有」,不算坏档,
+  // 也不要顺手把 id 从这里删掉(原则 10:她画的东西永远不被抹掉)
+  drawings: string[]
 }
 
 function createSave(): SaveData {
@@ -63,6 +68,7 @@ function createSave(): SaveData {
     familiarityLastAt: {},
     giftedAt: {},
     shells: 0,
+    drawings: [],
   }
 }
 
@@ -165,6 +171,10 @@ function parseSave(raw: string | null): SaveData | null {
       // 贝壳是后加的字段。老存档没有就当作 0,不因此把整份档判成损坏 ——
       // 童童现在存档里的天数、海草、相册、熟悉度必须原样继承
       shells: isCount(s.shells) ? Math.max(0, Math.floor(s.shells)) : 0,
+      // 画是 S2 才加的字段。老存档没有就当作还没画过
+      drawings: Array.isArray(s.drawings)
+        ? s.drawings.filter((id): id is string => typeof id === 'string')
+        : [],
       ...withBed(s),
     }
   } catch {
