@@ -433,6 +433,69 @@ def('count_four', (g) => {
   }
 })
 
+// ---- 画画的工具 -----------------------------------------------------------
+// 这四个是 S2-3 画布工具栏用的。宪法二/十三:图标是主角,文字是加分项 ——
+// 童童一个字不认也要能按对,所以四个的**外形轮廓**必须一眼分得开,
+// 不能靠颜色区分(她的屏幕亮度和色觉都不在我们手里)
+
+// 笔:斜着的一支铅笔,左下是尖、右上是粉色橡皮头。
+// 和下面那块橡皮共用同一个粉,两个一眼看得出是一对
+def('pencil', (g) => {
+  for (const k of [0, 1, 2]) line(g, 3 + k, 12, 11 + k, 4, C.gold)
+  for (const k of [0, 1, 2]) line(g, 10 + k, 5, 11 + k, 4, C.heart)
+  for (const k of [0, 1, 2]) line(g, 3 + k, 12, 4 + k, 11, C.sand)
+  set(g, 3, 12, C.waterDeep)
+  set(g, 4, 12, C.waterDeep)
+  set(g, 3, 11, C.waterDeep)
+})
+
+// 橡皮:斜着的一块,上半奶白下半粉。斜着摆是为了和笔的斜角呼应,
+// 但它是**一块**、笔是**一条**,轮廓差别足够大
+def('eraser', (g) => {
+  for (let y = 4; y <= 11; y++) {
+    const off = Math.round((11 - y) * 0.7)
+    for (let x = 3 + off; x <= 9 + off; x++) {
+      set(g, x, y, y <= 7 ? C.cream : C.heart)
+    }
+  }
+})
+
+// 退一步:一支朝左的箭头,右端往下拐。箭头做得偏大 ——
+// 这是四个里最需要「按了会怎样」一目了然的一个
+def('undo', (g) => {
+  const col = C.water
+  for (let x = 5; x <= 11; x++) {
+    set(g, x, 5, col)
+    set(g, x, 6, col)
+  }
+  for (let y = 6; y <= 12; y++) {
+    set(g, 10, y, col)
+    set(g, 11, y, col)
+  }
+  for (let i = 0; i <= 2; i++) {
+    for (let y = 3 + (2 - i); y <= 8 - (2 - i); y++) set(g, 2 + i, y, col)
+  }
+})
+
+// 重来:一张新的空白纸,右上角折起来。
+// **循环箭头在 16×16 上画不出来** —— 试过两版:环细了糊成疙瘩,环粗到 3px 又因为
+// outline() 要在两侧各描 1px 深边,16 格里塞不下,读出来像个「6」。
+// 换成「换一张新纸」:大块形状不怕描边,而且对童童来说这就是重来的字面意思。
+def('redraw', (g) => {
+  for (let y = 2; y <= 13; y++) {
+    for (let x = 4; x <= 11; x++) {
+      if (y <= 4 && x >= 9) {
+        const dx = x - 9
+        const dy = y - 2
+        if (dx > dy) continue // 折掉的那个角,留空
+        set(g, x, y, C.sand) // 折过来的一小片,比纸面深一档
+      } else {
+        set(g, x, y, C.cream)
+      }
+    }
+  }
+})
+
 // ---- 输出 -----------------------------------------------------------------
 const names = Object.keys(ICONS).sort()
 for (const name of names) savePng(`${DIR}/${name}.png`, ICONS[name])

@@ -1,25 +1,23 @@
-// 绘画画布验证页的界面(ROADMAP S2-2)。挂载入口在同目录的 draw-test.tsx。
+// 绘画画布验证页的界面(ROADMAP S2-2 / S2-3)。挂载入口在同目录的 draw-test.tsx。
 //
-// 这里要能亲眼看见的四件事:
+// 这里要能亲眼看见的六件事:
 //   1. 线条平滑、不毛 —— 后备缓冲区按 DPR 放大了,而且没被 :root 的
 //      image-rendering: pixelated 继承到(所以入口**故意**引 index.css,
 //      不引的话那个坑根本不会出现,等于没测)
 //   2. 手掌/手指画不出东西 —— 「挡掉的 touch」那一栏会往上跳,画面纹丝不动
 //   3. 有 Pencil 时线条随力道变粗细,「压感」一栏显示「有」;
 //      鼠标画时恒为 0.5,显示「无(固定线宽)」,线条从头到尾一样粗
-//   4. 导出的 PNG 恒为 1024×768,和 S2-1 量配额用的尺寸一致
+//   4. 四个颜色、笔、橡皮切得动,选中的那个格子换成红框
+//   5. 退一步能一笔一笔退回去;**重来之后再退一步,整张画会全部回来**
+//   6. 导出的 PNG 恒为 1024×768,和 S2-1 量配额用的尺寸一致
 //
 // 「存取往返」按钮会真的写一次 IndexedDB,但读回来显示完就把它删掉,
 // 不留垃圾,也不碰跑之前就存在的画。
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  DRAW_HEIGHT,
-  DRAW_WIDTH,
-  DrawingCanvas,
-  type DrawingCanvasHandle,
-  type DrawingCanvasStats,
-} from '../components/DrawingCanvas'
+import { DrawingBoard } from '../components/DrawingBoard'
+import { DRAW_HEIGHT, DRAW_WIDTH } from '../components/DrawingCanvas'
+import type { DrawingCanvasHandle, DrawingCanvasStats } from '../components/DrawingCanvas'
 import { deleteDrawing, loadDrawing, saveDrawing } from '../lib/drawings'
 
 const POLL_MS = 200
@@ -114,16 +112,13 @@ export function DrawTestPage() {
 
   return (
     <div className="wrap">
-      <div>
-        <h1>绘画画布验证 · S2-2</h1>
+      <div className="board">
+        <h1>画布验证 · S2-2 / S2-3</h1>
         <p className="note">
           用 Pencil 或鼠标画。手指/手掌画不出东西是<b>对的</b>——那是防误触。
         </p>
-        <div className="paper">
-          <DrawingCanvas ref={canvas} className="sheet" />
-        </div>
+        <DrawingBoard ref={canvas} />
         <div className="bar">
-          <button onClick={() => canvas.current?.clear()}>清空</button>
           <button onClick={() => void onExport()}>导出 PNG</button>
           <button onClick={() => void onRoundTrip()}>存取往返</button>
         </div>
@@ -146,6 +141,7 @@ export function DrawTestPage() {
             />
             <Row label="最近压力值" value={stats.lastPressure.toFixed(3)} />
             <Row label="笔画数" value={String(stats.strokes)} />
+            <Row label="可退步数" value={String(stats.undoDepth)} />
             <Row label="采样点" value={String(stats.samples)} />
             <Row label="其中补点" value={String(stats.coalescedSamples)} />
             <Row label="挡掉的 touch" value={String(stats.ignoredTouch)} />

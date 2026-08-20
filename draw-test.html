@@ -31,25 +31,21 @@
         gap: 24px;
         align-items: flex-start;
       }
-      /* 画布本身是透明的,纸的颜色由这层容器给 —— 组件只负责笔迹 */
-      .paper {
+      /* 纸和工具栏都在 DrawingBoard 里,这一页只负责给它一个宽度。
+         --ui-scale 平时由 ScreenFrame 写在 :root 上,这一页没有舞台,
+         走 index.css 里 var(--ui-scale, 2) 的兜底值 2 */
+      .board {
         width: min(70vw, 640px);
-        aspect-ratio: 4 / 3;
-        background: #fffdf6;
-        border: 2px solid #e8dcc0;
-        border-radius: 2px;
-      }
-      .sheet {
-        display: block;
-        width: 100%;
-        height: 100%;
       }
       .bar {
         display: flex;
         gap: 8px;
         margin-top: 12px;
       }
-      button {
+      /* 只给这一页自己那两个按钮上样式。**不能写成裸的 `button {}`** ——
+         那会把圆角和背景色套到 DrawingBoard 的像素按钮上,
+         圆角正是 §二十二·3 明令禁止的东西,而且这一页看着对了、游戏里却是另一套 */
+      .bar button {
         padding: 8px 16px;
         border: 1px solid #e8dcc0;
         border-radius: 4px;

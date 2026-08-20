@@ -188,6 +188,21 @@
   background-image: url('/assets/world/ui/sv/slot.png');
 }
 
+/* 画板的道具格(S2-3)。和 .ui-slot 同一张 20×20 贴图,但画板是全屏弹层、
+   活在舞台缩放之外,所以边长要乘 --ui-scale —— 和 .hud-panel-lg 同一个理由。
+   选中态复用 canvas HUD 那张 slot_active.png,两边是同一套视觉语言。
+   用 aria-pressed 当选择器:样式和无障碍状态绑死,不会出现「看着选中、读屏说没选」 */
+.ui-slot-lg {
+  width: calc(20px * var(--ui-scale, 2));
+  height: calc(20px * var(--ui-scale, 2));
+  background-image: url('/assets/world/ui/sv/slot.png');
+  background-size: 100% 100%;
+}
+
+.ui-slot-lg[aria-pressed='true'] {
+  background-image: url('/assets/world/ui/sv/slot_active.png');
+}
+
 /* `.ui-slot-active`(红框选中格)随 ActionBar 一起删了 —— 现在 hotbar 全在 canvas 里,
    高亮由 draw.ts 直接 drawImage(slot_active.png) 处理。`.ui-slot` 保留:NPC 的送礼按钮还在用 */
 

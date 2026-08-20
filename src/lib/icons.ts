@@ -33,6 +33,11 @@ const MAP: Record<string, string> = {
   '\u{2764}': 'heart', // ❤
   '\u{1F497}': 'heart_pink', // 💗
   '\u{2753}': 'question', // ❓
+  // S2-3 画画的工具。这四个在 content/*.json 里没有对应台词,是组件直接按 emoji 取的
+  '\u{270F}': 'pencil', // ✏
+  '\u{1F9FD}': 'eraser', // 🧽
+  '\u{21A9}': 'undo', // ↩
+  '\u{1F4C4}': 'redraw', // 📄 一张新纸(「重来」)
 }
 
 /** 变体选择符:让 ❤ ☺ 这类字符按彩色 emoji 而不是黑白符号渲染。
