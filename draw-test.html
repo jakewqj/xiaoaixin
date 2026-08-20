@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>绘画画布验证 · 小爱心</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #14495c;
+        color: #e8dcc0;
+        font: 14px/1.6 -apple-system, "Segoe UI", system-ui, sans-serif;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+      h2 {
+        margin: 16px 0 6px;
+        font-size: 14px;
+        color: #7fd1d8;
+      }
+      p.note {
+        margin: 0 0 16px;
+        color: #7fd1d8;
+      }
+      .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      /* 画布本身是透明的,纸的颜色由这层容器给 —— 组件只负责笔迹 */
+      .paper {
+        width: min(70vw, 640px);
+        aspect-ratio: 4 / 3;
+        background: #fffdf6;
+        border: 2px solid #e8dcc0;
+        border-radius: 2px;
+      }
+      .sheet {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .bar {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      button {
+        padding: 8px 16px;
+        border: 1px solid #e8dcc0;
+        border-radius: 4px;
+        background: #2e8b9b;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      aside {
+        flex: 1;
+        min-width: 260px;
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 2px 0;
+        border-bottom: 1px solid rgba(232, 220, 192, 0.15);
+      }
+      .row b {
+        color: #fff;
+      }
+      pre {
+        margin: 0;
+        padding: 12px;
+        max-height: 34vh;
+        overflow: auto;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.35);
+        white-space: pre-wrap;
+      }
+      aside img {
+        width: 100%;
+        border: 2px solid #e8dcc0;
+        background: #fffdf6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/dev/draw-test.tsx"></script>
+  </body>
+</html>
