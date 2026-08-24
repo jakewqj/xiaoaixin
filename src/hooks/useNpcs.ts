@@ -27,6 +27,9 @@ export interface NpcSpec {
   话题库?: Record<string, NpcTopic[]>
   熟悉度上限?: number
   礼物反馈?: { 很喜欢: NpcGiftReaction; 谢谢你: NpcGiftReaction }
+  // 偶尔提起挂在自己身边的画(ROADMAP 2-5)。只表达喜欢,不评价画得怎么样。
+  // 没填的邻居走 App 里的兜底文案
+  挂画反馈?: { text: string; icon?: string }[]
 }
 
 // "112x48" 这种字符串换算成像素宽高。哪个 NPC 的格式写错了就退回一个不算太离谱的默认方块,

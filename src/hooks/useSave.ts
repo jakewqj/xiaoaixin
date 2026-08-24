@@ -14,6 +14,9 @@ export const HUNGER_STEP_MS = 5 * 60 * 1000
 // 不会出现「我把它饿了一个星期」这种画面
 const MAX_OFFLINE_DROP = 2
 
+// 一个邻居身边最多挂 3 张(ROADMAP 2-4)。满了旧的自动退回相册,不是删掉
+export const MAX_HANGING = 3
+
 export interface SaveData {
   version: number
   createdAt: string
@@ -47,6 +50,19 @@ export interface SaveData {
   // 按画下来的先后排。IndexedDB 里读不到某个 id 时当「这张没有」,不算坏档,
   // 也不要顺手把 id 从这里删掉(原则 10:她画的东西永远不被抹掉)
   drawings: string[]
+  // 挂在邻居身边木板上的画:邻居 id → 画的 id,**最多 3 张,新的在后**。
+  // 满了之后最旧的那张只是从这里挪走,**不删** —— 它仍然在 drawings 里,
+  // 也就是仍然在相册里(原则 10:她画的永远不消失)。所以这里不需要额外的
+  // 「已归档」列表,drawings 本身就是全集
+  hangings: Record<string, string[]>
+  // 童童手写的小纸条(ROADMAP 2-6):贴在哪 → 纸条那张图的 id。
+  // key 是带前缀的位置串:`seagrass:<海草id>`、`place:<地点id>`。
+  // 和 hangings 一样,图本体在 IndexedDB,这里只存 id;
+  // 而且它同样在 drawings 里 —— 相册收的是全集(2-8)
+  notes: Record<string, string>
+  // 她真的游到过的地点 id。**只用来决定「起名字的木牌」出不出现** ——
+  // 没去过的地方不该先摆一块空牌在那儿等她。只增不减,和熟悉度一个道理
+  visited: string[]
 }
 
 function createSave(): SaveData {
@@ -69,6 +85,9 @@ function createSave(): SaveData {
     giftedAt: {},
     shells: 0,
     drawings: [],
+    hangings: {},
+    notes: {},
+    visited: [],
   }
 }
 
@@ -174,6 +193,36 @@ function parseSave(raw: string | null): SaveData | null {
       // 画是 S2 才加的字段。老存档没有就当作还没画过
       drawings: Array.isArray(s.drawings)
         ? s.drawings.filter((id): id is string => typeof id === 'string')
+        : [],
+      // 挂画同理,老存档没有就是还没挂过。逐个邻居校验成字符串数组并砍到 3 张 ——
+      // 存档是可以被爸爸手改的,读进来的东西一律不当真
+      // s 已经是 Partial<SaveData>,s.hangings 本来就有类型 —— 别再往
+      // Record<string, unknown> 上强转,那一转就退化成 any,白白多一条 lint。
+      // Array.isArray 那层看着多余,但存档是可以被爸爸手改的,运行时仍要挡一下
+      hangings:
+        s.hangings && typeof s.hangings === 'object'
+          ? Object.fromEntries(
+              Object.entries(s.hangings)
+                .map(([npcId, ids]): [string, string[]] => [
+                  npcId,
+                  Array.isArray(ids)
+                    ? ids.filter((id): id is string => typeof id === 'string').slice(-MAX_HANGING)
+                    : [],
+                ])
+                .filter(([, ids]) => ids.length > 0),
+            )
+          : {},
+      // 纸条同理:老存档没有就是还没写过。逐条校验成字符串,手改过的存档不当真
+      notes:
+        s.notes && typeof s.notes === 'object'
+          ? Object.fromEntries(
+              Object.entries(s.notes).filter(
+                (pair): pair is [string, string] => typeof pair[1] === 'string',
+              ),
+            )
+          : {},
+      visited: Array.isArray(s.visited)
+        ? s.visited.filter((id): id is string => typeof id === 'string')
         : [],
       ...withBed(s),
     }

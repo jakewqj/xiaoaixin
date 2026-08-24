@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import ScreenFrame, { STAGE_WIDTH } from './components/ScreenFrame'
+import ScreenFrame, { STAGE_WIDTH, STAGE_HEIGHT } from './components/ScreenFrame'
 import WorldCanvas from './components/WorldCanvas'
 import { EAT_MS } from './render/world'
-import type { NpcView, PetView, WorldSnapshot } from './render/world'
+import type { NoteView, NpcView, PetView, WorldSnapshot } from './render/world'
 import DialoguePanel from './components/DialoguePanel'
 import type { PanelContent } from './components/DialoguePanel'
 import KnowledgeCard from './components/KnowledgeCard'
 import Book from './components/Book'
 import Album from './components/Album'
 import SeaPicker from './components/SeaPicker'
+import { DrawingOverlay } from './components/DrawingOverlay'
 import {
   BED_LIMIT,
   clarityOf,
@@ -17,7 +18,9 @@ import {
 } from './lib/seagrass'
 import { SEAS, seaById, SEA_CARD_EVENTS } from './lib/seas'
 import { currentStage, isHanddrawn, stagesReached, toneFilter } from './lib/pet'
-import { useSave, MAX_FULLNESS, HUNGER_STEP_MS } from './hooks/useSave'
+import { useSave, MAX_FULLNESS, HUNGER_STEP_MS, MAX_HANGING } from './hooks/useSave'
+import { useDrawingUrls } from './hooks/useDrawingUrls'
+import { saveDrawing } from './lib/drawings'
 import { usePet } from './hooks/usePet'
 import { useBreath, POP_MS, SWIM_MS } from './hooks/useBreath'
 import { useDialogue } from './hooks/useDialogue'
@@ -59,6 +62,15 @@ const GIFT_REPLY_MS = 3000
 
 // 没有真的礼物道具,送出去的是已经长成的海草。npc.json 大部分邻居还没填「礼物反馈」,
 // 给个通用兜底,不因为缺数据就哑掉
+// 邻居提起挂着的画的概率(ROADMAP 2-5「约 20% 概率」)。
+// **偶尔说才珍贵** —— 每次点她都提一遍,那句话三天就没味道了(宪法十同一个道理)
+const MENTION_HANGING_CHANCE = 0.2
+
+// 没填「挂画反馈」的邻居用这句。只说喜欢,**不评价画得怎么样** ——
+// 没有分数、没有星级、没有「画得真好」(原则 4:小爱心不是老师;原则 10:不判对错)。
+// 6 字,在宪法二「每句话 3–8 个字」之内
+const FALLBACK_HANGING_TEXT = '我喜欢你画的'
+
 const FALLBACK_GIFT_TEXT: Record<'很喜欢' | '谢谢你', string> = {
   很喜欢: '谢谢你,我很喜欢!',
   谢谢你: '谢谢你!',
@@ -90,6 +102,10 @@ function App() {
   // 不用路由库,页面切换就是一个状态
   const [page, setPage] = useState<'sea' | 'book' | 'album' | 'admin'>('sea')
   const [seaPickerOpen, setSeaPickerOpen] = useState(false)
+  // 正在给哪个邻居画画。null = 没在画
+  const [drawingFor, setDrawingFor] = useState<string | null>(null)
+  // 正在给什么起名字。key 是位置串(seagrass:xx / place:xx),title 是给她看的那句话
+  const [noteFor, setNoteFor] = useState<{ key: string; title: string } | null>(null)
   const [adminGateOpen, setAdminGateOpen] = useState(false)
 
   const grownCount = countGrown(save.seagrass)
@@ -102,9 +118,14 @@ function App() {
   const { config, update: updateConfig, reset: resetConfig, resetToOnlyPet } = useConfig()
 
   // world.json 的海域用中文名当 key,seas.ts 的 sea.name 正好是同一个字符串,靠它对上
-  const allSpots = world?.海域[sea.name]?.地点 ?? []
+  // 这两个原来是每次渲染新建的数组。2-6 加了几个吃它们当依赖的 useMemo/useCallback,
+  // 不 memo 的话依赖每帧都变,那几个 memo 等于白写(lint 也会直接点出来)
+  const allSpots = useMemo(() => world?.海域[sea.name]?.地点 ?? [], [world, sea.name])
   // config 还没加载完之前先当作一个地点都没开放,免得先闪出一整排、加载完又收回去
-  const openSpots = config ? allSpots.filter((spot) => config.开放地点.includes(spot.名字)) : []
+  const openSpots = useMemo(
+    () => (config ? allSpots.filter((spot) => config.开放地点.includes(spot.名字)) : []),
+    [config, allSpots],
+  )
   // 假定 config 里开放的地点是 world.json 地点列表的一段前缀,这是当前唯一一份内容数据的实际排法
   const lockedBeyondEnd = openSpots.length > 0 && allSpots.length > openSpots.length
 
@@ -142,6 +163,78 @@ function App() {
     [update],
   )
 
+  // 挂在各个邻居身边的画。id → object URL,渲染层只认路径(见 useDrawingUrls)
+  const hangingIds = useMemo(
+    () => Object.values(save.hangings).flat(),
+    [save.hangings],
+  )
+  const hangingUrls = useDrawingUrls(hangingIds)
+
+  // 手写纸条贴在世界里的位置(ROADMAP 2-6)。
+  //
+  // 两种触发,处理方式**故意不一样**:
+  //   种海草 —— 她刚动完手,顺势弹出来让她起名字,是对她动作的回应,不算打扰
+  //   到新地点 —— **不弹**。她正游着,全屏弹层横插一杠就是宪法二禁止的弹窗打断。
+  //     改成在那儿摆一块空木牌,想写的时候点它。写过的牌不给热区:
+  //     原则 10 她写的不许被改掉,也就没有「重写」这回事
+  const noteIds = useMemo(() => Object.values(save.notes), [save.notes])
+  const noteUrls = useDrawingUrls(noteIds)
+
+  const noteViews: NoteView[] = useMemo(() => {
+    const views: NoteView[] = []
+    for (const plant of save.seagrass) {
+      const key = `seagrass:${plant.id}`
+      const id = save.notes[key]
+      views.push({
+        key,
+        label: '给海草起名字',
+        leftPx: Math.round(plant.x * STAGE_WIDTH - 18),
+        topPx: STAGE_HEIGHT - 108,
+        src: id ? (noteUrls[id] ?? null) : null,
+      })
+    }
+    openSpots.forEach((spot, index) => {
+      if (!save.visited.includes(spot.id)) return
+      const key = `place:${spot.id}`
+      const id = save.notes[key]
+      views.push({
+        key,
+        label: '给这里起名字',
+        leftPx: index * STAGE_WIDTH + 28,
+        topPx: 52,
+        src: id ? (noteUrls[id] ?? null) : null,
+      })
+    })
+    return views
+  }, [save.seagrass, save.notes, save.visited, openSpots, noteUrls])
+
+  // 她游进了第几格。只在跨格那一帧收到一次(见 render/world.ts 的 onSpotChanged)
+  const handleSpotChanged = useCallback(
+    (index: number) => {
+      const spot = openSpots[index]
+      if (!spot) return
+      update((prev) =>
+        prev.visited.includes(spot.id) ? {} : { visited: [...prev.visited, spot.id] },
+      )
+    },
+    [openSpots, update],
+  )
+
+  // 写好的纸条:存进 IndexedDB → 记进存档 → 贴到那个位置。
+  // 存不进去就什么都不做也不报错(宪法十四),对她来说就是「这次没贴上」
+  const saveNote = useCallback(
+    async (key: string, png: Blob) => {
+      const drawingId = await saveDrawing(png)
+      setNoteFor(null)
+      if (!drawingId) return
+      update((prev) => ({
+        drawings: [...prev.drawings, drawingId],
+        notes: { ...prev.notes, [key]: drawingId },
+      }))
+    },
+    [update],
+  )
+
   // 送礼:每个邻居每天只能送 1 次,礼物是已经长成的海草——不消耗数量,和喂食一个道理。
   // 送礼也走熟悉度的每日一涨规则,和聊天共用同一个「今天涨过了没」
   const giveGift = useCallback(
@@ -161,6 +254,25 @@ function App() {
       return
     }
     if (sceneId || npcTalk) return
+
+    // 身边挂着画的话,偶尔提一句。isGift 在这里读作「一句不需要她回应的话」:
+    // 没有选项、过一会儿自己收起、点一下也能提前收 —— 和收到礼物那句同一种。
+    // **不涨熟悉度**:那是聊天和送礼的事,她路过听见一句夸奖不该变成进度
+    const hung = save.hangings[id] ?? []
+    if (hung.length > 0 && Math.random() < MENTION_HANGING_CHANCE) {
+      const lines = npc.挂画反馈 ?? []
+      const line =
+        lines.length > 0
+          ? lines[Math.floor(Math.random() * lines.length)]
+          : { text: FALLBACK_HANGING_TEXT }
+      setNpcTalk({
+        npcId: id,
+        topic: { id: 'hanging_mention', say: line.text },
+        isGift: true,
+      })
+      return
+    }
+
     const pool = unlockedTopics(npc, level)
     if (pool.length === 0) return
     setNpcTalk({ npcId: id, topic: pool[Math.floor(Math.random() * pool.length)], isGift: false })
@@ -172,6 +284,36 @@ function App() {
     bumpFamiliarity(id, cap)
     logDialogue(id, npc.名字, option.text)
   }
+
+  // 画完送出去。三件事按顺序:图片本体进 IndexedDB、id 进存档、挂上那块木板。
+  //
+  // **存不进去就什么都不做,但也不报错**(宪法十四:静默降级,绝不白屏)——
+  // 对童童来说就是「这次没送成」,她可以再按一次。
+  //
+  // 挂满 3 张时最旧的那张只是从 hangings 里挪走,**不删**:它还在 drawings 里,
+  // 也就是还在相册里(ROADMAP 2-4 原话「满了旧的自动存进相册(不删除)」)
+  const sendDrawing = useCallback(
+    async (npcId: string, npc: NpcSpec, cap: number, png: Blob) => {
+      const drawingId = await saveDrawing(png)
+      setDrawingFor(null)
+      if (!drawingId) return
+      update((prev) => ({
+        drawings: [...prev.drawings, drawingId],
+        hangings: {
+          ...prev.hangings,
+          [npcId]: [...(prev.hangings[npcId] ?? []), drawingId].slice(-MAX_HANGING),
+        },
+      }))
+      // 反应和送海草共用同一套「很喜欢 / 谢谢你」,**不按画得怎么样分档** ——
+      // 原则 10:不判对错。随机一档,和她画了什么无关
+      const tier: '很喜欢' | '谢谢你' = Math.random() < 0.5 ? '很喜欢' : '谢谢你'
+      const reaction = npc.礼物反馈?.[tier] ?? { text: FALLBACK_GIFT_TEXT[tier] }
+      setNpcTalk({ npcId, topic: { id: `drawing_${tier}`, say: reaction.text }, isGift: true })
+      if (npc.动画.happy) setReactingNpc(npcId)
+      bumpFamiliarity(npcId, cap)
+    },
+    [bumpFamiliarity, update],
+  )
 
   function handleNpcGift(id: string, npc: NpcSpec, cap: number) {
     const tier: '很喜欢' | '谢谢你' = Math.random() < 0.5 ? '很喜欢' : '谢谢你'
@@ -348,14 +490,20 @@ function App() {
   // 种一棵新芽。种满了就只是种满了,按下去照样有反应
   const plant = useCallback(() => {
     playSfx('plant')
+    // 先把这一棵造出来,再交给 update —— 这样起名字用的 id 和真正种下去的是同一个。
+    // (写成在更新函数里赋值给外面的变量也能跑,但 TS 的控制流分析看不到回调里的赋值,
+    //  会把它收窄成 never;何况那样也更难读)
+    const fresh = plantSeagrass()
+    const full = save.seagrass.length >= BED_LIMIT
     update((prev) =>
-      prev.seagrass.length >= BED_LIMIT
-        ? {}
-        : { seagrass: [...prev.seagrass, plantSeagrass()] },
+      prev.seagrass.length >= BED_LIMIT ? {} : { seagrass: [...prev.seagrass, fresh] },
     )
     remember('first_plant')
     showCard(knowledge.pickByEvent('种海草后', save.knowledgeSeen))
-  }, [update, showCard, knowledge, save.knowledgeSeen, remember])
+    // 刚种下就顺势让她起名字。这是对她动作的回应,不是横插一杠的弹窗;
+    // 而且弹层上有「先不写」,不写照样种成(原则 1:没有失败态)
+    if (!full) setNoteFor({ key: `seagrass:${fresh.id}`, title: '给海草起名字' })
+  }, [update, showCard, knowledge, save.knowledgeSeen, save.seagrass.length, remember])
 
   // 选项动作。第 3 周才有的海草床先不接,选了它只是把气泡收起来 ——
   // 宁可什么都不发生,也不临时编一个机制出来
@@ -584,6 +732,9 @@ function App() {
         frameCount: anim.帧数,
         fps: anim.fps,
         canGift: grownCount > 0 && save.giftedAt[id] !== new Date().toDateString(),
+        hangings: (save.hangings[id] ?? [])
+          .map((drawingId) => hangingUrls[drawingId])
+          .filter((url): url is string => Boolean(url)),
       },
     ]
   })
@@ -599,6 +750,7 @@ function App() {
     pet: petView,
     seagrass: save.seagrass,
     npcs: npcViews,
+    notes: noteViews,
     swimMs: SWIM_MS,
   }
 
@@ -642,6 +794,26 @@ function App() {
             const cap = config?.开放NPC.find((n) => n.id === id)?.熟悉度上限 ?? 5
             if (npc) handleNpcGift(id, npc, cap)
           }}
+          onSpotChanged={handleSpotChanged}
+          // 点空木牌 = 给这儿起个名字。写过的牌没有热区,点不到
+          onTapNote={(key) => {
+            if (sceneId) return
+            setNpcTalk(null)
+            setNoteFor({
+              key,
+              title: key.startsWith('seagrass:') ? '给海草起名字' : '给这里起名字',
+            })
+          }}
+          // 邻居正说着话时点画画,**把话收起、照样打开画板** ——
+          // 按钮明明在那儿、点下去却什么都不发生,是这个项目最忌讳的死点击。
+          // 收话的写法和「她在说话时再点她」那条一致(handleNpcTapSprite)。
+          // 只有剧本对话(sceneId)还挡着:那是一段有头有尾的话,不该被打断
+          onTapDraw={(id) => {
+            if (sceneId) return
+            if (!npcs?.[id]) return
+            setNpcTalk(null)
+            setDrawingFor(id)
+          }}
           hud={
             <>
               {card && <KnowledgeCard card={card} onDismiss={() => setCard(null)} />}
@@ -674,6 +846,30 @@ function App() {
           events={save.albumEvents}
           metAt={save.createdAt}
           onClose={() => setPage('sea')}
+        />
+      )}
+      {drawingFor &&
+        npcs?.[drawingFor] &&
+        (() => {
+          const npc = npcs[drawingFor]
+          const cap = config?.开放NPC.find((n) => n.id === drawingFor)?.熟悉度上限 ?? 5
+          return (
+            <DrawingOverlay
+              title={`画给${npc.名字}`}
+              confirmLabel="送给她"
+              confirmIcon="🎨"
+              onConfirm={(png) => void sendDrawing(drawingFor, npc, cap, png)}
+              onClose={() => setDrawingFor(null)}
+            />
+          )
+        })()}
+      {noteFor && (
+        <DrawingOverlay
+          title={noteFor.title}
+          confirmLabel="贴上去"
+          confirmIcon="✏"
+          onConfirm={(png) => void saveNote(noteFor.key, png)}
+          onClose={() => setNoteFor(null)}
         />
       )}
       {seaPickerOpen && (

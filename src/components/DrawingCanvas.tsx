@@ -48,8 +48,10 @@ export type DrawingCanvasHandle = {
   undo(): void
   // 「重来」。它自己也是可撤销的一步,按错了退一步全回来
   clear(): void
-  // 导出成 1024×768 的 PNG。存不出来返回 null(调用方当「这次没导出」处理,别报错)
-  exportBlob(): Promise<Blob | null>
+  // 导出成 1024×768 的 PNG。存不出来返回 null(调用方当「这次没导出」处理,别报错)。
+  // 传了 background 就垫一层不透明底色:画布本身是透明的,而挂到木板上、
+  // 存进相册、以后存到系统相册的那张必须有底,否则深色笔画配深色木头看不清
+  exportBlob(background?: string): Promise<Blob | null>
   getStats(): DrawingCanvasStats
 }
 
@@ -461,7 +463,7 @@ export function DrawingCanvas({
         strokes.current = []
         repaint()
       },
-      async exportBlob() {
+      async exportBlob(background?: string) {
         const canvas = canvasRef.current
         if (!canvas) return null
         // 后备缓冲区在 2 倍屏上是 2048×1536,直接导出会是 4 倍体积。
@@ -471,6 +473,11 @@ export function DrawingCanvas({
         out.height = DRAW_HEIGHT
         const outCtx = out.getContext('2d')
         if (!outCtx) return null
+        // 底先铺,笔迹后画 —— 反过来会把画盖掉
+        if (background) {
+          outCtx.fillStyle = background
+          outCtx.fillRect(0, 0, DRAW_WIDTH, DRAW_HEIGHT)
+        }
         outCtx.drawImage(canvas, 0, 0, DRAW_WIDTH, DRAW_HEIGHT)
         return new Promise<Blob | null>((resolve) => {
           try {

@@ -978,4 +978,102 @@ savePng(`${DIR}/fg_kelp_c.png`, kelpBlade(166, 3.1, KELP_DARK))
   savePng(`${DIR}/light_shaft.png`, g)
 }
 
+// ---- 挂画的木板(S2-4)---------------------------------------------------
+// 童童送给邻居的画挂在这块板上,每个邻居身边一块,最多 3 张。
+// 三个格子等宽等高、横着排开 —— 和 draw-icons 里「四」那个图标同一个道理:
+// 要让人一眼看出「这里能放三张」,格子就必须同形同色重复排列。
+// 空格子画成凹陷的深色,**空着也要看得出是个画框**,不然板上没画时像块烂木头。
+{
+  const SLOT_W = 28
+  const SLOT_H = 21 // 4:3,和画布的 1024×768 同比
+  const GAP = 3
+  const PAD = 4
+  const W = PAD * 2 + SLOT_W * 3 + GAP * 2
+  const H = PAD * 2 + SLOT_H
+  const g = grid(W, H)
+
+  const WOOD = [122, 76, 40, 255]
+  const WOOD_LIT = [156, 104, 56, 255]
+  const WOOD_DIM = [88, 54, 28, 255]
+  const HOLE = [64, 40, 22, 255]
+
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let col = WOOD
+      if (y === 0) col = WOOD_LIT
+      else if (y === H - 1) col = WOOD_DIM
+      // 横向木纹:每 4 行一道,深浅交错。竖纹会和三个格子的竖边打架
+      else if (y % 4 === 2 && x % 7 !== 0) col = WOOD_DIM
+      set(g, x, y, col)
+    }
+  }
+
+  for (let i = 0; i < 3; i++) {
+    const x0 = PAD + i * (SLOT_W + GAP)
+    for (let y = PAD; y < PAD + SLOT_H; y++) {
+      for (let x = x0; x < x0 + SLOT_W; x++) set(g, x, y, HOLE)
+    }
+    // 凹陷感:上/左描暗一档,下/右描亮一档
+    for (let x = x0 - 1; x <= x0 + SLOT_W; x++) {
+      set(g, x, PAD - 1, WOOD_DIM)
+      set(g, x, PAD + SLOT_H, WOOD_LIT)
+    }
+    for (let y = PAD - 1; y <= PAD + SLOT_H; y++) {
+      set(g, x0 - 1, y, WOOD_DIM)
+      set(g, x0 + SLOT_W, y, WOOD_LIT)
+    }
+  }
+
+  outline(g, [46, 28, 14, 255])
+  savePng(`${DIR}/hang_board.png`, g)
+}
+
+// ---- 手写小纸条的木牌(S2-6)-----------------------------------------------
+// 童童给海草、给地点起的名字写在这上面。一块牌一张纸条,比挂画的木板小一号。
+// 顶上留一根钉子的位置 —— 不然它像浮在水里,不像「贴在那儿」
+{
+  const SLOT_W = 30
+  const SLOT_H = 22
+  const PAD = 3
+  const NAIL = 3
+  const W = PAD * 2 + SLOT_W
+  const H = PAD * 2 + SLOT_H + NAIL
+  const g = grid(W, H)
+
+  const WOOD = [122, 76, 40, 255]
+  const WOOD_LIT = [156, 104, 56, 255]
+  const WOOD_DIM = [88, 54, 28, 255]
+  const HOLE = [64, 40, 22, 255]
+
+  // 钉子:顶上正中一小截
+  for (let y = 0; y < NAIL; y++) {
+    for (let x = Math.floor(W / 2) - 1; x <= Math.floor(W / 2) + 1; x++) {
+      set(g, x, y, y === 0 ? WOOD_LIT : WOOD_DIM)
+    }
+  }
+  for (let y = NAIL; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let col = WOOD
+      if (y === NAIL) col = WOOD_LIT
+      else if (y === H - 1) col = WOOD_DIM
+      else if ((y - NAIL) % 4 === 2 && x % 7 !== 0) col = WOOD_DIM
+      set(g, x, y, col)
+    }
+  }
+  for (let y = NAIL + PAD; y < NAIL + PAD + SLOT_H; y++) {
+    for (let x = PAD; x < PAD + SLOT_W; x++) set(g, x, y, HOLE)
+  }
+  for (let x = PAD - 1; x <= PAD + SLOT_W; x++) {
+    set(g, x, NAIL + PAD - 1, WOOD_DIM)
+    set(g, x, NAIL + PAD + SLOT_H, WOOD_LIT)
+  }
+  for (let y = NAIL + PAD - 1; y <= NAIL + PAD + SLOT_H; y++) {
+    set(g, PAD - 1, y, WOOD_DIM)
+    set(g, PAD + SLOT_W, y, WOOD_LIT)
+  }
+
+  outline(g, [46, 28, 14, 255])
+  savePng(`${DIR}/note_tag.png`, g)
+}
+
 console.log('World layer art v2 generated in ' + DIR + '/')

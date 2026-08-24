@@ -13,7 +13,8 @@ import { Camera } from './camera'
 import { EASE_IN_OUT, lerp } from './easing'
 import { drawBackground } from './layers/background'
 import { drawActors, EAT_MS } from './layers/actors'
-import type { ActorState, NpcView, PetView } from './layers/actors'
+import type { ActorState, NpcView, PetView, NoteView } from './layers/actors'
+export type { NoteView } from './layers/actors'
 import { drawOverlay } from './layers/overlay'
 import { REST_Y, Swim } from './swim'
 import type { Hotspot } from './types'
@@ -39,6 +40,7 @@ export interface WorldSnapshot {
   pet: PetView
   seagrass: Plant[]
   npcs: NpcView[]
+  notes: NoteView[]
   /** 换气上浮/下沉的时长,和 useBreath 用的是同一个数,不能各写一份 */
   swimMs: number
 }
@@ -105,6 +107,8 @@ export class WorldRenderer {
   private live: Furrow | null = null
   private furrows: Furrow[] = []
   private onEating: ((active: boolean) => void) | null = null
+  private onSpot: ((index: number) => void) | null = null
+  private spotIndex = -1
 
   get worldWidth(): number {
     return STAGE_WIDTH * Math.max(1, this.snap?.slotCount ?? 1)
@@ -319,6 +323,14 @@ export class WorldRenderer {
     this.onEating = cb
   }
 
+  /** 她游进了第几格(地点)。地点切换早就没有按钮了 —— 点哪游哪、镜头跟随,
+   *  React 这边根本不知道她在哪一格。「首次抵达新地点」(ROADMAP 2-6)要的就是这个信号,
+   *  所以只能由渲染层回头通知,和 onEatingChanged 同一个路子。
+   *  只在**跨格**的那一帧报一次,不是每帧都报 */
+  onSpotChanged(cb: (index: number) => void): void {
+    this.onSpot = cb
+  }
+
   /** 点了她一下:放大回弹。在水面等着的时候点她 = 帮她换气,这层判断在 React 那边 */
   tap(): void {
     this.tapAt = this.now()
@@ -377,6 +389,14 @@ export class WorldRenderer {
     const grazeTilt = this.stepGraze(now)
     this.sweepFurrows(now)
     this.camera.update(now, this.swim.x, this.swim.vx, this.worldWidth)
+
+    // 跨格才报一次。第一帧的 -1 → 0 也算一次,所以开局就能拿到「她在第 0 格」
+    const slots = Math.max(1, this.snap?.slotCount ?? 1)
+    const spot = Math.min(slots - 1, Math.max(0, Math.floor(this.swim.x / STAGE_WIDTH)))
+    if (spot !== this.spotIndex) {
+      this.spotIndex = spot
+      this.onSpot?.(spot)
+    }
 
     // 转身 / 上浮的连续过渡
     const facing = this.swim.facingLeft ? -1 : 1
@@ -440,6 +460,7 @@ export class WorldRenderer {
       pet: s.pet,
       seagrass: s.seagrass,
       npcs: s.npcs,
+      notes: s.notes,
       tapAt: this.tapAt,
       bubblesAt: this.bubblesAt,
       poppingAt: this.poppingAt,

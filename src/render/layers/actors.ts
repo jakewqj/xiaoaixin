@@ -65,6 +65,19 @@ export interface NpcView {
   frameCount: number
   fps: number
   canGift: boolean
+  // 挂在这个邻居身边木板上的画,最多 3 张,新的在后。传进来的是 object URL,
+  // 由 useDrawingUrls 从 IndexedDB 转出来 —— 渲染层只认路径,不认识数据库
+  hangings: string[]
+}
+
+// 一张手写纸条贴在世界里的什么位置(ROADMAP 2-6)。
+// src 为 null = 这儿还没写过,画一块空木牌,点它就能写
+export interface NoteView {
+  key: string
+  label: string
+  leftPx: number
+  topPx: number
+  src: string | null
 }
 
 export interface ActorState {
@@ -86,6 +99,7 @@ export interface ActorState {
   pet: PetView
   seagrass: Plant[]
   npcs: NpcView[]
+  notes: NoteView[]
   /** 一次性动画的起点(ms)。null = 现在没在播 */
   tapAt: number | null
   bubblesAt: number | null
@@ -364,6 +378,9 @@ function drawNpcs(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]
     const left = npc.leftPx - boxW / 2
     const top = s.worldHeight - 160 - boxH
 
+    // 板先画,邻居后画 —— 邻居游到板前面是对的,反过来会挡住她的脸
+    drawHangBoard(ctx, npc, left, top)
+
     if (sheet) {
       const frame = frameOf(s.now, npc.fps, npc.frameCount, s.reduced)
       // 精灵在按钮里居中(见 petBox 的注释),盒子被 56px 触摸下限撑高时要跟着让开
@@ -381,15 +398,86 @@ function drawNpcs(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]
     }
     pushSpot(spots, s, `npc:${npc.id}`, npc.name, left, top, boxW, boxH)
 
-    if (!npc.canGift) continue
-    const gx = left + boxW + 8 - 20
-    const gy = top - 32
+    // 「画点什么送给 TA」。这个按钮**一直都在** —— 画画不该有每天一次的限制,
+    // 那是送海草那条规则(礼物是长成的海草,有没有取决于海草床)。
+    // 位置固定在这里,送礼按钮排在它右边:常在的那个不该因为另一个出现就挪窝
+    const bx = left + boxW - 12
+    const by = top - 32
     const slot = assets.get(`${WORLD_DIR}/ui/sv/slot.png`)
+    const pencil = assets.get(`${WORLD_DIR}/ui/icons/pencil.png`)
+    if (slot) ctx.drawImage(slot, bx, by)
+    if (pencil) ctx.drawImage(pencil, bx + 2, by + 2)
+    pushSpot(spots, s, `draw:${npc.id}`, `画点什么送给${npc.name}`, bx, by, 20, 20)
+
+    if (!npc.canGift) continue
+    const gx = bx + 24
+    const gy = by
     const icon = assets.get(`${WORLD_DIR}/ui/icon_sprout.png`)
     if (slot) ctx.drawImage(slot, gx, gy)
     if (icon) ctx.drawImage(icon, gx + 2, gy + 2)
     pushSpot(spots, s, `gift:${npc.id}`, `送海草给${npc.name}`, gx, gy, 20, 20)
   }
+}
+
+// 手写纸条的木牌。几何和 draw-world.mjs 里 note_tag 的生成参数是同一套数
+const TAG = { w: 36, h: 31, pad: 3, nail: 3, slotW: 30, slotH: 22 } as const
+
+export function drawNotes(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]) {
+  const tag = assets.get(`${WORLD_DIR}/note_tag.png`)
+  for (const note of s.notes) {
+    const x = Math.round(note.leftPx)
+    const y = Math.round(note.topPx)
+    if (tag) ctx.drawImage(tag, x, y)
+    if (note.src) {
+      const img = assets.get(note.src)
+      if (img) {
+        // 和挂画同一个理由:1024 宽的画塞进 30px 的格子是 34:1 缩小,
+        // 世界层关着平滑的话最近邻会把笔画整条跳过 —— 这一处要开,用完还回去
+        const smooth = ctx.imageSmoothingEnabled
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(img, x + TAG.pad, y + TAG.nail + TAG.pad, TAG.slotW, TAG.slotH)
+        ctx.imageSmoothingEnabled = smooth
+      }
+    } else {
+      // 空牌才可以点。写过的不给热区 —— 原则 10:她写的不许被改掉,也就没有「重写」
+      pushSpot(spots, s, `note:${note.key}`, note.label, x, y, TAG.w, TAG.h)
+    }
+  }
+}
+
+// 挂画的木板。几何写死在这里,和 draw-world.mjs 里 hang_board 的生成参数是同一套数 ——
+// 改一边必须改另一边(和 HOTBAR.slot 与 sv/slot.png 同样的约定)
+const BOARD = { w: 98, h: 29, pad: 4, slotW: 28, slotH: 21, gap: 3 } as const
+
+// 板挂在邻居左手边。画的比例是 4:3,格子也是 4:3,所以直接贴满格子,不用留边、不用裁
+function drawHangBoard(ctx: CanvasRenderingContext2D, npc: NpcView, left: number, top: number) {
+  if (npc.hangings.length === 0) return
+  const board = assets.get(`${WORLD_DIR}/hang_board.png`)
+  const x = Math.round(left - BOARD.w - 16)
+  const y = Math.round(top + 4)
+  if (board) ctx.drawImage(board, x, y)
+  // **缩略图这一处必须开平滑,别跟着世界层关。**
+  // 世界层为了像素风全程 imageSmoothingEnabled = false,而这里是把 1024 宽的画
+  // 塞进 28px 的格子 —— 36:1 缩小,最近邻等于每 36 个像素取 1 个,
+  // 6px 粗的线条整条被跳过,板上三个格子会是纯白的(实测就是这样)。
+  // 童童的画不是像素画,和 DrawingCanvas 要写回 image-rendering: auto 是同一个道理
+  const smooth = ctx.imageSmoothingEnabled
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  npc.hangings.slice(0, 3).forEach((src, i) => {
+    const img = assets.get(src)
+    if (!img) return
+    ctx.drawImage(
+      img,
+      x + BOARD.pad + i * (BOARD.slotW + BOARD.gap),
+      y + BOARD.pad,
+      BOARD.slotW,
+      BOARD.slotH,
+    )
+  })
+  // 用完必须还回去,否则后面画的精灵会被双线性插值糊边
+  ctx.imageSmoothingEnabled = smooth
 }
 
 // ---- 环境气泡(z7,压在角色之上)---------------------------------------
@@ -439,6 +527,8 @@ export function drawActors(ctx: CanvasRenderingContext2D, s: ActorState): Hotspo
   ctx.translate(-Math.round(s.camX), -Math.round(s.camY))
 
   drawSeagrassBed(ctx, s, spots)
+  // 纸条比邻居靠后一层:她游过去时人在牌前面
+  drawNotes(ctx, s, spots)
   drawNpcs(ctx, s, spots)
   drawShadow(ctx, s)
   drawPet(ctx, s, spots)

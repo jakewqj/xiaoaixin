@@ -23,6 +23,9 @@ interface WorldCanvasProps {
   onTapBed: () => void
   onTapNpc: (id: string) => void
   onTapGift: (id: string) => void
+  onTapDraw: (id: string) => void
+  onTapNote: (key: string) => void
+  onSpotChanged: (index: number) => void
   /** 她真的低头开吃 / 吃完抬头的那一刻。游去海草床的路上还不算「在吃」 */
   onEatingChanged: (active: boolean) => void
   hud?: ReactNode
@@ -57,6 +60,9 @@ function WorldCanvas({
   onTapBed,
   onTapNpc,
   onTapGift,
+  onTapDraw,
+  onTapNote,
+  onSpotChanged,
   onEatingChanged,
   hud,
 }: WorldCanvasProps) {
@@ -80,9 +86,24 @@ function WorldCanvas({
 
   // 小爱心和邻居的精灵表路径是跟着状态变的,和固定的世界素材分开预载。
   // 少一张就少画一层,不阻塞、不白屏(CLAUDE.md 十四)
-  const srcKey = [snapshot.pet.anim?.src, ...snapshot.npcs.map((n) => n.src)].join('|')
+  const srcKey = [
+    snapshot.pet.anim?.src,
+    ...snapshot.npcs.map((n) => n.src),
+    // 童童挂上去的画也是「跟着状态变的图」,和精灵表一起载。它们是 object URL,
+    // 但 assets 只按路径认图,不关心是 /assets/ 还是 blob:
+    ...snapshot.npcs.flatMap((n) => n.hangings),
+    // 纸条也是跟着状态变的图,和挂画一起载
+    ...snapshot.notes.map((n) => n.src).filter(Boolean),
+  ].join('|')
   const spriteSrcs = useMemo(
-    () => [`${WORLD_DIR}/ui/sv/slot.png`, `${WORLD_DIR}/ui/icon_sprout.png`, ...srcKey.split('|').filter(Boolean)],
+    () => [
+      `${WORLD_DIR}/ui/sv/slot.png`,
+      `${WORLD_DIR}/ui/icon_sprout.png`,
+      `${WORLD_DIR}/ui/icons/pencil.png`,
+      `${WORLD_DIR}/hang_board.png`,
+      `${WORLD_DIR}/note_tag.png`,
+      ...srcKey.split('|').filter(Boolean),
+    ],
     [srcKey],
   )
 
@@ -110,6 +131,10 @@ function WorldCanvas({
   useEffect(() => {
     renderer.onEatingChanged(onEatingChanged)
   }, [renderer, onEatingChanged])
+
+  useEffect(() => {
+    renderer.onSpotChanged(onSpotChanged)
+  }, [renderer, onSpotChanged])
 
   // 开发构建里给截图脚本用:把时钟钉死,重构前后才能在同一相位比对
   useEffect(() => {
@@ -150,8 +175,10 @@ function WorldCanvas({
         return
       }
       if (id.startsWith('gift:')) onTapGift(id.slice(5))
+      if (id.startsWith('draw:')) onTapDraw(id.slice(5))
+      if (id.startsWith('note:')) onTapNote(id.slice(5))
     },
-    [renderer, onTapPet, onTapAnchor, onTapBed, onTapNpc, onTapGift],
+    [renderer, onTapPet, onTapAnchor, onTapBed, onTapNpc, onTapGift, onTapDraw, onTapNote],
   )
 
   return (
