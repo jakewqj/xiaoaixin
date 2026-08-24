@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export interface ConfigSpec {
   开放海域: string[]
@@ -115,10 +115,13 @@ export function useConfig() {
 
   const resetToOnlyPet = useCallback(() => setOverride(ONLY_PET_OVERRIDE), [])
 
-  return {
-    config: defaults ? mergeConfig(defaults, override) : null,
-    update,
-    reset,
-    resetToOnlyPet,
-  }
+  // 合并结果要 memo。不 memo 的话每次渲染都是一个新对象,吃 config 当依赖的
+  // useMemo/useEffect 全部每帧失效 —— 上一轮给 allSpots/openSpots 加的 memo
+  // 就是这么被架空的,而依赖链上一旦有人 setState 就直接变成死循环
+  const config = useMemo(
+    () => (defaults ? mergeConfig(defaults, override) : null),
+    [defaults, override],
+  )
+
+  return { config, update, reset, resetToOnlyPet }
 }

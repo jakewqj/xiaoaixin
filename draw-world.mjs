@@ -1043,7 +1043,10 @@ savePng(`${DIR}/fg_kelp_c.png`, kelpBlade(166, 3.1, KELP_DARK))
   const WOOD = [122, 76, 40, 255]
   const WOOD_LIT = [156, 104, 56, 255]
   const WOOD_DIM = [88, 54, 28, 255]
-  const HOLE = [64, 40, 22, 255]
+  // 还没写字的牌是**一张空白的纸**,不是一个黑洞。深色凹槽在亮沙地上是整屏最重的一块,
+  // 一片海草床上摆四五块就成了一排黑窟窿。纸色和 DrawingOverlay 导出时垫的底同一个值,
+  // 写过之后那张画正好铺满这块凹槽,亮度不跳
+  const HOLE = [255, 253, 246, 255]
 
   // 钉子:顶上正中一小截
   for (let y = 0; y < NAIL; y++) {

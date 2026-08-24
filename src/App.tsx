@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ScreenFrame, { STAGE_WIDTH, STAGE_HEIGHT } from './components/ScreenFrame'
 import WorldCanvas from './components/WorldCanvas'
-import { EAT_MS } from './render/world'
+import { EAT_MS, placeNotePos, seagrassNoteRow } from './render/world'
+import { WATER_LINE } from './render/world-data'
 import type { NoteView, NpcView, PetView, WorldSnapshot } from './render/world'
 import DialoguePanel from './components/DialoguePanel'
 import type { PanelContent } from './components/DialoguePanel'
 import KnowledgeCard from './components/KnowledgeCard'
 import Book from './components/Book'
 import Album from './components/Album'
+import type { AlbumDrawing } from './components/Album'
 import SeaPicker from './components/SeaPicker'
 import { DrawingOverlay } from './components/DrawingOverlay'
 import {
@@ -43,10 +45,15 @@ import type { HudSnapshot, SlotSpec } from './ui/types'
 type PoseName = 'idle' | 'happy' | 'eating' | 'sleeping'
 
 const POSE_MS = 2500
+/** 世界比舞台高出一个水面线 —— 摇上去能看见天空。牌子的纵坐标活在这个世界里,
+ *  不是活在 480×270 的舞台里,写成 STAGE_HEIGHT - n 就会飘在半空(2026-08-24 实测) */
+const WORLD_HEIGHT = STAGE_HEIGHT + WATER_LINE
 /** 兜底定时器要多留出来的一段:够她从世界最远处游回海草床。
  *  正常路径永远不会走到这儿 —— 渲染层犁完就通知了 */
 const GRAZE_TRAVEL_CAP_MS = 20000
 const CARD_MS = 15000
+/** 关着的那几页不用把画从 IndexedDB 里读出来。同一个常量数组,不然每次渲染都是新的 */
+const NO_DRAWINGS: string[] = []
 const DAY_MS = 24 * 60 * 60 * 1000
 const WELCOME_BACK_DAYS = 3
 
@@ -106,6 +113,8 @@ function App() {
   const [drawingFor, setDrawingFor] = useState<string | null>(null)
   // 正在给什么起名字。key 是位置串(seagrass:xx / place:xx),title 是给她看的那句话
   const [noteFor, setNoteFor] = useState<{ key: string; title: string } | null>(null)
+  // 正在给哪张知识卡画手绘页(ROADMAP 2-7)。null = 没在画
+  const [cardToDraw, setCardToDraw] = useState<KnowledgeCardData | null>(null)
   const [adminGateOpen, setAdminGateOpen] = useState(false)
 
   const grownCount = countGrown(save.seagrass)
@@ -116,6 +125,17 @@ function App() {
 
   const world = useWorld()
   const { config, update: updateConfig, reset: resetConfig, resetToOnlyPet } = useConfig()
+
+  // config.json 的「系统开关」。在这之前这些开关一个都没人读 —— 爸爸在后台拨了不响,
+  // 而「按钮在、点了没反应」和「开关拨了没变化」是同一类死控件(2026-08-24 接上)。
+  //
+  // 两种「没写 true」要分开看:
+  //   config 还没加载完 —— 当作关,否则按钮会先闪出来再收回去
+  //   加载完了但没有这个键 —— 当作开,免得爸爸手改 config.json 时删掉一行就整块功能消失
+  const featureOn = useCallback(
+    (name: string) => (config ? config.系统开关[name] !== false : false),
+    [config],
+  )
 
   // world.json 的海域用中文名当 key,seas.ts 的 sea.name 正好是同一个字符串,靠它对上
   // 这两个原来是每次渲染新建的数组。2-6 加了几个吃它们当依赖的 useMemo/useCallback,
@@ -173,51 +193,110 @@ function App() {
   // 手写纸条贴在世界里的位置(ROADMAP 2-6)。
   //
   // 两种触发,处理方式**故意不一样**:
-  //   种海草 —— 她刚动完手,顺势弹出来让她起名字,是对她动作的回应,不算打扰
+  //   种海草 —— 她刚动完手,顺势弹出来让她起名字,是对她动作的回应,不算打扰。
+  //     **只有写过名字的海草才立牌**(2026-08-24 用户决议):空牌也立的话,种满 12 棵时
+  //     36px 宽的牌会铺满整条沙线连成一道栅栏,把海草床整个挡住、还互相压住她写的字
   //   到新地点 —— **不弹**。她正游着,全屏弹层横插一杠就是宪法二禁止的弹窗打断。
   //     改成在那儿摆一块空木牌,想写的时候点它。写过的牌不给热区:
   //     原则 10 她写的不许被改掉,也就没有「重写」这回事
   const noteIds = useMemo(() => Object.values(save.notes), [save.notes])
   const noteUrls = useDrawingUrls(noteIds)
 
+  // 「手写命名」关掉之后**只是不再出新的空木牌**,已经写好的照旧贴在那儿 ——
+  // 爸爸关一个开关不该让童童写过的字从世界上消失(原则 10)
+  const namingOn = featureOn('手写命名')
+
   const noteViews: NoteView[] = useMemo(() => {
     const views: NoteView[] = []
-    for (const plant of save.seagrass) {
-      const key = `seagrass:${plant.id}`
-      const id = save.notes[key]
+    const named = save.seagrass.filter((plant) => save.notes[`seagrass:${plant.id}`])
+    const row = seagrassNoteRow(named.map((plant) => plant.x), WORLD_HEIGHT)
+    named.forEach((plant, i) => {
       views.push({
-        key,
+        key: `seagrass:${plant.id}`,
         label: '给海草起名字',
-        leftPx: Math.round(plant.x * STAGE_WIDTH - 18),
-        topPx: STAGE_HEIGHT - 108,
-        src: id ? (noteUrls[id] ?? null) : null,
+        ...row[i],
+        written: true,
+        src: noteUrls[save.notes[`seagrass:${plant.id}`]] ?? null,
       })
-    }
+    })
     openSpots.forEach((spot, index) => {
       if (!save.visited.includes(spot.id)) return
       const key = `place:${spot.id}`
       const id = save.notes[key]
+      // 关掉之后不再摆空牌;写过的那块照样摆
+      if (!id && !namingOn) return
       views.push({
         key,
         label: '给这里起名字',
-        leftPx: index * STAGE_WIDTH + 28,
-        topPx: 52,
+        ...placeNotePos(index, WORLD_HEIGHT),
+        written: Boolean(id),
         src: id ? (noteUrls[id] ?? null) : null,
       })
     })
     return views
-  }, [save.seagrass, save.notes, save.visited, openSpots, noteUrls])
+  }, [save.seagrass, save.notes, save.visited, openSpots, noteUrls, namingOn])
 
-  // 她游进了第几格。只在跨格那一帧收到一次(见 render/world.ts 的 onSpotChanged)
-  const handleSpotChanged = useCallback(
-    (index: number) => {
-      const spot = openSpots[index]
-      if (!spot) return
-      update((prev) =>
-        prev.visited.includes(spot.id) ? {} : { visited: [...prev.visited, spot.id] },
-      )
+  // 相册收的是全集(ROADMAP 2-8):她画过的每一张,按画下来的先后排,各自标出来处。
+  //
+  // **来处查的是 drawingOrigins,不是 hangings/notes/cardDrawings**:挂满 3 张之后
+  // 最旧那张会从 hangings 里挪走(2-4),挪走之后就再也反查不出它当初送给了谁。
+  // 老存档里的画没有来处,那就只写日期 —— 不编一个出来
+  const albumDrawingUrls = useDrawingUrls(page === 'album' ? save.drawings : NO_DRAWINGS)
+
+  const albumDrawings: AlbumDrawing[] = useMemo(() => {
+    const spotName = (id: string) => allSpots.find((spot) => spot.id === id)?.名字
+    return save.drawings
+      .map((id) => {
+        const url = albumDrawingUrls[id]
+        if (!url) return null
+        const origin = save.drawingOrigins[id] ?? ''
+        const [kind, ref] = [origin.slice(0, origin.indexOf(':')), origin.slice(origin.indexOf(':') + 1)]
+        let from = ''
+        if (kind === 'npc') from = `送给${npcs?.[ref]?.名字 ?? '朋友'}`
+        else if (kind === 'seagrass') from = '海草的名字'
+        else if (kind === 'place') from = `${spotName(ref) ?? '这里'}的名字`
+        else if (kind === 'card') from = '图鉴里画的'
+        return { id, url, from }
+      })
+      .filter((d): d is AlbumDrawing => d !== null)
+  }, [save.drawings, save.drawingOrigins, albumDrawingUrls, npcs, allSpots])
+
+  // 她游进了第几格。只在跨格那一帧收到一次(见 render/world.ts 的 onSpotChanged),
+  // 而第一格的 -1 → 0 是**开局第一帧**就发的 —— 那会儿 config.json / world.json 多半还没回来,
+  // openSpots 还是空的。所以不能在回调里当场查表:查不到就永远查不到了,家海草床那块木牌
+  // 一整局都不会出现。记下格号,等地点表加载完再对(2026-08-24 实测揪出来的)
+  const [spotIndex, setSpotIndex] = useState(-1)
+  const handleSpotChanged = useCallback((index: number) => setSpotIndex(index), [])
+
+  useEffect(() => {
+    const spot = openSpots[spotIndex]
+    if (!spot || save.visited.includes(spot.id)) return
+    update((prev) =>
+      prev.visited.includes(spot.id) ? {} : { visited: [...prev.visited, spot.id] },
+    )
+  }, [spotIndex, openSpots, save.visited, update])
+
+  // 图鉴手绘页(ROADMAP 2-7)。和纸条、挂画同一条路:图本体进 IndexedDB,
+  // 存档里只留 id,渲染只认 object URL
+  // 图鉴没打开就不读:一张 1024×768 的 PNG 几百 KB,一开局全读出来在 iPad 上是白扔内存
+  const cardDrawingIds = useMemo(
+    () => (page === 'book' ? Object.values(save.cardDrawings) : NO_DRAWINGS),
+    [page, save.cardDrawings],
+  )
+  const cardDrawingUrls = useDrawingUrls(cardDrawingIds)
+
+  const saveCardDrawing = useCallback(
+    async (cardId: string, png: Blob) => {
+      const drawingId = await saveDrawing(png)
+      setCardToDraw(null)
+      if (!drawingId) return
+      update((prev) => ({
+        drawings: [...prev.drawings, drawingId],
+        drawingOrigins: { ...prev.drawingOrigins, [drawingId]: `card:${cardId}` },
+        cardDrawings: { ...prev.cardDrawings, [cardId]: drawingId },
+      }))
     },
-    [openSpots, update],
+    [update],
   )
 
   // 写好的纸条:存进 IndexedDB → 记进存档 → 贴到那个位置。
@@ -229,6 +308,8 @@ function App() {
       if (!drawingId) return
       update((prev) => ({
         drawings: [...prev.drawings, drawingId],
+        // key 本身就是位置串(seagrass:xx / place:xx),直接当来处用
+        drawingOrigins: { ...prev.drawingOrigins, [drawingId]: key },
         notes: { ...prev.notes, [key]: drawingId },
       }))
     },
@@ -299,6 +380,7 @@ function App() {
       if (!drawingId) return
       update((prev) => ({
         drawings: [...prev.drawings, drawingId],
+        drawingOrigins: { ...prev.drawingOrigins, [drawingId]: `npc:${npcId}` },
         hangings: {
           ...prev.hangings,
           [npcId]: [...(prev.hangings[npcId] ?? []), drawingId].slice(-MAX_HANGING),
@@ -502,8 +584,8 @@ function App() {
     showCard(knowledge.pickByEvent('种海草后', save.knowledgeSeen))
     // 刚种下就顺势让她起名字。这是对她动作的回应,不是横插一杠的弹窗;
     // 而且弹层上有「先不写」,不写照样种成(原则 1:没有失败态)
-    if (!full) setNoteFor({ key: `seagrass:${fresh.id}`, title: '给海草起名字' })
-  }, [update, showCard, knowledge, save.knowledgeSeen, save.seagrass.length, remember])
+    if (!full && namingOn) setNoteFor({ key: `seagrass:${fresh.id}`, title: '给海草起名字' })
+  }, [update, showCard, knowledge, save.knowledgeSeen, save.seagrass.length, remember, namingOn])
 
   // 选项动作。第 3 周才有的海草床先不接,选了它只是把气泡收起来 ——
   // 宁可什么都不发生,也不临时编一个机制出来
@@ -573,6 +655,8 @@ function App() {
     return () => clearTimeout(timer)
   }, [hudTip])
 
+  const bookOn = featureOn('图鉴')
+
   // 推给 canvas 的一份快照。季节/月相/潮汐还没有真的算,先占位;
   // 天数、贝壳、海草棵数是存档里现成的真数据。见 ROADMAP S4「潮汐与月亮」
   const hudSnapshot: HudSnapshot = useMemo(() => {
@@ -581,7 +665,11 @@ function App() {
       { id: 'shell', icon: `${UI_DIR}/icon_shell.png`, label: '贝壳(长大了才有)', locked: true, tip: '长大了才有' },
       { id: 'gift', icon: `${UI_DIR}/icon_gift.png`, label: '礼物(长大了才有)', locked: true, tip: '长大了才有' },
       { id: 'backpack', icon: `${UI_DIR}/icon_backpack.png`, label: '背包(长大了才有)', locked: true, tip: '长大了才有' },
-      { id: 'book', icon: `${UI_DIR}/icon_book.png`, label: '图鉴' },
+      // 关掉就是这一格空着。不做成灰格子 + 「长大了才有」—— 那句话是假的,
+      // 它不是没长大,是爸爸关了(原则 4 那条「不撒谎」的延伸)
+      bookOn
+        ? { id: 'book', icon: `${UI_DIR}/icon_book.png`, label: '图鉴' }
+        : { id: 'book', icon: '', label: '', empty: true },
       { id: 'pad', icon: '', label: '', empty: true },
       // 第二排 = 常用动作
       grownCount > 0
@@ -602,7 +690,7 @@ function App() {
       slots,
       tip: hudTip,
     }
-  }, [save.daysPlayed, save.fullness, grownCount, breath.phase, hudTip])
+  }, [save.daysPlayed, save.fullness, grownCount, breath.phase, hudTip, bookOn])
 
   const handleSlotTap = useCallback(
     (id: string) => {
@@ -731,6 +819,7 @@ function App() {
         frameHeight,
         frameCount: anim.帧数,
         fps: anim.fps,
+        canDraw: featureOn('画画送礼'),
         canGift: grownCount > 0 && save.giftedAt[id] !== new Date().toDateString(),
         hangings: (save.hangings[id] ?? [])
           .map((drawingId) => hangingUrls[drawingId])
@@ -834,6 +923,13 @@ function App() {
       {page === 'book' && (
         <Book
           cards={knowledge.bookCards(save.knowledgeSeen)}
+          drawings={Object.fromEntries(
+            Object.entries(save.cardDrawings)
+              .map(([cardId, id]) => [cardId, cardDrawingUrls[id]])
+              .filter((pair): pair is [string, string] => Boolean(pair[1])),
+          )}
+          canDraw={featureOn('图鉴手绘页')}
+          onDraw={setCardToDraw}
           onClose={() => setPage('sea')}
         />
       )}
@@ -845,6 +941,7 @@ function App() {
           titles={album.titles}
           events={save.albumEvents}
           metAt={save.createdAt}
+          drawings={albumDrawings}
           onClose={() => setPage('sea')}
         />
       )}
@@ -858,6 +955,7 @@ function App() {
               title={`画给${npc.名字}`}
               confirmLabel="送给她"
               confirmIcon="🎨"
+              closeLabel="先不画"
               onConfirm={(png) => void sendDrawing(drawingFor, npc, cap, png)}
               onClose={() => setDrawingFor(null)}
             />
@@ -870,6 +968,16 @@ function App() {
           confirmIcon="✏"
           onConfirm={(png) => void saveNote(noteFor.key, png)}
           onClose={() => setNoteFor(null)}
+        />
+      )}
+      {cardToDraw && (
+        <DrawingOverlay
+          title={cardToDraw.childText}
+          confirmLabel="画好了"
+          confirmIcon="🎨"
+          closeLabel="先不画"
+          onConfirm={(png) => void saveCardDrawing(cardToDraw.id, png)}
+          onClose={() => setCardToDraw(null)}
         />
       )}
       {seaPickerOpen && (

@@ -60,6 +60,19 @@ export interface SaveData {
   // 和 hangings 一样,图本体在 IndexedDB,这里只存 id;
   // 而且它同样在 drawings 里 —— 相册收的是全集(2-8)
   notes: Record<string, string>
+  // 每张画是从哪来的(ROADMAP 2-8「标出每张的来处」):画的 id → 位置串。
+  // 值和 hangings / notes / cardDrawings 用的是同一套 key 写法:
+  // `npc:<邻居id>`、`seagrass:<海草id>`、`place:<地点id>`、`card:<知识卡id>`。
+  //
+  // **为什么不从那三张表反查**:挂满 3 张之后最旧那张会从 hangings 里挪走,
+  // 挪走之后就再也查不出它当初是送给谁的了 —— 而它还在相册里,总不能写「不知道哪来的」。
+  // 存的是 key 不是现成的句子:邻居/地点的名字将来改了,相册里跟着改
+  drawingOrigins: Record<string, string>
+  // 图鉴手绘页(ROADMAP 2-7):知识卡 id → 她给那张卡画的画的 id。
+  // 一张卡一张画,画过就不再给「我来画」那个按钮 —— 原则 10:她画的不许被改掉,
+  // 也就没有「重画一张」。和 notes / hangings 一样,图本体在 IndexedDB,这里只存 id,
+  // 而且它同样在 drawings 里 —— 相册收的是全集(2-8)
+  cardDrawings: Record<string, string>
   // 她真的游到过的地点 id。**只用来决定「起名字的木牌」出不出现** ——
   // 没去过的地方不该先摆一块空牌在那儿等她。只增不减,和熟悉度一个道理
   visited: string[]
@@ -87,6 +100,8 @@ function createSave(): SaveData {
     drawings: [],
     hangings: {},
     notes: {},
+    cardDrawings: {},
+    drawingOrigins: {},
     visited: [],
   }
 }
@@ -217,6 +232,24 @@ function parseSave(raw: string | null): SaveData | null {
         s.notes && typeof s.notes === 'object'
           ? Object.fromEntries(
               Object.entries(s.notes).filter(
+                (pair): pair is [string, string] => typeof pair[1] === 'string',
+              ),
+            )
+          : {},
+      // 来处表是 2-8 才加的。老存档里的画没有来处,相册就只写日期,不写来处
+      drawingOrigins:
+        s.drawingOrigins && typeof s.drawingOrigins === 'object'
+          ? Object.fromEntries(
+              Object.entries(s.drawingOrigins).filter(
+                (pair): pair is [string, string] => typeof pair[1] === 'string',
+              ),
+            )
+          : {},
+      // 图鉴手绘页也是后加的,老存档没有就是还没在图鉴里画过
+      cardDrawings:
+        s.cardDrawings && typeof s.cardDrawings === 'object'
+          ? Object.fromEntries(
+              Object.entries(s.cardDrawings).filter(
                 (pair): pair is [string, string] => typeof pair[1] === 'string',
               ),
             )

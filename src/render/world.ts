@@ -15,6 +15,7 @@ import { drawBackground } from './layers/background'
 import { drawActors, EAT_MS } from './layers/actors'
 import type { ActorState, NpcView, PetView, NoteView } from './layers/actors'
 export type { NoteView } from './layers/actors'
+export { placeNotePos, seagrassNoteRow } from './layers/actors'
 import { drawOverlay } from './layers/overlay'
 import { REST_Y, Swim } from './swim'
 import type { Hotspot } from './types'
@@ -329,6 +330,11 @@ export class WorldRenderer {
    *  只在**跨格**的那一帧报一次,不是每帧都报 */
   onSpotChanged(cb: (index: number) => void): void {
     this.onSpot = cb
+    // 订阅晚了一步要补一次。setSnapshot 结尾会**同步**画一帧,
+    // 而 React 那边是先 setSnapshot 后 onSpotChanged 两个 effect —— 第 0 格的
+    // -1 → 0 就发在那一帧,回调还没挂上,而格号已经落定了永远不会再发。
+    // 后果是家海草床那块「给这里起名字」的木牌一整局都不出现(2026-08-24 实测)
+    if (this.spotIndex >= 0) cb(this.spotIndex)
   }
 
   /** 点了她一下:放大回弹。在水面等着的时候点她 = 帮她换气,这层判断在 React 那边 */

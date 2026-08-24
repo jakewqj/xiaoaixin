@@ -5,6 +5,13 @@ import type { GrowthStage } from '../lib/pet'
 import type { usePet } from '../hooks/usePet'
 import type { AlbumTitles, Memory } from '../hooks/useAlbum'
 
+/** 相册里的一张画(ROADMAP 2-8)。`from` 已经是给她看的那句来处,解析在 App 里做 */
+export interface AlbumDrawing {
+  id: string
+  url: string
+  from: string
+}
+
 interface AlbumProps {
   pet: ReturnType<typeof usePet>
   stages: GrowthStage[]
@@ -12,7 +19,16 @@ interface AlbumProps {
   titles: AlbumTitles
   events: Record<string, string>
   metAt: string
+  /** 她画过的全部,按画下来的先后排 */
+  drawings: AlbumDrawing[]
   onClose: () => void
+}
+
+// 画的 id 是 `drawing_{毫秒}`(lib/drawings.ts 的 nextId),日期直接从 id 里读 ——
+// 不用在存档里再存一份「画于何时」,少一个会和 id 对不上的字段
+function drawnAt(id: string) {
+  const ms = Number(id.slice('drawing_'.length))
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : undefined
 }
 
 // 只写「几月几日」。年份对她还没有意义,而且写上年份会让相册看起来像账本
@@ -32,6 +48,7 @@ function Album({
   titles,
   events,
   metAt,
+  drawings,
   onClose,
 }: AlbumProps) {
   const biggest = Math.max(...stages.map((stage) => stage.体型), 0.01)
@@ -118,6 +135,35 @@ function Album({
                 </p>
               </article>
             ))}
+          </section>
+        )}
+
+        {drawings.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="ui-text font-kuaile text-wood-dark/80">{titles.画画}</h2>
+            {/* 这一句是写给爸爸看的,不是给她的操作提示 —— 所以放在标题下面一行、
+                用和日期一样的浅色小字,不做成按钮 */}
+            <p className="ui-text-tight font-wenkai text-ink/40">长按存到相册</p>
+            <div className="flex flex-wrap items-start gap-4">
+              {drawings.map((drawing) => (
+                <figure key={drawing.id} className="flex w-40 flex-col gap-1">
+                  {/* 普通 <img> + object URL:iPad 上长按它会出系统的「存储到照片」。
+                      别改成 canvas 或者 background-image,那两样长按都没有这个菜单;
+                      也别给它加 -webkit-touch-callout: none */}
+                  <img
+                    src={drawing.url}
+                    alt={drawing.from}
+                    className="hud-panel-lg block aspect-[4/3] w-full object-cover"
+                  />
+                  <figcaption className="text-center">
+                    <p className="ui-text-tight font-kuaile text-ink">{drawing.from}</p>
+                    <p className="ui-text-tight font-wenkai text-ink/40">
+                      {dayLabel(drawnAt(drawing.id))}
+                    </p>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
           </section>
         )}
       </div>

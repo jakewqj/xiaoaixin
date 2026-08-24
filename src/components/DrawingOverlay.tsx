@@ -24,6 +24,9 @@ type Props = {
   /** 交出去那个按钮上的字。送礼是「送给她」,起名字是「贴上去」 */
   confirmLabel: string
   confirmIcon: string
+  /** 出口那个按钮上的字。写字是「先不写」,画画是「先不画」——
+   *  按钮上写着「我来画」、退出去却写「先不写」,对着正在认字的孩子是两回事 */
+  closeLabel?: string
   onConfirm: (png: Blob) => void
   onClose: () => void
 }
@@ -32,6 +35,7 @@ export function DrawingOverlay({
   title,
   confirmLabel,
   confirmIcon,
+  closeLabel = '先不写',
   onConfirm,
   onClose,
 }: Props) {
@@ -56,7 +60,7 @@ export function DrawingOverlay({
           className="hud-panel-lg flex cursor-pointer items-center gap-2 px-4 py-2 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
         >
           <PixelIcon emoji="🌊" scaled />
-          <span className="ui-text font-kuaile text-ink">先不写</span>
+          <span className="ui-text font-kuaile text-ink">{closeLabel}</span>
         </button>
 
         <span className="ui-text font-kuaile text-[#f8e8c8]">{title}</span>

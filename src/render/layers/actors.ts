@@ -64,6 +64,8 @@ export interface NpcView {
   frameHeight: number
   frameCount: number
   fps: number
+  /** 「画点什么送给 TA」那个按钮出不出现。config.json 的「系统开关.画画送礼」说了算 */
+  canDraw: boolean
   canGift: boolean
   // 挂在这个邻居身边木板上的画,最多 3 张,新的在后。传进来的是 object URL,
   // 由 useDrawingUrls 从 IndexedDB 转出来 —— 渲染层只认路径,不认识数据库
@@ -77,6 +79,12 @@ export interface NoteView {
   label: string
   leftPx: number
   topPx: number
+  /**
+   * 这块牌上**已经有东西了**。和 `src` 分开的原因:图是从 IndexedDB 异步读出来的,
+   * 读到之前 `src` 还是 null —— 只看 src 的话,写过的牌会在那一小段时间里变成一块可点的空牌,
+   * 点下去就把她写的字覆盖掉了(原则 10)
+   */
+  written: boolean
   src: string | null
 }
 
@@ -398,29 +406,105 @@ function drawNpcs(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]
     }
     pushSpot(spots, s, `npc:${npc.id}`, npc.name, left, top, boxW, boxH)
 
-    // 「画点什么送给 TA」。这个按钮**一直都在** —— 画画不该有每天一次的限制,
-    // 那是送海草那条规则(礼物是长成的海草,有没有取决于海草床)。
-    // 位置固定在这里,送礼按钮排在它右边:常在的那个不该因为另一个出现就挪窝
-    const bx = left + boxW - 12
-    const by = top - 32
+    // 她身边的两个按钮。画画不设次数(画满了顶掉最旧的那张,但没有「今天画过了」),
+    // 送海草是每天一次的心意 —— 所以后者会时有时无。
+    //
+    // **有几个就摆几个,不留空位**:关掉画画之后送礼按钮要顶上来,
+    // 原地留一个看不见的洞是给自己找的麻烦
+    const buttons: { id: string; label: string; icon: string }[] = []
+    if (npc.canDraw) {
+      buttons.push({
+        id: `draw:${npc.id}`,
+        label: `画点什么送给${npc.name}`,
+        icon: `${WORLD_DIR}/ui/icons/pencil.png`,
+      })
+    }
+    if (npc.canGift) {
+      buttons.push({
+        id: `gift:${npc.id}`,
+        label: `送海草给${npc.name}`,
+        icon: `${WORLD_DIR}/ui/icon_sprout.png`,
+      })
+    }
     const slot = assets.get(`${WORLD_DIR}/ui/sv/slot.png`)
-    const pencil = assets.get(`${WORLD_DIR}/ui/icons/pencil.png`)
-    if (slot) ctx.drawImage(slot, bx, by)
-    if (pencil) ctx.drawImage(pencil, bx + 2, by + 2)
-    pushSpot(spots, s, `draw:${npc.id}`, `画点什么送给${npc.name}`, bx, by, 20, 20)
-
-    if (!npc.canGift) continue
-    const gx = bx + 24
-    const gy = by
-    const icon = assets.get(`${WORLD_DIR}/ui/icon_sprout.png`)
-    if (slot) ctx.drawImage(slot, gx, gy)
-    if (icon) ctx.drawImage(icon, gx + 2, gy + 2)
-    pushSpot(spots, s, `gift:${npc.id}`, `送海草给${npc.name}`, gx, gy, 20, 20)
+    buttons.forEach((button, i) => {
+      const bx = left + boxW - 12 + i * 24
+      const by = top - 32
+      const icon = assets.get(button.icon)
+      if (slot) ctx.drawImage(slot, bx, by)
+      if (icon) ctx.drawImage(icon, bx + 2, by + 2)
+      pushSpot(spots, s, button.id, button.label, bx, by, 20, 20)
+    })
   }
 }
 
 // 手写纸条的木牌。几何和 draw-world.mjs 里 note_tag 的生成参数是同一套数
 const TAG = { w: 36, h: 31, pad: 3, nail: 3, slotW: 30, slotH: 22 } as const
+
+// 牌摆在哪,由渲染层算 —— 它已经知道沙面在哪、海草长多高(drawSeagrassBed),
+// App 那边再算一遍就等于把同一套几何抄两份,抄错了就是牌飘在半空(2026-08-24 实测踩过)。
+//
+// 牌底埋进沙里,和海草的根一样深(worldHeight - 30),读起来才是「插在那儿」不是「浮在水里」
+const TAG_BOTTOM = 30
+
+/**
+ * 摆一整排海草名牌(只摆**写过名字的**那几棵,2026-08-24 用户决议)。
+ *
+ * 为什么要整排一起算、不能一棵一棵各算各的:12 棵种满时 36px 宽的牌铺满整条沙线,
+ * 挨得近的两块会互相压住 —— 压住的是童童写的字(原则 10:她写的永远不消失)。
+ * 所以后摆的牌要躲开先摆的:先试叶子右边,右边占了就翻到左边,两边都占了才往右挪。
+ * 地点牌那一格是钉死的,一开始就当成「已经占了」。
+ *
+ * `xs` 是 lib/seagrass 那个 0–100 的横向百分比,按传进来的顺序返回。
+ */
+export function seagrassNoteRow(
+  xs: readonly number[],
+  worldHeight: number,
+): { leftPx: number; topPx: number }[] {
+  const topPx = worldHeight - TAG_BOTTOM - TAG.h
+  const maxLeft = STAGE_WIDTH - TAG.w - 2
+  // 地点牌只在第 0 格,而海草床也只在第 0 格 —— 会撞的就这一块
+  const taken: [number, number][] = [[PLACE_NOTE_X - 2, PLACE_NOTE_X + TAG.w + 2]]
+  const free = (l: number) => taken.every(([a, b]) => l + TAG.w <= a || l >= b)
+  const out = xs.map(() => ({ leftPx: 0, topPx }))
+
+  // 从左往右摆,不然「躲开前面那块」会变成躲开右边那块,越挤越乱
+  for (const i of xs.map((_, i) => i).sort((a, b) => xs[a] - xs[b])) {
+    const center = (xs[i] / 100) * STAGE_WIDTH
+    // 叶片只有 ±8px 宽,牌摆在它右边,不压叶子
+    let left = center + 10
+    if (!free(left)) {
+      const alt = center - 10 - TAG.w
+      if (alt >= 2 && free(alt)) left = alt
+      else {
+        // 两边都占着:从左往右扫一遍,撞上谁就贴着谁的右沿排过去
+        for (const [a, b] of [...taken].sort((p, q) => p[0] - q[0])) {
+          if (left < b && left + TAG.w > a) left = b
+        }
+      }
+    }
+    left = Math.round(Math.min(maxLeft, Math.max(2, left)))
+    taken.push([left, left + TAG.w])
+    out[i] = { leftPx: left, topPx }
+  }
+  return out
+}
+
+/**
+ * 一块牌立在这一格地点的沙地上。
+ *
+ * **横坐标不能贴左边缘**:每一格的左右两个角都被珊瑚岩草塞满(DECOR_VARIANTS 三个变体
+ * 都是 0–110 和 360–480 两簇),牌立在那儿会被埋掉大半 —— 而且这不是镜头晃一下就好的,
+ * 装饰的世界坐标和牌一样是钉死的。三个变体在 140–270 这一段都是空的,牌摆这儿。
+ */
+const PLACE_NOTE_X = 200
+
+export function placeNotePos(spotIndex: number, worldHeight: number) {
+  return {
+    leftPx: spotIndex * STAGE_WIDTH + PLACE_NOTE_X,
+    topPx: worldHeight - TAG_BOTTOM - TAG.h,
+  }
+}
 
 export function drawNotes(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]) {
   const tag = assets.get(`${WORLD_DIR}/note_tag.png`)
@@ -439,8 +523,10 @@ export function drawNotes(ctx: CanvasRenderingContext2D, s: ActorState, spots: H
         ctx.drawImage(img, x + TAG.pad, y + TAG.nail + TAG.pad, TAG.slotW, TAG.slotH)
         ctx.imageSmoothingEnabled = smooth
       }
-    } else {
-      // 空牌才可以点。写过的不给热区 —— 原则 10:她写的不许被改掉,也就没有「重写」
+    } else if (!note.written) {
+      // 空牌才可以点。写过的不给热区 —— 原则 10:她写的不许被改掉,也就没有「重写」。
+      // 判据是 written 不是 src:src 还在从 IndexedDB 里读出来的那一小段时间里,
+      // 只看 src 的话这块牌是可点的,点下去就把她写的字盖了
       pushSpot(spots, s, `note:${note.key}`, note.label, x, y, TAG.w, TAG.h)
     }
   }
