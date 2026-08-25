@@ -36,6 +36,8 @@ export interface WorldSnapshot {
   clarity: number
   surfaced: boolean
   slotCount: number
+  /** 每一格是哪个地点。渲染层只拿它挑装饰,不做任何游戏逻辑 */
+  spotIds: string[]
   lockedBeyondEnd: boolean
   lockedBeforeStart: boolean
   pet: PetView
@@ -449,6 +451,7 @@ export class WorldRenderer {
     drawBackground(this.bg, {
       ...common,
       sea: s.sea,
+      spotIds: s.spotIds,
       clarity: s.clarity,
       lockedBeyondEnd: s.lockedBeyondEnd,
       lockedBeforeStart: s.lockedBeforeStart,

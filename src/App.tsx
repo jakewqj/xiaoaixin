@@ -152,6 +152,9 @@ function App() {
   // 世界横条:一格一个地点。地点切换没有按钮了——点哪游哪,她自己游过去,镜头跟着。
   // 位置和镜头都在渲染层(src/render),不在这里 —— 那是每帧都变的量,进 React 就是每帧全树重渲染
   const slotCount = Math.max(1, openSpots.length)
+  // 每一格是哪个地点。渲染层拿它挑装饰 —— 一个地点一套排布,爸爸在后台改「开放地点」
+  // 也不会把别的地点的珊瑚换掉(见 world-data.ts 的 SPOT_DECOR)
+  const spotIds = useMemo(() => openSpots.map((spot) => spot.id), [openSpots])
 
   const npcs = useNpcs()
   const { entries: logEntries, log: logDialogue } = useDialogueLog(config?.后台.对话日志上限)
@@ -834,6 +837,7 @@ function App() {
     clarity,
     surfaced: breath.atSurface,
     slotCount,
+    spotIds,
     lockedBeyondEnd,
     lockedBeforeStart: false,
     pet: petView,

@@ -122,6 +122,115 @@ export const DECOR_VARIANTS: Decor[][] = [
   ],
 ]
 
+/**
+ * 一个地点长什么样。**按地点 id 认,不按格子号认。**
+ *
+ * 原来是 `DECOR_VARIANTS[i % 3]` —— 三套排布按格子轮换。这在只有三个地点时看不出问题,
+ * 六个地点一开就露馅:珊瑚花园和家海草床是同一批珊瑚摆在同一个位置。
+ * 更要命的是格子号会变 —— 「开放地点」是爸爸在后台随手拨的,关掉一个海豚潟湖,
+ * 它后面每一个地点的珊瑚都会换一批。「同一个地点永远长同一个样」(REFACTOR_PLAN §2.5)
+ * 按格号取模根本守不住,得钉在 id 上。
+ *
+ * 摆位的两条硬约束:
+ *   ① **中间那条水道要留出来** —— 海草种在第一格的 x 6%–94%,别的地点中间也是邻居站的地方
+ *      (NPC 落在 0.65 处,见 App 的 npcViews),大件一律往两侧和中前段摆
+ *   ② lift 是**负数往沙里沉、正数往水里抬**(baseline = 沙面 + 6 - lift)。
+ *      鱼群要给正的 lift 才游在珊瑚上方,不然一群鱼趴在沙上
+ *
+ * 地点的性格照 GDD §3 红海地点表,一个字没自己加:
+ *   换气水面「抬头看天」→ 最空,中间什么都没有;珊瑚花园「五颜六色的珊瑚、小鱼群」→ 最挤;
+ *   沙地浅滩「挖沙、找贝壳」→ 沙洲和贝壳堆,珊瑚几乎没有;老沉船「长满珊瑚的旧船」→ 船是主角
+ */
+export const SPOT_DECOR: Record<string, Decor[]> = {
+  // 家海草床保持原样。这是童童最熟的一格,没有理由动它
+  home_meadow: DECOR_VARIANTS[0],
+
+  surface: [
+    { file: 'kelp.png', x: -8, sway: true },
+    { file: 'rock_small.png', x: 6 },
+    { file: 'seagrass_tall.png', x: 40, sway: true },
+    { file: 'coral_green.png', x: 62, lift: -2 },
+    { file: 'rock_small.png', x: 392 },
+    { file: 'tubes_purple.png', x: 416, lift: -2 },
+    { file: 'kelp.png', x: 452, sway: true },
+  ],
+
+  dolphin_lagoon: [
+    { file: 'rock_big.png', x: -16 },
+    { file: 'kelp.png', x: 6, sway: true },
+    { file: 'fan_purple.png', x: 22 },
+    { file: 'coral_brain_pink.png', x: 62, lift: -2 },
+    { file: 'seagrass_tall.png', x: 104, sway: true },
+    { file: 'rock_small.png', x: 392 },
+    { file: 'coral_brain_orange.png', x: 404, lift: -3 },
+    { file: 'coral_green.png', x: 436, lift: -2 },
+    { file: 'kelp.png', x: 462, sway: true },
+  ],
+
+  coral_garden: [
+    { file: 'rock_big.png', x: -22 },
+    { file: 'coral_brain_pink.png', x: -4, lift: -2 },
+    { file: 'tubes_purple.png', x: 28 },
+    { file: 'coral_branch_red.png', x: 58, lift: -2 },
+    { file: 'fan_purple.png', x: 92 },
+    { file: 'fish_school.png', x: 96, lift: 96, sway: true },
+    { file: 'anemone.png', x: 138, lift: -1 },
+    { file: 'coral_green.png', x: 168, lift: -2 },
+    { file: 'fish_school.png', x: 176, lift: 58, sway: true },
+    { file: 'coral_brain_orange.png', x: 208, lift: -2 },
+    { file: 'anemone.png', x: 246, lift: -1 },
+    { file: 'rock_small.png', x: 360 },
+    { file: 'coral_branch_pink.png', x: 356, lift: -2 },
+    { file: 'coral_tube.png', x: 396, lift: -2 },
+    { file: 'coral_brain_pink.png', x: 424, lift: -2 },
+    { file: 'kelp.png', x: 466, sway: true },
+  ],
+
+  // 这一格的东西**故意小而多**:第一版只摆了两堆贝壳,上屏是两个米粒,
+  // 「找贝壳」这件事在画面上根本不成立。现在是一路撒过去,走到哪儿脚边都有几个
+  sand_flat: [
+    { file: 'seagrass_tall.png', x: 2, sway: true },
+    { file: 'rock_small.png', x: 20 },
+    { file: 'sand_mound.png', x: 54 },
+    { file: 'shell_pile.png', x: 42 },
+    { file: 'shell_pile.png', x: 116 },
+    { file: 'starfish.png', x: 150 },
+    { file: 'shell_pink.png', x: 168 },
+    { file: 'shell_pile.png', x: 196 },
+    { file: 'shell_white.png', x: 236 },
+    { file: 'shell_pile.png', x: 262 },
+    { file: 'sand_mound.png', x: 286 },
+    { file: 'starfish.png', x: 318 },
+    { file: 'shell_pile.png', x: 344 },
+    { file: 'shell_white.png', x: 372 },
+    { file: 'shell_pile.png', x: 388 },
+    { file: 'rock_small.png', x: 402 },
+    { file: 'coral_green.png', x: 430, lift: -2 },
+    { file: 'kelp.png', x: 464, sway: true },
+  ],
+
+  old_wreck: [
+    { file: 'rock_big.png', x: -20 },
+    { file: 'kelp.png', x: 4, sway: true },
+    { file: 'wreck_mast.png', x: 30 },
+    { file: 'wreck_hull.png', x: 78 },
+    { file: 'seagrass_tall.png', x: 236, sway: true },
+    { file: 'rock_small.png', x: 250 },
+    { file: 'coral_branch_red.png', x: 396, lift: -2 },
+    { file: 'rock_small.png', x: 410 },
+    { file: 'coral_green.png', x: 440, lift: -2 },
+    { file: 'kelp.png', x: 466, sway: true },
+  ],
+}
+
+/** 这一格该画哪一批装饰。没写过的地点(印度海湾/澳洲浅海还没做美术)退回原来的三套轮换 */
+export function decorFor(spotId: string | undefined, index: number): Decor[] {
+  const own = spotId ? SPOT_DECOR[spotId] : undefined
+  if (own) return own
+  const n = DECOR_VARIANTS.length
+  return DECOR_VARIANTS[((index % n) + n) % n]
+}
+
 /** 沙底上的小散落物,位置按格子错开;不挡路、不可点,纯风景 */
 export const SCATTER = [
   'shell_pink.png',
@@ -238,7 +347,7 @@ export const WORLD_PRELOAD: readonly string[] = [
   ...['sky.png', 'cloud_big.png', 'cloud_small.png', 'island_big.png', 'island_small.png',
     'surface.png', 'far.png', 'sand.png', 'shadow.png', 'light_shaft.png'].map((f) => `${WORLD_DIR}/${f}`),
   ...[...FG_REEFS.files, ...FG_REEFS.kelp.files].map((f) => `${WORLD_DIR}/${f}`),
-  ...new Set(DECOR_VARIANTS.flat().map((d) => `${WORLD_DIR}/${d.file}`)),
+  ...new Set([...DECOR_VARIANTS.flat(), ...Object.values(SPOT_DECOR).flat()].map((d) => `${WORLD_DIR}/${d.file}`)),
   ...SCATTER.map((f) => `${WORLD_DIR}/${f}`),
   ...BUBBLE_SIZES.map((f) => `${WORLD_DIR}/${f}`),
 ]

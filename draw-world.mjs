@@ -1079,4 +1079,236 @@ savePng(`${DIR}/fg_kelp_c.png`, kelpBlade(166, 3.1, KELP_DARK))
   savePng(`${DIR}/note_tag.png`, g)
 }
 
+// ---- S3-1 地点辨识度素材 -------------------------------------------------
+// 这一轮之前红海六个地点长得一模一样:装饰按格子号 `i % 3` 轮换,珊瑚花园和家海草床
+// 是同一批珊瑚摆在同一个位置。这批素材是三个新地点各自的「一眼认得出」。
+//
+// 出处走 GDD 的红海地点表(§3):珊瑚花园「五颜六色的珊瑚、小鱼群」、
+// 沙地浅滩「挖沙、找贝壳」、老沉船「长满珊瑚的旧船」。一个字没自己加。
+
+// 海葵:一丛末端鼓起的触手(泡泡海葵 Entacmaea quadricolor 那种鼓头,红海常见,
+// 正是小丑鱼住的那种)。珊瑚花园的标志物之一,S3-2 的小丑鱼一家住这。
+//
+// 画到第三版才对,两版失败的教训值得记:
+//   ① 所有触手从**同一个点**射出去 —— 描边一上整丛糊成一块粉色扇贝壳
+//   ② 加了个椭圆口盘 —— 立刻变成一朵蘑菇
+// 30px 见方画不了「盘 + 须」这种层次。能读出来的只有一种:**一排分得开的手指**,
+// 根根之间留 2px 空,让描边把空隙吃成深色缝 —— 缝才是让人看出「一丛」的东西。
+function anemone(body, tip, column, edge, heights) {
+  const PITCH = 4
+  const W = 3 + heights.length * PITCH
+  const H = Math.max(...heights) + 9
+  const g = grid(W, H)
+  const footY = H - 6
+  // 柱身:埋在触手底下的一小截,只露出两三行
+  for (let y = footY; y < H - 1; y++) {
+    for (let x = 5; x < W - 5; x++) set(g, x, y, column)
+  }
+  heights.forEach((hgt, i) => {
+    const x0 = 2 + i * PITCH
+    // 越靠边的越往外倒,整丛才是张开的一束,不是一排栅栏
+    const lean = (i - (heights.length - 1) / 2) * 0.22
+    for (let k = 0; k < hgt; k++) {
+      const y = footY - k
+      const x = x0 + Math.round(lean * k)
+      const col = k >= hgt - 3 ? tip : body
+      set(g, x, y, col)
+      set(g, x + 1, y, col)
+      // 末端鼓一点:泡泡海葵的触手就是顶上一个球
+      if (k === hgt - 2) { set(g, x - 1, y, tip); set(g, x + 2, y, tip) }
+    }
+  })
+  outline(g, edge)
+  return crop(g)
+}
+savePng(`${DIR}/anemone.png`, anemone(
+  [232, 138, 168, 255], [252, 206, 224, 255], [198, 106, 130, 255], [146, 66, 98, 255],
+  [11, 16, 13, 20, 17, 22, 15, 18, 12]))
+
+// 小鱼群:一小群橙粉色的礁鱼,全部朝右(和精灵朝向规矩一致)。
+// 摆的时候给正的 lift 抬离沙面 —— 它是游在珊瑚上方的,不是趴在沙上的
+{
+  const W = 62
+  const H = 34
+  const g = grid(W, H)
+  const body = [246, 152, 96, 255]
+  const hi = [252, 206, 160, 255]
+  const eye = [40, 30, 34, 255]
+  // [x, y, 大小] —— 错开成松散的一群,不排队、不对齐
+  const fish = [
+    [10, 8, 1], [26, 5, 0], [42, 10, 1], [16, 18, 0],
+    [33, 17, 1], [50, 20, 0], [8, 27, 0], [27, 28, 1], [46, 30, 0],
+  ]
+  for (const [x, y, big] of fish) {
+    const rx = big ? 4.5 : 3.2
+    const ry = big ? 2.6 : 1.9
+    fillEllipse(g, x, y, rx, ry, body)
+    // 尾鳍:身后一个小三角
+    thickLine(g, x - rx, y, x - rx - 3, y - 2, body, 1)
+    thickLine(g, x - rx, y, x - rx - 3, y + 2, body, 1)
+    fillEllipse(g, x + 0.5, y - 0.8, rx * 0.5, ry * 0.4, hi)
+    set(g, Math.round(x + rx - 1), Math.round(y - 0.4), eye)
+  }
+  outline(g, [150, 72, 36, 255])
+  savePng(`${DIR}/fish_school.png`, crop(g))
+}
+
+// 贝壳堆:几枚扇贝叠在一起。沙地浅滩的「找贝壳」就靠它和散落物撑
+{
+  const g = grid(34, 18)
+  const pink = shell([246, 172, 152, 255], [216, 128, 108, 255], [152, 84, 70, 255])
+  const white = shell([246, 240, 226, 255], [210, 198, 176, 255], [150, 138, 116, 255])
+  const cream = shell([242, 214, 160, 255], [206, 172, 116, 255], [146, 112, 66, 255])
+  blit(g, white, 1, 9)
+  blit(g, pink, 9, 10)
+  blit(g, cream, 18, 9)
+  blit(g, pink, 6, 2)
+  blit(g, white, 15, 1)
+  savePng(`${DIR}/shell_pile.png`, crop(g))
+}
+
+// 沙洲:一道低矮的沙丘。**不描深色边** —— 沙丘旁边就是沙,一圈黑边会让它像贴纸;
+// 靠顶上一线高光和底部压深把它从沙面上分出来
+{
+  const W = 104
+  const H = 24
+  const g = grid(W, H)
+  for (let x = 2; x < W - 2; x++) {
+    const t = (x - 2) / (W - 5)
+    const rise = Math.round((H - 5) * Math.pow(Math.sin(t * Math.PI), 0.7) + 1.2 * Math.sin(x * 0.6))
+    const top = H - 1 - rise
+    for (let y = top; y < H; y++) {
+      let col = [235, 200, 115]
+      if (y <= top + 1) col = [250, 230, 166]
+      else if (y >= H - 3) col = [200, 156, 82]
+      // 沙纹:几道横向的深色虚线,和 sand.png 同一套颜色
+      if ((y - top) % 5 === 2 && (x + y) % 3 !== 0) col = [216, 176, 96]
+      const r = hash(x, y, 7)
+      if (r > 0.94) col = [246, 224, 154]
+      set(g, x, y, [...col, 255])
+    }
+  }
+  savePng(`${DIR}/sand_mound.png`, crop(g))
+}
+
+// 老沉船的船体:一段侧卧的旧木船,长满珊瑚和苔。
+//
+// **不许往恐怖里画**(宪法二):不做黑洞洞的舱口、不做骷髅、不做倾覆下沉的姿态。
+// 它是一块「被海接管了的旧木头」—— 暖棕木色、舷窗是发亮的青玻璃不是黑窟窿,
+// 甲板上长着和珊瑚花园同一批的珊瑚。断口做成参差的木茬,不做撕裂的黑影。
+{
+  const W = 156
+  const H = 66
+  const g = grid(W, H)
+  const WOOD = [136, 92, 54, 255]
+  const WOOD_HI = [172, 124, 78, 255]
+  const WOOD_DIM = [98, 64, 34, 255]
+  const MOSS = [96, 146, 76, 255]
+  const MOSS_HI = [138, 180, 96, 255]
+  const GLASS = [104, 176, 176, 255]
+  const GLASS_HI = [196, 236, 232, 255]
+  const BRASS = [206, 168, 92, 255]
+  const EDGE = [62, 38, 20, 255]
+
+  const L = 8
+  const R = 146
+  const deck = new Array(W).fill(-1)
+  for (let x = L; x < R; x++) {
+    const t = (x - L) / (R - L)
+    let top = Math.round(22 + 8 * t)
+    // 船首:**弧线,不是斜坡**。直线斜上去读出来是块搭板,弧着收才是船头
+    if (x < L + 20) top = Math.round(22 - 17 * Math.sqrt((L + 20 - x) / 20))
+    // 右端是断口:参差的木茬,不是一刀切
+    if (x > 114) top = Math.round(30 + (x - 114) * 1.05 + 5 * hash(x, 11) - 1)
+    deck[x] = top
+    let bot = H - 2 - Math.round(2.5 * Math.sin(Math.PI * t))
+    // 船首那一段龙骨也翘起来,船头才是**离开沙面的一个楔子**;只收上缘的话
+    // 左边会留一堵齐地的直墙,读出来是块斜搭板不是船头
+    if (x < L + 24) bot = Math.min(bot, H - 2 - Math.round(30 * Math.pow((L + 24 - x) / 24, 1.7)))
+    for (let y = top; y <= bot; y++) {
+      let col = WOOD
+      if (y === top) col = WOOD_HI
+      else if ((y - top) % 6 === 0) col = WOOD_DIM // 横向船板缝
+      else if (x % 17 === 0) col = WOOD_DIM // 竖向肋骨
+      else if (y > bot - 3) col = WOOD_DIM
+      set(g, x, y, col)
+    }
+  }
+  // 舷窗:黄铜圈 + 发亮的青玻璃。三个等距,一眼看出是船不是石头
+  for (const px of [44, 74, 104]) {
+    const py = deck[px] + 17
+    fillEllipse(g, px, py, 5.2, 5.2, BRASS)
+    fillEllipse(g, px, py, 3.6, 3.6, GLASS)
+    set(g, px - 1, py - 2, GLASS_HI)
+    set(g, px, py - 2, GLASS_HI)
+  }
+  // 苔:沿着舷缘长一条,底下几处斑
+  for (let x = L; x < R; x++) {
+    const top = deck[x]
+    if (top < 0) continue
+    set(g, x, top, MOSS)
+    if ((x + top) % 3 !== 0) set(g, x, top + 1, MOSS)
+    if (hash(x, 3) > 0.72) set(g, x, top + 2, MOSS_HI)
+    if (hash(x, 9) > 0.9) set(g, x, top + 6, MOSS)
+  }
+  outline(g, EDGE)
+  // 甲板上的珊瑚:和珊瑚花园同一批生成器,不另发明一套
+  const grow = [
+    [brainCoral(26, 16, [240, 140, 160, 255], [194, 86, 112, 255], [252, 195, 206, 255], [142, 58, 80, 255]), 28],
+    [staghorn(24, 22, [224, 66, 52, 255], [244, 128, 96, 255], [128, 30, 24, 255],
+      [[12, Math.PI / 2, 10, 3], [5, Math.PI / 2 + 0.6, 7, 2], [19, Math.PI / 2 - 0.5, 7, 2]]), 60],
+    [tubes(20, 22, [[156, 96, 196, 255], [196, 152, 226, 255], [78, 40, 110, 255], [92, 52, 128, 255]],
+      [12, 18, 14], 6), 92],
+    [brainCoral(22, 14, [238, 152, 88, 255], [188, 96, 40, 255], [250, 198, 140, 255], [130, 64, 26, 255]), 122],
+  ]
+  for (const [src, x] of grow) {
+    // 贴着那一段舷缘的最高点长,免得半截悬空
+    let top = 999
+    for (let i = x; i < Math.min(x + src[0].length, R); i++) if (deck[i] >= 0) top = Math.min(top, deck[i])
+    if (top === 999) continue
+    blit(g, src, x, top - src.length + 2)
+  }
+  savePng(`${DIR}/wreck_hull.png`, crop(g))
+}
+
+// 断桅:斜插在沙里的一根圆木,上头挑着半截横桁,缠着海藻。船体旁边摆一根,一眼认出是船。
+//
+// **横桁只往一边伸。** 第一版对称地穿过桅杆,上屏一看是个十字架 —— 沉船旁边立个十字架
+// 是墓碑,不是船具(宪法二:不许黑暗惊吓)。挑到一侧、再挂两串海藻,读出来才是「船上掉下来的杆子」。
+{
+  const W = 56
+  const H = 88
+  const g = grid(W, H)
+  const WOOD = [136, 92, 54, 255]
+  const WOOD_HI = [172, 124, 78, 255]
+  const WEED = [86, 148, 74, 255]
+  const WEED_HI = [124, 184, 92, 255]
+  thickLine(g, 12, 85, 34, 6, WOOD, 6)
+  thickLine(g, 10, 85, 32, 6, WOOD_HI, 1)
+  // 横桁:从桅杆上段往右**垂下去**。挑得太平就成了十字架的那一横,垂下来才是「断了、吊着」
+  thickLine(g, 27, 22, 49, 43, WOOD, 4)
+  thickLine(g, 27, 21, 49, 42, WOOD_HI, 1)
+  // 横桁上挂下来的两串海藻
+  for (const [x, len] of [[36, 14], [46, 20]]) {
+    const y0 = 24 + Math.round((x - 27) * 0.95)
+    for (let k = 0; k < len; k++) {
+      const y = y0 + k
+      const dx = Math.round(1.6 * Math.sin(k * 0.5 + x))
+      set(g, x + dx, y, k % 4 === 1 ? WEED_HI : WEED)
+      set(g, x + dx + 1, y, WEED)
+    }
+  }
+  // 缠在桅杆上的几段短藻
+  for (let i = 0; i < 4; i++) {
+    const t = 0.24 + i * 0.17
+    const x = Math.round(12 + 22 * t)
+    const y = Math.round(85 - 79 * t)
+    const side = i % 2 === 0 ? 1 : -1
+    thickLine(g, x, y, x + side * 6, y + 4, WEED, 2)
+    set(g, x + side * 6, y + 4, WEED_HI)
+  }
+  outline(g, [62, 38, 20, 255])
+  savePng(`${DIR}/wreck_mast.png`, crop(g))
+}
+
 console.log('World layer art v2 generated in ' + DIR + '/')

@@ -14,7 +14,7 @@ import { alternateProgress, EASE_IN_OUT, lerp, LINEAR, loopProgress, stepIndex }
 import { indexRange, layer } from '../parallax'
 import { DUST_FAR, drawDust, drawSparkles } from './particles'
 import {
-  DECOR_VARIANTS,
+  decorFor,
   FURROW,
   LOCKED_HINT_COLOR,
   MAX_HAZE,
@@ -42,6 +42,8 @@ export interface BgState {
   worldWidth: number
   worldHeight: number
   slotCount: number
+  /** 每一格是哪个地点(world.json 的地点 id),按开放顺序排。装饰认它不认格子号 */
+  spotIds: string[]
   sea: SeaTheme
   clarity: number
   lockedBeyondEnd: boolean
@@ -166,10 +168,11 @@ function drawHaze(ctx: CanvasRenderingContext2D, s: BgState, ox: number): void {
 }
 
 // 中景装饰:珊瑚和岩石挤在画面两侧,中间留给小爱心和海草床。
-// 三种排布按格子取模轮换,同一个地点永远同一种
+// **一格一个地点、一个地点一套排布**,认的是地点 id —— 爸爸在后台关掉一个地点,
+// 剩下的地点各自还是原来那个样子(见 world-data.ts 的 SPOT_DECOR)
 function drawDecor(ctx: CanvasRenderingContext2D, s: BgState, from: number, to: number): void {
   for (let i = from; i <= to; i++) {
-    const variant = DECOR_VARIANTS[((i % DECOR_VARIANTS.length) + DECOR_VARIANTS.length) % DECOR_VARIANTS.length]
+    const variant = decorFor(s.spotIds[i], i)
     variant.forEach((decor, j) => {
       const tex = img(decor.file)
       if (!tex) return
