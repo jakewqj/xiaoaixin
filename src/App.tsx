@@ -822,6 +822,7 @@ function App() {
         frameHeight,
         frameCount: anim.帧数,
         fps: anim.fps,
+        onSeabed: npc.落位 === '沙面',
         canDraw: featureOn('画画送礼'),
         canGift: grownCount > 0 && save.giftedAt[id] !== new Date().toDateString(),
         hangings: (save.hangings[id] ?? [])

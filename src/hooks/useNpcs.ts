@@ -23,6 +23,8 @@ export interface NpcSpec {
   语言: string
   精灵: string
   精灵规格?: { 尺寸: string }
+  /** 「沙面」= 坐在海底(砗磲这类固着生物)。不写就是游在水里 */
+  落位?: string
   动画: Record<string, NpcAnim>
   话题库?: Record<string, NpcTopic[]>
   熟悉度上限?: number

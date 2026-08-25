@@ -64,6 +64,8 @@ export interface NpcView {
   frameHeight: number
   frameCount: number
   fps: number
+  /** 坐在沙上还是游在水里。砗磲是固着不动的贝类,浮在半空就是错的 */
+  onSeabed: boolean
   /** 「画点什么送给 TA」那个按钮出不出现。config.json 的「系统开关.画画送礼」说了算 */
   canDraw: boolean
   canGift: boolean
@@ -384,7 +386,12 @@ function drawNpcs(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]
     const boxW = Math.max(MIN_TOUCH, npc.frameWidth)
     const boxH = Math.max(MIN_TOUCH, npc.frameHeight)
     const left = npc.leftPx - boxW / 2
-    const top = s.worldHeight - 160 - boxH
+    // 默认游在中上层水域(错开小爱心的漂移带和右下角按钮区)。
+    // 坐底的邻居改成把**精灵的脚**放在沙面上 —— 注意精灵是在 56px 触摸盒里居中画的,
+    // 直接拿 boxH 去减会让她整个陷进沙里半格
+    const top = npc.onSeabed
+      ? s.worldHeight - (SAND_H - 6) - npc.frameHeight - (boxH - npc.frameHeight) / 2
+      : s.worldHeight - 160 - boxH
 
     // 板先画,邻居后画 —— 邻居游到板前面是对的,反过来会挡住她的脸
     drawHangBoard(ctx, npc, left, top)
