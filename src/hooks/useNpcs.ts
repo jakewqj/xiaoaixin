@@ -34,6 +34,13 @@ export interface NpcSpec {
   挂画反馈?: { text: string; icon?: string }[]
 }
 
+/** npc.json 里「地点」写成这个值 = 不落地点,跟着小爱心游(小金是唯一一个) */
+export const FOLLOW_PET = '跟随小爱心'
+
+/** npc.json 里「语言」写成这个值 = 复读(小金)。它既不是 zh 也不是外语,
+ *  对话面板不能凭「不是 zh」就把它当外语用 TTS 念中文 —— 见 App.tsx 的 foreign 判定 */
+export const REPEAT_LANG = '复读'
+
 // "112x48" 这种字符串换算成像素宽高。哪个 NPC 的格式写错了就退回一个不算太离谱的默认方块,
 // 不让一条坏数据把整个地点渲染炸掉
 export function frameSizeOf(npc: NpcSpec): [number, number] {

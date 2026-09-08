@@ -32,12 +32,13 @@ import type { KnowledgeCardData } from './hooks/useKnowledge'
 import { useAlbum } from './hooks/useAlbum'
 import { useWorld } from './hooks/useWorld'
 import { useConfig } from './hooks/useConfig'
-import { useNpcs, unlockedTopics, frameSizeOf } from './hooks/useNpcs'
+import { useNpcs, unlockedTopics, frameSizeOf, FOLLOW_PET, REPEAT_LANG } from './hooks/useNpcs'
 import type { NpcSpec, NpcTopic } from './hooks/useNpcs'
 import AdminGate from './components/AdminGate'
 import AdminPanel from './components/AdminPanel'
 import { useDialogueLog } from './hooks/useDialogueLog'
 import { playSfx } from './lib/sfx'
+import { speak } from './lib/speech'
 import HUD from './ui/HUD'
 import { UI_DIR } from './ui/layout'
 import type { HudSnapshot, SlotSpec } from './ui/types'
@@ -64,6 +65,8 @@ const TRIGGERED = ['greet_first', 'handdrawn', 'welcome_back', 'grow_up']
 
 // 选中一个选项之后開心一下的时长。没有 happy 动画的邻居就不会有这个反应
 const NPC_REACT_MS = 1800
+/** 小金「跟着复读」时切到 talk 动画的时长。够他念完一个短句(中英都短) */
+const RECITE_MS = 1400
 // 送礼的反馈比普通反应停久一点,够她看完再消失(也可以直接点一下提前收起)
 const GIFT_REPLY_MS = 3000
 
@@ -104,6 +107,9 @@ function App() {
     isGift: boolean
   } | null>(null)
   const [reactingNpc, setReactingNpc] = useState<string | null>(null)
+  // 小金正在「跟着复读」。只切他的 talk 动画,不弹对话框 —— 复读是声音不是一段话,
+  // 而且对话框同一时刻只能有一份,他总不能把刚说完的那个 NPC 顶掉
+  const [recitingNpc, setRecitingNpc] = useState<string | null>(null)
   const [answered, setAnswered] = useState<string[]>([])
   const [card, setCard] = useState<KnowledgeCardData | null>(null)
   // 不用路由库,页面切换就是一个状态
@@ -159,10 +165,13 @@ function App() {
   const npcs = useNpcs()
   const { entries: logEntries, log: logDialogue } = useDialogueLog(config?.后台.对话日志上限)
   // 「开放NPC」里点了名、住的地点也开放了的邻居,按她住的那格摆进世界
-  const placedNpcs =
+  const placedNpcs: { id: string; npc: NpcSpec; spotIndex: number; follow?: boolean }[] =
     npcs && config
       ? Object.entries(npcs).flatMap(([id, npc]) => {
           if (!config.开放NPC.some((n) => n.id === id)) return []
+          // 「跟随小爱心」的邻居不落在某个地点,跟着宠物游 —— 不受「开放地点」限制。
+          // spotIndex 只是占位,渲染层对 follow 的邻居根本不读它
+          if (npc.地点 === FOLLOW_PET) return [{ id, npc, spotIndex: 0, follow: true }]
           const spotIndex = openSpots.findIndex((spot) => spot.id === npc.地点)
           if (spotIndex < 0) return []
           return [{ id, npc, spotIndex }]
@@ -367,6 +376,15 @@ function App() {
     if (npc.动画.happy) setReactingNpc(id)
     bumpFamiliarity(id, cap)
     logDialogue(id, npc.名字, option.text)
+
+    // 小金跟着复读:童童选了什么,他就把那个词/短语用原文念一遍(中英都支持)。
+    // 这正是 3-3 「练发音的安全出口」—— 只复读,**不判断像不像**。只在他在场时触发。
+    // 语言跟着当前 NPC 走:Dolly/Sousa 的选项是英文 → en-US,中文 NPC → zh-CN;
+    // 小金自己的选项都是中文词 → zh-CN。绝不会按「外语角色」用 TTS 念中文(那条旧坑)
+    if (placedNpcs.some((p) => p.id === 'xiaojin')) {
+      speak(option.text, npc.语言 === 'en' ? 'en-US' : 'zh-CN')
+      setRecitingNpc('xiaojin')
+    }
   }
 
   // 画完送出去。三件事按顺序:图片本体进 IndexedDB、id 进存档、挂上那块木板。
@@ -512,6 +530,13 @@ function App() {
     const timer = setTimeout(() => setReactingNpc(null), NPC_REACT_MS)
     return () => clearTimeout(timer)
   }, [reactingNpc])
+
+  // 复读动画自己会停。设这个状态和清它之间隔着的是一声朗读,不等也不行
+  useEffect(() => {
+    if (!recitingNpc) return
+    const timer = setTimeout(() => setRecitingNpc(null), RECITE_MS)
+    return () => clearTimeout(timer)
+  }, [recitingNpc])
 
   // 送礼的反馈自己会走,不用她做任何事;当然也能直接点一下提前收起(DialoguePanel 的点击收起逻辑)
   useEffect(() => {
@@ -746,7 +771,9 @@ function App() {
       ? {
           speaker: talkingNpc.名字,
           text: npcTalk.topic.say,
-          foreign: talkingNpc.语言 !== 'zh',
+          // 只有真正的外语(英语)才朗读。小金是「复读」,照旧会触发「外语朗读」把他
+          // 的台词用 TTS 念成中文 —— 那是旧坑,这里一并堵上
+          foreign: talkingNpc.语言 !== 'zh' && talkingNpc.语言 !== REPEAT_LANG,
           options: npcTalk.isGift
             ? []
             : (npcTalk.topic.options ?? []).map((option) => {
@@ -807,8 +834,16 @@ function App() {
   }
 
   // 邻居按住的地点落位。有 happy 动画的话,选中选项/收到礼物后短暂切过去演一下
-  const npcViews: NpcView[] = placedNpcs.flatMap(({ id, npc, spotIndex }) => {
-    const key = reactingNpc === id && npc.动画.happy ? 'happy' : 'idle'
+  const npcViews: NpcView[] = placedNpcs.flatMap(({ id, npc, spotIndex, follow }) => {
+    // 跟随者(小金)默认一直在游(swim),复读时切 talk;
+    // 落地的邻居照旧:idle,选中选项有 happy 的话演一下
+    const key = follow
+      ? recitingNpc === id
+        ? 'talk'
+        : 'swim'
+      : reactingNpc === id && npc.动画.happy
+        ? 'happy'
+        : 'idle'
     const anim = npc.动画[key]
     if (!anim) return []
     const [frameWidth, frameHeight] = frameSizeOf(npc)
@@ -816,18 +851,23 @@ function App() {
       {
         id,
         name: npc.名字,
-        leftPx: spotIndex * STAGE_WIDTH + STAGE_WIDTH * 0.65,
+        leftPx: follow ? 0 : spotIndex * STAGE_WIDTH + STAGE_WIDTH * 0.65,
         src: `${npc.精灵}${anim.文件}`,
         frameWidth,
         frameHeight,
         frameCount: anim.帧数,
         fps: anim.fps,
         onSeabed: npc.落位 === '沙面',
-        canDraw: featureOn('画画送礼'),
-        canGift: grownCount > 0 && save.giftedAt[id] !== new Date().toDateString(),
-        hangings: (save.hangings[id] ?? [])
-          .map((drawingId) => hangingUrls[drawingId])
-          .filter((url): url is string => Boolean(url)),
+        follow,
+        // 跟随的邻居不摆「送礼 / 画画」按钮、不挂木板 —— 那两样得钉在一个地方,
+        // 跟着宠物到处漂既不像样,还会跟宠物自己的交互抢热区
+        canDraw: follow ? false : featureOn('画画送礼'),
+        canGift: follow ? false : grownCount > 0 && save.giftedAt[id] !== new Date().toDateString(),
+        hangings: follow
+          ? []
+          : (save.hangings[id] ?? [])
+              .map((drawingId) => hangingUrls[drawingId])
+              .filter((url): url is string => Boolean(url)),
       },
     ]
   })

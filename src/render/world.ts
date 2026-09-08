@@ -20,7 +20,7 @@ import { drawOverlay } from './layers/overlay'
 import { REST_Y, Swim } from './swim'
 import type { Hotspot } from './types'
 import type { Furrow } from './layers/background'
-import { FURROW, GRAZE, MOTION, SAND_H, WATER_LINE } from './world-data'
+import { FOLLOW, FURROW, GRAZE, MOTION, SAND_H, WATER_LINE } from './world-data'
 
 /** 她能游到的最浅处:水面线再往下留出半个身子,别把背露出水面 */
 const CEILING_PAD = 6
@@ -90,6 +90,12 @@ export class WorldRenderer {
   private breathHold = false
   /** 上浮前她在哪一层。换完气回原处,不会平白无故沉回默认深度 */
   private restY = REST_Y
+
+  // 跟随者(小金)的当前位置。他没有固定地点,每帧朝「宠物身后」的目标平滑追赶;
+  // 小爱心转身时他绕过去而不是啪地换边(和 flip 的 500ms 过渡同一套手感)。
+  // null = 现在没有跟随者,或还没初始化 —— 他进场时从目标点开始,不凭空飘过来
+  private followX: number | null = null
+  private followY: number | null = null
 
   // 站姿进度 0→1:0 是平着游,1 是竖起来把鼻孔探出水面
   private stand = 0
@@ -448,6 +454,26 @@ export class WorldRenderer {
       reduced,
     }
 
+    // 跟随者每帧向「宠物身后」的目标平滑追赶。没有跟随者就清空,他下次进场重新落位。
+    // 目标横坐标 = 宠物中心 - 前进方向 × (半个身宽 + 留白),所以她转弯时目标跳到另一侧,
+    // 跟随者靠 lerp 慢慢绕过去。纵坐标跟着她的身体中心再往下沉一点。
+    if (s.npcs.some((n) => n.follow)) {
+      const facing = this.swim.facingLeft ? -1 : 1
+      const targetX = this.swim.x - facing * ((FRAME_WIDTH * s.pet.scale) / 2 + FOLLOW.gap)
+      const targetY = this.petTop + FOLLOW.drop
+      if (this.followX === null || this.followY === null) {
+        this.followX = targetX
+        this.followY = targetY
+      } else {
+        const k = this.reduced ? 1 : FOLLOW.ease
+        this.followX = lerp(this.followX, targetX, k)
+        this.followY = lerp(this.followY, targetY, k)
+      }
+    } else {
+      this.followX = null
+      this.followY = null
+    }
+
     drawBackground(this.bg, {
       ...common,
       sea: s.sea,
@@ -467,6 +493,8 @@ export class WorldRenderer {
       tilt,
       graze: this.graze,
       pet: s.pet,
+      followX: this.followX,
+      followY: this.followY,
       seagrass: s.seagrass,
       npcs: s.npcs,
       notes: s.notes,
