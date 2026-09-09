@@ -771,6 +771,9 @@ function App() {
       ? {
           speaker: talkingNpc.名字,
           text: npcTalk.topic.say,
+          // 画了头像的邻居走星露谷版式(左台词 / 右立绘 + 名牌)。
+          // 路径和精灵一样拼在「精灵」目录后面 —— 换手稿只动文件,不动代码(宪法五)
+          portrait: talkingNpc.头像 ? `${talkingNpc.精灵}${talkingNpc.头像}` : undefined,
           // 只有真正的外语(英语)才朗读。小金是「复读」,照旧会触发「外语朗读」把他
           // 的台词用 TTS 念成中文 —— 那是旧坑,这里一并堵上
           foreign: talkingNpc.语言 !== 'zh' && talkingNpc.语言 !== REPEAT_LANG,
