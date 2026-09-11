@@ -277,9 +277,9 @@
   * **`<button>` 会把内容垂直居中这条又栽了一次**(渲染重构阶段 1–2 记过)。台词板撑满左栏之后,两行字飘到板中间,`flex-col justify-start` 顶回去。
   * **一处宪法边界**:头像是**朝左**的。§十三「朝向一律朝右」管的是精灵表(代码要按朝向镜像它),头像是固定图没有镜像逻辑;朝左是让她看向左边的台词区。**这是新情况不是改规矩**,要朝右把 `P_*` 的 x 镜像一下即可。
   * **测试上两个坑**:① `querySelector('img')` 抓到的是选项图标(`PixelIcon` 在 DOM 里排在立绘前面),害我误判三条 FAIL 说立绘是 16×16 —— 测试选错了不是代码错;② **焦点那条第一版是假 PASS**,程序调 `.focus()` 在 Chrome 里不进 `:focus-visible`,量到 `3px none` —— **`outline-style` 是 `none` 就等于没有轮廓**,而断言只比了字符串。改成真按 Tab 并断言 style 不是 none。另:`scripts/pose_*.png` 是多个 `draw-*.mjs` 共用的文件名,跑 `--debug` 会盖掉别人的。
-  * 实测两轮共 **26 项全过、控制台零报错**(无头 Chrome + 自写 CDP)。`npm run build` 通过;`npm run lint` **24 problems**,与开工前一致。提交在分支 `ada-portrait-dialogue`,**尚未合进 `main`**。
+  * 实测两轮共 **26 项全过、控制台零报错**(无头 Chrome + 自写 CDP)。`npm run build` 通过;`npm run lint` **24 problems**,与开工前一致。**已提交**:`a39b5b6`(已 fast-forward 合进 `main` 并推送,Vercel / EdgeOne 的自动构建随之触发)。
 
-> **git 同步状态(2026-09-08 核对)**:核对时工作区干净、本地 `main` = `origin/main` = `6e4c1d2`(本轮对话框改星露谷式的改动提交在分支 `ada-portrait-dialogue` 上,还没合进 `main`),五个分支全部已推到 `github.com/jakewqj/xiaoaixin`。上面各条里写的「尚未 git commit」都是当时的记录,**已逐条标注实际提交号,不要再照那句话判断**。下次核对用 `git fetch && git status -sb`,别只看 `git status`(不 fetch 的话落后了也看不出来)。
+> **git 同步状态(2026-09-11 核对)**:核对时工作区干净、本地 `main` = `origin/main` = `a39b5b6`,五个分支全部已推到 `github.com/jakewqj/xiaoaixin`。上面各条里写的「尚未 git commit」都是当时的记录,**已逐条标注实际提交号,不要再照那句话判断**。下次核对用 `git fetch && git status -sb`,别只看 `git status`(不 fetch 的话落后了也看不出来)。
 
 ---
  
