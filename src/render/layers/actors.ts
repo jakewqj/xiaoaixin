@@ -71,6 +71,8 @@ export interface NpcView {
   /** 「画点什么送给 TA」那个按钮出不出现。config.json 的「系统开关.画画送礼」说了算 */
   canDraw: boolean
   canGift: boolean
+  /** 「问她」按钮。只有砗磲奶奶有 —— 她是白名单知识库的具身化(GDD §6.2) */
+  canAsk: boolean
   // 挂在这个邻居身边木板上的画,最多 3 张,新的在后。传进来的是 object URL,
   // 由 useDrawingUrls 从 IndexedDB 转出来 —— 渲染层只认路径,不认识数据库
   hangings: string[]
@@ -459,9 +461,21 @@ function drawNpcs(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]
         icon: `${WORLD_DIR}/ui/icon_sprout.png`,
       })
     }
+    if (npc.canAsk) {
+      buttons.push({
+        id: `ask:${npc.id}`,
+        label: `问${npc.name}一个问题`,
+        icon: `${WORLD_DIR}/ui/icons/question.png`,
+      })
+    }
     const slot = assets.get(`${WORLD_DIR}/ui/sv/slot.png`)
+    // **以她头顶为中心排,不是从右边缘往右甩。** 原来的写法(left + boxW - 12 + i*24)
+    // 两个按钮时还好,3-4 加上「问她」变成三个,第三个正好排进右下角的 HUD 里 ——
+    // 实测 elementsFromPoint 顶层是「喂海草」,童童点「问她」会喂海草。
+    // 居中之后按钮数量再变也不会往一边越界
+    const rowW = buttons.length * 24 - 4
     buttons.forEach((button, i) => {
-      const bx = left + boxW - 12 + i * 24
+      const bx = Math.round(left + boxW / 2 - rowW / 2) + i * 24
       const by = top - 32
       const icon = assets.get(button.icon)
       if (slot) ctx.drawImage(slot, bx, by)

@@ -37,6 +37,7 @@ import type { NpcSpec, NpcTopic } from './hooks/useNpcs'
 import AdminGate from './components/AdminGate'
 import AdminPanel from './components/AdminPanel'
 import { useDialogueLog } from './hooks/useDialogueLog'
+import AskPanel from './components/AskPanel'
 import { playSfx } from './lib/sfx'
 import { speak } from './lib/speech'
 import HUD from './ui/HUD'
@@ -92,7 +93,6 @@ function App() {
   const pet = usePet()
   const breath = useBreath()
   const scenes = useDialogue()
-  const knowledge = useKnowledge()
   const album = useAlbum()
 
   const [pose, setPose] = useState<PoseName>('idle')
@@ -131,6 +131,11 @@ function App() {
 
   const world = useWorld()
   const { config, update: updateConfig, reset: resetConfig, resetToOnlyPet } = useConfig()
+
+  // 把爸爸的屏蔽名单喂给白名单。**这道闸 2026-09-13 才接上** ——
+  // 以前 config 的「知识卡.屏蔽」能填不能用,是个死控件;3-4 让砗磲奶奶直接从
+  // 白名单取卡,不接上的话爸爸屏蔽的卡会从她嘴里漏出去
+  const knowledge = useKnowledge(config?.知识卡.屏蔽)
 
   // config.json 的「系统开关」。在这之前这些开关一个都没人读 —— 爸爸在后台拨了不响,
   // 而「按钮在、点了没反应」和「开关拨了没变化」是同一类死控件(2026-08-24 接上)。
@@ -217,6 +222,12 @@ function App() {
   // 「手写命名」关掉之后**只是不再出新的空木牌**,已经写好的照旧贴在那儿 ——
   // 爸爸关一个开关不该让童童写过的字从世界上消失(原则 10)
   const namingOn = featureOn('手写命名')
+
+  // 「问问题」单开一个开关,没并进「图鉴」—— 那个开关管的是那本册子,
+  // 关掉它不见得是不想让她问砗磲奶奶(和 S2 给「图鉴手绘页」单开一个键同一个理由)
+  const askOn = featureOn('问问题')
+  // 正在问谁。null = 没在问
+  const [askingNpc, setAskingNpc] = useState<string | null>(null)
 
   const noteViews: NoteView[] = useMemo(() => {
     const views: NoteView[] = []
@@ -792,6 +803,31 @@ function App() {
         }
       : null
 
+  // 她问出一个问题。**两条路(点学科 / 打字)在这儿汇合,后面完全一样。**
+  //
+  // 答得出就给那张卡;答不出就照实说「这个我也不知道,我们去问爸爸」——
+  // 宪法原则 5 写得很清楚:「我不知道」是一个必须实现的功能,不是失败。
+  // 所以这一支**没有任何失败的味道**:不换音效、不皱眉、不说「再想想」(原则 4),
+  // 用的就是她平时说话那个面板。
+  const answerAsk = useCallback(
+    (npcId: string, card: KnowledgeCardData | undefined, asked: string) => {
+      const npc = npcs?.[npcId]
+      setAskingNpc(null)
+      if (card) {
+        showCard(card)
+        return
+      }
+      const lines = knowledge.unknownLines
+      const say = lines.length > 0 ? lines[Math.floor(Math.random() * lines.length)] : '这个我也不知道'
+      setNpcTalk({ npcId, topic: { id: `unknown_${Date.now()}`, say }, isGift: true })
+      // **把答不上来的问题记进对话日志。** 「我们去问爸爸」这句话得能兑现 ——
+      // 爸爸在后台看得见她问过什么,才接得住;看不见的话那句话就是个死胡同。
+      // 复用现成的日志,没有新增存档字段
+      if (npc) logDialogue(npcId, npc.名字, `问:${asked} → 我不知道`)
+    },
+    [npcs, showCard, knowledge, logDialogue, setAskingNpc],
+  )
+
   // 换一片海:只换风景,海草床、饱腹度、换气都不动。第一次去某片海记进相册,
   // 并且一定给一张那片海的知识卡 —— 这种第一次不该靠掷骰子
   const pickSea = useCallback(
@@ -866,6 +902,10 @@ function App() {
         // 跟着宠物到处漂既不像样,还会跟宠物自己的交互抢热区
         canDraw: follow ? false : featureOn('画画送礼'),
         canGift: follow ? false : grownCount > 0 && save.giftedAt[id] !== new Date().toDateString(),
+        // 只有「图鉴总入口」这个角色功能的邻居才能被问(GDD §6.2:砗磲奶奶就是
+        // 白名单知识库的具身化)。写成读 npc.json 的角色功能,不写死 id ——
+        // 以后印度海湾的珍珠爷爷要是也担这个功能,填一行 JSON 就行
+        canAsk: follow ? false : askOn && (npc.角色功能 ?? []).includes('图鉴总入口'),
         hangings: follow
           ? []
           : (save.hangings[id] ?? [])
@@ -930,6 +970,14 @@ function App() {
             const npc = npcs?.[id]
             const cap = config?.开放NPC.find((n) => n.id === id)?.熟悉度上限 ?? 5
             if (npc) handleNpcGift(id, npc, cap)
+          }}
+          // 点「问她」。邻居正说着话就先把话收起 —— 按钮在那儿、点下去没反应
+          // 是这个项目最忌讳的死点击(和 onTapDraw 同一条处理)
+          onTapAsk={(id) => {
+            if (sceneId) return
+            if (!npcs?.[id]) return
+            setNpcTalk(null)
+            setAskingNpc(id)
           }}
           onSpotChanged={handleSpotChanged}
           // 点空木牌 = 给这儿起个名字。写过的牌没有热区,点不到
@@ -1026,6 +1074,22 @@ function App() {
           closeLabel="先不画"
           onConfirm={(png) => void saveCardDrawing(cardToDraw.id, png)}
           onClose={() => setCardToDraw(null)}
+        />
+      )}
+      {askingNpc && npcs?.[askingNpc] && (
+        <AskPanel
+          portrait={
+            npcs[askingNpc].头像 ? `${npcs[askingNpc].精灵}${npcs[askingNpc].头像}` : undefined
+          }
+          name={npcs[askingNpc].名字}
+          subjects={knowledge.subjects}
+          onPickSubject={(subject) =>
+            answerAsk(askingNpc, knowledge.pickBySubject(subject, save.knowledgeSeen), subject)
+          }
+          onAsk={(text) =>
+            answerAsk(askingNpc, knowledge.search(text, save.knowledgeSeen), text)
+          }
+          onClose={() => setAskingNpc(null)}
         />
       )}
       {seaPickerOpen && (

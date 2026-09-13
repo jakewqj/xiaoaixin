@@ -23,6 +23,7 @@ interface WorldCanvasProps {
   onTapBed: () => void
   onTapNpc: (id: string) => void
   onTapGift: (id: string) => void
+  onTapAsk: (id: string) => void
   onTapDraw: (id: string) => void
   onTapNote: (key: string) => void
   onSpotChanged: (index: number) => void
@@ -60,6 +61,7 @@ function WorldCanvas({
   onTapBed,
   onTapNpc,
   onTapGift,
+  onTapAsk,
   onTapDraw,
   onTapNote,
   onSpotChanged,
@@ -175,10 +177,11 @@ function WorldCanvas({
         return
       }
       if (id.startsWith('gift:')) onTapGift(id.slice(5))
+      if (id.startsWith('ask:')) onTapAsk(id.slice(4))
       if (id.startsWith('draw:')) onTapDraw(id.slice(5))
       if (id.startsWith('note:')) onTapNote(id.slice(5))
     },
-    [renderer, onTapPet, onTapAnchor, onTapBed, onTapNpc, onTapGift, onTapDraw, onTapNote],
+    [renderer, onTapPet, onTapAnchor, onTapBed, onTapNpc, onTapGift, onTapAsk, onTapDraw, onTapNote],
   )
 
   return (

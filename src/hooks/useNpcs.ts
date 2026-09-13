@@ -28,6 +28,10 @@ export interface NpcSpec {
   精灵规格?: { 尺寸: string }
   /** 「沙面」= 坐在海底(砗磲这类固着生物)。不写就是游在水里 */
   落位?: string
+  /** 角色在系统里担什么职。目前代码只认「图鉴总入口」—— 担这个职的邻居
+      身边会多一个「问她」按钮(3-4)。写成读字段而不是写死 id,
+      以后换人担这个职只要改一行 JSON */
+  角色功能?: string[]
   动画: Record<string, NpcAnim>
   话题库?: Record<string, NpcTopic[]>
   熟悉度上限?: number
