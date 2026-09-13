@@ -304,9 +304,9 @@
   * **「我们去问爸爸」要能兑现**:答不上来的问题记一条进对话日志(复用 `xiaoaixin_log`,没加存档字段),爸爸看得见才接得住。**这条不在 3-4 原文里,是我加的,可以否掉。**
   * **实测发现的两个真 bug**:① 三个按钮横着排出去,第三个正好压进右下角 HUD ——`elementsFromPoint` 顶层是「喂海草」,童童点「问她」会喂海草。改成**以 NPC 头顶为中心排**。② **输入框字号必须 ≥16px**,否则 iOS Safari 获焦时会把整页放大、打乱横屏锁定;所以面板活在舞台外面,字号 `max(16px, 12px × --ui-scale)`。
   * **看图才发现的**:名字和提示语第一版用 HUD 那个奶白,压在浅木面板上看不清。**浅底一律墨色**(S2-3 栽过一次)。
-  * 实测 **21/21 全过、控制台零报错,连跑两遍一致**。`npm run build` 通过;`npm run lint` **24 → 18**(顺手收掉 `useKnowledge` 里几条 unsafe-any,没新增)。提交在分支 `s3-4-ask-clam`(该分支建在 `lift-typing-ban` 上,那个修宪提交也在里面)。
+  * 实测 **21/21 全过、控制台零报错,连跑两遍一致**。`npm run build` 通过;`npm run lint` **24 → 18**(顺手收掉 `useKnowledge` 里几条 unsafe-any,没新增)。**已提交**:`e7b1814`(已合进 `main` 并推送;同一批带上了修宪那个提交 `2adb770`)。
 
-> **git 同步状态(2026-09-11 收工核对)**:核对时工作区干净、本地 `main` = `origin/main` = `e583a43`,五个分支全部已推到 `github.com/jakewqj/xiaoaixin`。上面各条里写的「尚未 git commit」都是当时的记录,**已逐条标注实际提交号,不要再照那句话判断**。下次核对用 `git fetch && git status -sb`,别只看 `git status`(不 fetch 的话落后了也看不出来)。
+> **git 同步状态(2026-09-14 核对)**:核对时工作区干净、本地 `main` = `origin/main` = `e7b1814`,五个分支全部已推到 `github.com/jakewqj/xiaoaixin`。上面各条里写的「尚未 git commit」都是当时的记录,**已逐条标注实际提交号,不要再照那句话判断**。下次核对用 `git fetch && git status -sb`,别只看 `git status`(不 fetch 的话落后了也看不出来)。
 
 ---
  
