@@ -73,6 +73,8 @@ export interface NpcView {
   canGift: boolean
   /** 「问她」按钮。只有砗磲奶奶有 —— 她是白名单知识库的具身化(GDD §6.2) */
   canAsk: boolean
+  /** 绿绿的委托按钮(ROADMAP 3-6)。没有委托可说时是 false,按钮就不出现 */
+  canQuest: boolean
   // 挂在这个邻居身边木板上的画,最多 3 张,新的在后。传进来的是 object URL,
   // 由 useDrawingUrls 从 IndexedDB 转出来 —— 渲染层只认路径,不认识数据库
   hangings: string[]
@@ -466,6 +468,16 @@ function drawNpcs(ctx: CanvasRenderingContext2D, s: ActorState, spots: Hotspot[]
         id: `ask:${npc.id}`,
         label: `问${npc.name}一个问题`,
         icon: `${WORLD_DIR}/ui/icons/question.png`,
+      })
+    }
+    // 委托。图标是信封 —— 绿绿是信使,委托就是她捎来的一封信。
+    // **不能借用 icon_map.png**,那个在 HUD 里已经是「换一片海」了,一个图标两个意思
+    // 等于没有图标,而原则 2 的底线是「只看图标也能完成操作」
+    if (npc.canQuest) {
+      buttons.push({
+        id: `quest:${npc.id}`,
+        label: `听听${npc.name}说什么`,
+        icon: `${WORLD_DIR}/ui/icons/letter.png`,
       })
     }
     const slot = assets.get(`${WORLD_DIR}/ui/sv/slot.png`)

@@ -194,6 +194,14 @@ export function useKnowledge(blocked: string[] = []) {
     return order.filter((s) => open.some((card) => card.学科.includes(s)))
   }, [open])
 
+  // 按 id 取一张。委托做完时给的那张卡走这条路(ROADMAP 3-6)。
+  // **不看冷却** —— 那是一辈子只发生一次的时刻,和「长大一点」那种 必定=true 同一类;
+  // 但**照样过屏蔽那道闸**(取的是 open 不是 cards):爸爸屏蔽掉的卡不该从委托里漏出去
+  const cardById = useCallback(
+    (id: string | null | undefined) => (id ? open.find((card) => card.id === id) : undefined),
+    [open],
+  )
+
   // 图鉴里放两种卡:本来就住在图鉴里的,和她已经在海里遇到过的。
   // 不显示「还没解锁」的格子,也不显示总数 —— 她不知道一共有多少张,就没有什么可集齐的
   const bookCards = useCallback(
@@ -202,5 +210,5 @@ export function useKnowledge(blocked: string[] = []) {
     [open],
   )
 
-  return { anchors, subjects, unknownLines, bookCards, pickByAnchor, pickByEvent, pickBySubject, search }
+  return { anchors, subjects, unknownLines, bookCards, cardById, pickByAnchor, pickByEvent, pickBySubject, search }
 }

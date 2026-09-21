@@ -52,7 +52,7 @@
     "图鉴手绘页": true,
     "问问题": true,
     "自然事件": false,
-    "委托": false,
+    "委托": true,
     "交易": false,
     "三个罐子": false,
     "画画送礼": true,

@@ -8,6 +8,7 @@ import DialoguePanel from './components/DialoguePanel'
 import type { PanelContent } from './components/DialoguePanel'
 import KnowledgeCard from './components/KnowledgeCard'
 import Book from './components/Book'
+import { useQuests } from './hooks/useQuests'
 import Album from './components/Album'
 import type { AlbumDrawing } from './components/Album'
 import SeaPicker from './components/SeaPicker'
@@ -105,6 +106,12 @@ function App() {
     npcId: string
     topic: NpcTopic
     isGift: boolean
+    // 这句话说完之后要递上来的图鉴卡(委托做完那一下,ROADMAP 3-6)。
+    // **挂在这句话身上,不另开 state 或 ref**:开 state + effect 会多两条
+    // `set-state-in-effect` 警告,用 ref 则会被 react-hooks/refs 顺着
+    // `panelContent → onDismiss` 追成「render 期间读 ref」的 error。
+    // 这个仓库的规矩是 lint 一条都不新增
+    thenCard?: KnowledgeCardData
   } | null>(null)
   const [reactingNpc, setReactingNpc] = useState<string | null>(null)
   // 小金正在「跟着复读」。只切他的 talk 动画,不弹对话框 —— 复读是声音不是一段话,
@@ -136,6 +143,26 @@ function App() {
   // 以前 config 的「知识卡.屏蔽」能填不能用,是个死控件;3-4 让砗磲奶奶直接从
   // 白名单取卡,不接上的话爸爸屏蔽的卡会从她嘴里漏出去
   const knowledge = useKnowledge(config?.知识卡.屏蔽)
+
+  const quests = useQuests()
+
+  // 委托的上报口(ROADMAP 3-6)。四个动作各自在自己那条路上喊一声,
+  // 由这里判断要不要把挂着的那条标成「做完了」。
+  //
+  // **只标 done,不在这里发奖** —— 熟悉度和图鉴卡要等她回去告诉绿绿。
+  // 这样做的理由:「完成给熟悉度」给的是和绿绿的关系,关系不该在她不在场的时候涨。
+  // 回不回去、什么时候回去都随便,不回去也没有任何损失(无时限、无失败)
+  const reportQuest = useCallback(
+    (event: string, target?: string) => {
+      update((prev) =>
+        quests.settles(prev, event, target) && prev.quest
+          ? { quest: { id: prev.quest.id, done: true } }
+          : {},
+      )
+    },
+    [update, quests],
+  )
+
 
   // config.json 的「系统开关」。在这之前这些开关一个都没人读 —— 爸爸在后台拨了不响,
   // 而「按钮在、点了没反应」和「开关拨了没变化」是同一类死控件(2026-08-24 接上)。
@@ -228,6 +255,11 @@ function App() {
   const askOn = featureOn('问问题')
   // 正在问谁。null = 没在问
   const [askingNpc, setAskingNpc] = useState<string | null>(null)
+
+  // 委托(ROADMAP 3-6)。关掉之后**已经挂着的那条不消失、也不作废** ——
+  // 只是绿绿身边不再出现那个按钮;开关拨回来它还在原处等着(原则 6:变化永远可逆)
+  const questOn = featureOn('委托')
+  const questPhase = quests.phaseOf(save)
 
   const noteViews: NoteView[] = useMemo(() => {
     const views: NoteView[] = []
@@ -335,8 +367,10 @@ function App() {
         drawingOrigins: { ...prev.drawingOrigins, [drawingId]: key },
         notes: { ...prev.notes, [key]: drawingId },
       }))
+      // 只有给**海草**起名才算。给地点起名是另一件事,别顺手也算进去
+      if (key.startsWith('seagrass:')) reportQuest('给海草起名')
     },
-    [update],
+    [update, reportQuest],
   )
 
   // 送礼:每个邻居每天只能送 1 次,礼物是已经长成的海草——不消耗数量,和喂食一个道理。
@@ -425,8 +459,9 @@ function App() {
       setNpcTalk({ npcId, topic: { id: `drawing_${tier}`, say: reaction.text }, isGift: true })
       if (npc.动画.happy) setReactingNpc(npcId)
       bumpFamiliarity(npcId, cap)
+      reportQuest('送画给邻居', npcId)
     },
-    [bumpFamiliarity, update],
+    [bumpFamiliarity, update, reportQuest],
   )
 
   function handleNpcGift(id: string, npc: NpcSpec, cap: number) {
@@ -435,6 +470,40 @@ function App() {
     setNpcTalk({ npcId: id, topic: { id: `gift_${tier}`, say: reaction.text }, isGift: true })
     if (npc.动画.happy) setReactingNpc(id)
     giveGift(id, cap)
+  }
+
+  // 点绿绿的委托按钮。三种情形:
+  //   report — 事情做完了,回来告诉她。**奖励在这一刻才发**:熟悉度 +1(和聊天、
+  //            送礼共用同一条「每天最多涨一级」,不叠加)+ 那张图鉴卡。
+  //            「完成给熟悉度」给的是和她的关系,关系不该在她不在场的时候涨
+  //   active — 还没做完,她把委托再说一遍。**点几次说几次**,没有次数限制,
+  //            也不会因为问过一次就不肯再说(无时限、无失败)
+  //   new    — 今天的新委托。接下之后记一天,今天不再给第二条
+  function handleQuest(id: string, npc: NpcSpec, cap: number) {
+    setNpcTalk(null)
+    const hanging = quests.byId(save.quest?.id)
+    if (save.quest?.done) {
+      setNpcTalk({
+        npcId: id,
+        topic: { id: `quest_done_${save.quest.id}`, say: hanging?.完成语 ?? '谢谢你' },
+        isGift: true,
+        // 没填卡、或者那张卡被爸爸屏蔽了,就不带卡 —— 那次只给熟悉度
+        thenCard: knowledge.cardById(hanging?.知识卡),
+      })
+      if (npc.动画.happy) setReactingNpc(id)
+      update((prev) => ({
+        quest: null,
+        questsDone: prev.quest ? [...prev.questsDone, prev.quest.id] : prev.questsDone,
+      }))
+      bumpFamiliarity(id, cap)
+      return
+    }
+    const current = hanging ?? quests.nextQuest(save)
+    if (!current) return
+    if (!save.quest) {
+      update({ quest: { id: current.id, done: false }, questTakenAt: new Date().toDateString() })
+    }
+    setNpcTalk({ npcId: id, topic: { id: `quest_${current.id}`, say: current.say }, isGift: true })
   }
 
   // 摆一会儿姿势就回到平时的样子。
@@ -549,13 +618,6 @@ function App() {
     return () => clearTimeout(timer)
   }, [recitingNpc])
 
-  // 送礼的反馈自己会走,不用她做任何事;当然也能直接点一下提前收起(DialoguePanel 的点击收起逻辑)
-  useEffect(() => {
-    if (!npcTalk?.isGift) return
-    const timer = setTimeout(() => setNpcTalk(null), GIFT_REPLY_MS)
-    return () => clearTimeout(timer)
-  }, [npcTalk])
-
   // 条件自己不成立了就把气泡收起来。比如她没点选项,而是直接去戳小爱心把气换了
   useEffect(() => {
     if (!sceneId || !TRIGGERED.includes(sceneId)) return
@@ -585,6 +647,22 @@ function App() {
     },
     [update],
   )
+
+  // 收起邻居那句话。**排着队的委托卡在这一刻递上来** —— 她把完成语看完了,
+  // 位置才腾得出来。她中途跑去干别的(点画画、点别的邻居)不走这条路,
+  // 那张卡就这次不给了 —— 没有任何损失,那张卡照旧挂在它本来的触发点上
+  const dismissNpcTalk = useCallback(() => {
+    const pending = npcTalk?.thenCard
+    setNpcTalk(null)
+    if (pending) showCard(pending)
+  }, [npcTalk, showCard])
+
+  // 送礼的反馈自己会走,不用她做任何事;当然也能直接点一下提前收起(DialoguePanel 的点击收起逻辑)
+  useEffect(() => {
+    if (!npcTalk?.isGift) return
+    const timer = setTimeout(() => dismissNpcTalk(), GIFT_REPLY_MS)
+    return () => clearTimeout(timer)
+  }, [npcTalk, dismissNpcTalk])
 
   // 帮它换完气之后,有小概率主动说一句相关的知识。
   // 放在这里而不是 effect 里:换气完成是一次事件,不是一个持续状态,effect 会重复触发
@@ -658,6 +736,7 @@ function App() {
     if (sceneId === 'seagrass_grown') {
       update({ grownSeen: grownCount })
       remember('first_grown')
+      reportQuest('海草长成')
     }
 
     // 陪她长大的那一天记进相册,并且这一次一定给一张关于长大的知识卡 ——
@@ -799,7 +878,7 @@ function App() {
                   onSelect: () => handleNpcChoose(npcTalk.npcId, talkingNpc, cap, option),
                 }
               }),
-          onDismiss: npcTalk.isGift ? () => setNpcTalk(null) : undefined,
+          onDismiss: npcTalk.isGift ? dismissNpcTalk : undefined,
         }
       : null
 
@@ -813,6 +892,10 @@ function App() {
     (npcId: string, card: KnowledgeCardData | undefined, asked: string) => {
       const npc = npcs?.[npcId]
       setAskingNpc(null)
+      // **问出口就算数,答不答得上来都算。** 委托是「去问问砗磲奶奶」,
+      // 做的那件事是「问」;答不上来是她的功能不是失败(原则 5),
+      // 拿它当委托没完成会让「我不知道」重新变成一种失败
+      reportQuest('问了砗磲奶奶', npcId)
       if (card) {
         showCard(card)
         return
@@ -825,7 +908,7 @@ function App() {
       // 复用现成的日志,没有新增存档字段
       if (npc) logDialogue(npcId, npc.名字, `问:${asked} → 我不知道`)
     },
-    [npcs, showCard, knowledge, logDialogue, setAskingNpc],
+    [npcs, showCard, knowledge, logDialogue, setAskingNpc, reportQuest],
   )
 
   // 换一片海:只换风景,海草床、饱腹度、换气都不动。第一次去某片海记进相册,
@@ -906,6 +989,15 @@ function App() {
         // 白名单知识库的具身化)。写成读 npc.json 的角色功能,不写死 id ——
         // 以后印度海湾的珍珠爷爷要是也担这个功能,填一行 JSON 就行
         canAsk: follow ? false : askOn && (npc.角色功能 ?? []).includes('图鉴总入口'),
+        // 委托同样写成读 npc.json 的角色功能,不写死 lvlv ——
+        // 以后换谁发委托,改一行 JSON 就行。phase 是 idle 时按钮不出现:
+        // 四条全做完、或者今天已经接过并且回报过了,留一个只会重复同一句话的
+        // 按钮在那儿就是死控件
+        canQuest: follow
+          ? false
+          : questOn &&
+            (npc.角色功能 ?? []).includes('委托发布') &&
+            questPhase !== 'idle',
         hangings: follow
           ? []
           : (save.hangings[id] ?? [])
@@ -998,6 +1090,15 @@ function App() {
             if (!npcs?.[id]) return
             setNpcTalk(null)
             setDrawingFor(id)
+          }}
+          // 点委托。和「问她」「画画」同一条处理:她正说着话就先把话收起,
+          // 按钮在那儿、点下去没反应是这个项目最忌讳的死点击
+          onTapQuest={(id) => {
+            if (sceneId) return
+            const npc = npcs?.[id]
+            if (!npc) return
+            const cap = config?.开放NPC.find((n) => n.id === id)?.熟悉度上限 ?? 5
+            handleQuest(id, npc, cap)
           }}
           hud={
             <>

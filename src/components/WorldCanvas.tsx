@@ -25,6 +25,7 @@ interface WorldCanvasProps {
   onTapGift: (id: string) => void
   onTapAsk: (id: string) => void
   onTapDraw: (id: string) => void
+  onTapQuest: (id: string) => void
   onTapNote: (key: string) => void
   onSpotChanged: (index: number) => void
   /** 她真的低头开吃 / 吃完抬头的那一刻。游去海草床的路上还不算「在吃」 */
@@ -63,6 +64,7 @@ function WorldCanvas({
   onTapGift,
   onTapAsk,
   onTapDraw,
+  onTapQuest,
   onTapNote,
   onSpotChanged,
   onEatingChanged,
@@ -102,6 +104,12 @@ function WorldCanvas({
       `${WORLD_DIR}/ui/sv/slot.png`,
       `${WORLD_DIR}/ui/icon_sprout.png`,
       `${WORLD_DIR}/ui/icons/pencil.png`,
+      // 邻居身边那排按钮的图标**全部要在这儿列一遍**。assets.get 没载到就返回 null,
+      // 画的那一行是 `if (icon) drawImage` —— 没列的图标不会报错,只是**按钮里空着一个框**。
+      // `question.png`(3-4 的「问她」)就是这么漏的:热区在、aria-label 在、点得动,
+      // 所以那轮 21/21 全过,但框里没有图。letter.png 是 3-6 的委托,顺手一起列上
+      `${WORLD_DIR}/ui/icons/question.png`,
+      `${WORLD_DIR}/ui/icons/letter.png`,
       `${WORLD_DIR}/hang_board.png`,
       `${WORLD_DIR}/note_tag.png`,
       ...srcKey.split('|').filter(Boolean),
@@ -179,9 +187,10 @@ function WorldCanvas({
       if (id.startsWith('gift:')) onTapGift(id.slice(5))
       if (id.startsWith('ask:')) onTapAsk(id.slice(4))
       if (id.startsWith('draw:')) onTapDraw(id.slice(5))
+      if (id.startsWith('quest:')) onTapQuest(id.slice(6))
       if (id.startsWith('note:')) onTapNote(id.slice(5))
     },
-    [renderer, onTapPet, onTapAnchor, onTapBed, onTapNpc, onTapGift, onTapAsk, onTapDraw, onTapNote],
+    [renderer, onTapPet, onTapAnchor, onTapBed, onTapNpc, onTapGift, onTapAsk, onTapDraw, onTapQuest, onTapNote],
   )
 
   return (

@@ -76,6 +76,15 @@ export interface SaveData {
   // 她真的游到过的地点 id。**只用来决定「起名字的木牌」出不出现** ——
   // 没去过的地方不该先摆一块空牌在那儿等她。只增不减,和熟悉度一个道理
   visited: string[]
+  // 委托(ROADMAP 3-6):现在挂着的那一条。**无时限、无失败** —— 不做就一直挂着,
+  // 没有倒计时、没有放弃、没有任何惩罚(宪法十六:不做时间压力)。
+  // done = 事情做完了但还没回去告诉绿绿;跟她说过之后这里清空、id 进 questsDone
+  quest: { id: string; done: boolean } | null
+  // 做完并且跟绿绿说过的委托 id。只增不减,用来轮到下一条
+  questsDone: string[]
+  // 上次**接**委托的那天(toDateString)。「每天最多 1 条」就是靠这一条,
+  // 和 giftedAt / familiarityLastAt 同一个写法
+  questTakenAt: string
 }
 
 function createSave(): SaveData {
@@ -103,6 +112,9 @@ function createSave(): SaveData {
     cardDrawings: {},
     drawingOrigins: {},
     visited: [],
+    quest: null,
+    questsDone: [],
+    questTakenAt: '',
   }
 }
 
@@ -257,6 +269,15 @@ function parseSave(raw: string | null): SaveData | null {
       visited: Array.isArray(s.visited)
         ? s.visited.filter((id): id is string => typeof id === 'string')
         : [],
+      // 委托是 S3-6 才加的。老存档没有就是「还没接过任何一条」,不因此作废整份档
+      quest:
+        s.quest && typeof s.quest === 'object' && typeof s.quest.id === 'string'
+          ? { id: s.quest.id, done: s.quest.done === true }
+          : null,
+      questsDone: Array.isArray(s.questsDone)
+        ? s.questsDone.filter((id): id is string => typeof id === 'string')
+        : [],
+      questTakenAt: typeof s.questTakenAt === 'string' ? s.questTakenAt : '',
       ...withBed(s),
     }
   } catch {

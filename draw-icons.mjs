@@ -496,6 +496,17 @@ def('redraw', (g) => {
   }
 })
 
+// 信封:绿绿是信使,委托就是她捎来的一封信(ROADMAP 3-6)。
+// **折口必须画出来** —— 16px 上一个光秃秃的矩形读不出是「信」,只是一块纸。
+// 折口用 skinDim 不用 sand:sand 和 cream 差了不到一档,压在一起等于没画
+def('letter', (g) => {
+  for (let y = 5; y <= 11; y++) for (let x = 3; x <= 12; x++) set(g, x, y, C.cream)
+  line(g, 3, 5, 7, 9, C.skinDim)
+  line(g, 12, 5, 8, 9, C.skinDim)
+  set(g, 7, 9, C.skinDim)
+  set(g, 8, 9, C.skinDim)
+})
+
 // ---- 输出 -----------------------------------------------------------------
 const names = Object.keys(ICONS).sort()
 for (const name of names) savePng(`${DIR}/${name}.png`, ICONS[name])
