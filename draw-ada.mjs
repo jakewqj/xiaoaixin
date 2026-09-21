@@ -210,7 +210,10 @@ function createCharacter() {
   // 7) 腹甲、脖子、头、喙。顺序要紧:脖子先铺,头压上去,鹰嘴最后 —— 钩才盖得住下颌
   fillSpans(mask, PLASTRON, C.belly)
   for (let x = 21; x <= 59; x++) paint(x, 37, C.skinShade)   // 腹甲底影,免得整条跳成白带
-  for (const x of [31, 32, 45, 46, 57, 58]) paint(x, 35, C.seam)
+  // 腹甲接缝。**竖着划穿奶白带,不是横着点两格** —— 横的那版和带子同向,
+  // 读出来是腹甲上掉了两粒脏东西,不是缝。奶白带三行都齐的范围是 x 19–50,
+  // 原来的第三道在 x 57/58,**整个落在带外坐在肉色上**,是纯脏点,删掉
+  for (const x of [31, 45]) for (let y = 34; y <= 36; y++) paint(x, y, C.seam)
   for (let i = 0; i < HEAD_FRONT.length; i++) {
     const y = HEAD_Y0 + i
     for (let x = HEAD_BACK[i]; x <= HEAD_FRONT[i]; x++) {
@@ -257,8 +260,14 @@ function createCharacter() {
   for (let x = 62; x <= 67; x++) paint(x, 29, C.skinShade)
 
   // 12) 鳍上的骨线、后缘暗面和爪。少了这些前鳍就是一团没细节的肉色,读不出是桨
-  for (const [x, y] of [[55, 34], [57, 35], [59, 36], [61, 37], [63, 38], [65, 39], [67, 40]]) {
-    if (parts.flipperF.has(`${x},${y}`)) parts.flipperF.set(`${x},${y}`, C.seam)
+  // 骨线**每步画两格,连起来**。原来步长是 x+2 / y+1,两点之间连对角都不挨着,
+  // 七个点四周全是肉色 —— 这就是「散点读成脏,不是鳞片」(颈鳞那处已经改过一次,
+  // 这条当时漏了)。现在是一道 8 邻接连续的斜阶梯,才读得出是桨上的骨脊
+  for (let i = 0; i < 7; i++) {
+    const y = 34 + i
+    for (const x of [55 + i * 2, 56 + i * 2]) {
+      if (parts.flipperF.has(`${x},${y}`)) parts.flipperF.set(`${x},${y}`, C.seam)
+    }
   }
   for (const [y, x0, x1] of [[44, 50, 69], [45, 53, 68], [46, 56, 67]]) {
     for (let x = x0; x <= x1; x++) if (parts.flipperF.has(`${x},${y}`)) parts.flipperF.set(`${x},${y}`, C.skinShade)
@@ -391,7 +400,11 @@ function createPortrait() {
 
   // 3) 吻背上的额鳞,一列盾片。缝隙用深色勾出来才数得清
   shadeBand([[11, 7, 12], [12, 6, 11], [13, 6, 10]], P.shellBrown)
-  for (const [x, y] of [[9, 11], [7, 12], [12, 11]]) shade(x, y, P.seam)
+  // 缝**竖着划穿整条额鳞带**(y11–13),一道就够。原来是三粒孤立的深点,
+  // 其中 (7,12) 紧贴轮廓、只是把描边加粗了,另外两粒 #5e341c 压在 #884c27 上
+  // 对比度太低 —— 放大看根本读不出是缝,既没起作用又是散点。
+  // 48px 上这条带只有 6 格宽,划两道会比画布能承受的更密(头像那几轮的老教训)
+  for (let y = 11; y <= 13; y++) shade(9, y, P.seam)
 
   // 4) 眼睛:圆、大、只压一层薄眼睑。**上面不画眉脊** —— 那一道深色横脊是
   //    「海龟 → 猛禽」的开关,前几版就是这么翻的
