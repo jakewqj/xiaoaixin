@@ -8,6 +8,10 @@ export interface KnowledgeCardData {
   锚点?: string
   事件?: string
   图鉴?: boolean
+  // 这张卡进图鉴的哪一页(ROADMAP 3-5)。**不写就是「关于我」那一页** ——
+  // 讲她这个物种的事跟着她走,换到哪片海都在;讲某片海里的环境、邻居、故事的才写。
+  // 值是 world.json 里的海域名(红海浅滩 / 印度海湾 / 澳洲浅海),不是 seas.ts 的 id
+  海域?: string
 }
 
 interface RawCard extends KnowledgeCardData {

@@ -1,7 +1,27 @@
+import { useState } from 'react'
 import type { KnowledgeCardData } from '../hooks/useKnowledge'
+import { SEAS } from '../lib/seas'
 import PixelIcon from './PixelIcon'
 
 const SUBJECT_ORDER = ['生物', '自然', '数学', '历史', '百科']
+
+// 不写「海域」的卡归这一页。讲她这个物种的事(用肺呼吸、尾巴像鲸鱼、妈妈托我换
+// 第一口气)跟着她走,换到哪片海都在 —— 把这些挂到红海名下是不对的
+const SELF_PAGE = '关于我'
+
+// 海域的先后照 seas.ts,不在这里再抄一份名单。爸爸在 knowledge.json 里
+// 写了个不认识的海域名时,那一页仍然摆出来(排在最后),不让卡凭空消失
+function pagesOf(cards: KnowledgeCardData[]) {
+  const order = [SELF_PAGE, ...SEAS.map((sea) => sea.name)]
+  const seen = [...new Set(cards.map((card) => card.海域 ?? SELF_PAGE))]
+  const rank = (name: string) => {
+    const i = order.indexOf(name)
+    return i < 0 ? order.length : i
+  }
+  return seen
+    .sort((a, b) => rank(a) - rank(b))
+    .map((name) => ({ name, list: cards.filter((card) => (card.海域 ?? SELF_PAGE) === name) }))
+}
 
 interface BookProps {
   cards: KnowledgeCardData[]
@@ -15,14 +35,22 @@ interface BookProps {
 }
 
 // 图鉴。只摆出她已经见过的和本来就住在这里的,不显示总数、不显示未解锁的格子 ——
-// 她不知道一共有多少张,就没有什么需要集齐
+// 她不知道一共有多少张,就没有什么需要集齐。
+// 按海域分页(ROADMAP 3-5):**没去过的海不出现那一页** —— 摆一个空标签出来,
+// 就是变相告诉她「这儿还有一片没集齐」,和不显示未解锁格子是同一条线
 function Book({ cards, drawings, canDraw, onDraw, onClose }: BookProps) {
+  const pages = pagesOf(cards)
+  const [active, setActive] = useState(0)
+  // 卡是开图鉴那一刻算好传进来的,理论上不会中途变;夹一下纯粹是不让越界
+  const current = pages[Math.min(active, pages.length - 1)]
+  const pageCards = current?.list ?? []
+
   const groups = SUBJECT_ORDER.map((subject) => ({
     subject,
-    list: cards.filter((card) => card.学科 === subject),
+    list: pageCards.filter((card) => card.学科 === subject),
   })).filter((group) => group.list.length > 0)
 
-  const others = cards.filter((card) => !SUBJECT_ORDER.includes(card.学科))
+  const others = pageCards.filter((card) => !SUBJECT_ORDER.includes(card.学科))
   if (others.length > 0) groups.push({ subject: '还有', list: others })
 
   // 「你画了 N 张」就只是这一句(ROADMAP 2-7 明写:不做进度条、不做完成度百分比)。
@@ -31,21 +59,55 @@ function Book({ cards, drawings, canDraw, onDraw, onClose }: BookProps) {
 
   return (
     <div className="fixed inset-0 z-20 overflow-y-auto bg-parchment">
-      <div className="sticky top-0 flex items-center gap-4 border-b-4 border-wood-dark bg-wood px-5 py-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="hud-panel-lg flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
-        >
-          <PixelIcon emoji="🌊" scaled />
-          <span className="ui-text font-kuaile text-[#f8e8c8]">回海里</span>
-        </button>
-        {drawn > 0 && (
-          <span className="ui-text font-kuaile text-[#f8e8c8]">你画了 {drawn} 张</span>
+      <div className="sticky top-0 border-b-4 border-wood-dark bg-wood">
+        <div className="flex items-center gap-4 px-5 py-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="hud-panel-lg flex min-h-14 cursor-pointer items-center gap-2 px-4 py-2 transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart"
+          >
+            <PixelIcon emoji="🌊" scaled />
+            <span className="ui-text font-kuaile text-[#f8e8c8]">回海里</span>
+          </button>
+          {drawn > 0 && (
+            <span className="ui-text font-kuaile text-[#f8e8c8]">你画了 {drawn} 张</span>
+          )}
+        </div>
+
+        {/* 只有一页时不摆标签 —— 一个孤零零的标签不是选择,是噪音 */}
+        {pages.length > 1 && (
+          <div role="tablist" aria-label="海域" className="flex flex-wrap gap-2 px-5 pb-2">
+            {pages.map((page, i) => {
+              const on = page === current
+              return (
+                <button
+                  key={page.name}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setActive(i)}
+                  // 没选中的那个**不压透明度**。60% 的奶白压在木色上截图一看就读不清,
+                  // 而童童正在认字,一个读不出来的标签等于没有(原则 2 的底线)。
+                  // 选中与否靠有没有那块奶白木牌区分,比调淡文字清楚得多
+                  className={
+                    on
+                      ? 'sv-plate-lg ui-text font-kuaile cursor-pointer px-4 py-2 text-ink'
+                      : 'ui-text font-kuaile cursor-pointer px-4 py-2 text-[#f8e8c8] transition-transform active:translate-y-px focus-visible:outline-4 focus-visible:outline-offset-2 focus-visible:outline-heart'
+                  }
+                >
+                  {page.name}
+                </button>
+              )
+            })}
+          </div>
         )}
       </div>
 
-      <div className="mx-auto flex max-w-2xl flex-col gap-7 px-5 pt-2 pb-16">
+      <div
+        role="tabpanel"
+        aria-label={current?.name}
+        className="mx-auto flex max-w-2xl flex-col gap-7 px-5 pt-2 pb-16"
+      >
         {groups.map((group) => (
           <section key={group.subject} className="flex flex-col gap-3">
             {/* 标题和正文同字号,靠颜色分层级 —— 和对话面板里「说话人 vs 台词」一个做法。
