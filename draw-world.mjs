@@ -1311,4 +1311,75 @@ savePng(`${DIR}/anemone.png`, anemone(
   savePng(`${DIR}/wreck_mast.png`, crop(g))
 }
 
+// ---- 月亮的八个相位(ROADMAP 4-1) -----------------------------------------
+// 换气浮上水面那一下,镜头往上摇过水面线,天空才进画面 —— 月亮就摆在那儿。
+// **八张图,按 lib/time.ts 算出的真实月相选一张**,不是随便挑一个好看的。
+//
+// 画法:先铺满一个亮盘,再用「被照亮的边界」把暗的那半切掉。
+// 边界是一条椭圆弧:满月时看不见,上下弦时是一条直线,新月时和圆盘边缘重合 ——
+// 这正是真实月相的几何(晨昏线在球面上是个大圆,侧看是椭圆)
+{
+  const D = 15            // 直径。奇数,圆心落在整像素上
+  const R = (D - 1) / 2
+  const LIT = [246, 240, 214, 255]      // 被太阳照亮的那面:暖白
+  // 背光面:偏蓝的灰,**不画成黑** —— 黑洞比暗更吓人(宪法二),而且真实的新月
+  // 也不是全黑的(地照)。**这个灰要比描边亮出一大截**:第一版 #747c94 和描边
+  // #464e68 太近,凸月那 3px 暗边和 1px 描边糊成一条粗边,读成鳞边不是月相,
+  // f3 / f5 因此和满月分不出来 —— 名字说「快圆了」画面却是满月,那是在教错东西
+  const DARK = [150, 160, 190, 255]
+  const EDGE = [58, 64, 92, 255]
+  for (let f = 0; f < 8; f++) {
+    const g = grid(D, D)
+    // phase 0 = 新月,4 = 满月。k 是晨昏线椭圆的横向半径(带符号)
+    const angle = (f / 8) * Math.PI * 2
+    const k = -Math.cos(angle)          // f=0 → -1(全暗),f=4 → +1(全亮)
+    for (let y = 0; y < D; y++) {
+      for (let x = 0; x < D; x++) {
+        const dx = (x - R) / R
+        const dy = (y - R) / R
+        if (dx * dx + dy * dy > 1) continue
+        // 晨昏线:圆盘上横坐标为 k·√(1-dy²) 的那条弧
+        const term = k * Math.sqrt(Math.max(0, 1 - dy * dy))
+        // f<4 是上半月(右边亮),f>4 是下半月(左边亮)
+        const rightLit = f <= 4
+        const lit = rightLit ? dx >= -term : dx <= term
+        set(g, x, y, lit ? LIT : DARK)
+      }
+    }
+    outline(g, EDGE)
+    savePng(`${DIR}/moon_${f}.png`, g)
+  }
+}
+
+// ---- 星星(夜空平铺一张)----------------------------------------------------
+// 和 sky.png 同宽(96),高度只盖到水面线以上那 46 行 —— 星星不该出现在海里。
+// 三档亮度,疏密不均:均匀撒点会读成噪点,不是星空
+{
+  const W = 96
+  const H = 46
+  const g = grid(W, H)
+  const TIERS = [
+    [[255, 255, 255, 255], 10],
+    [[226, 234, 248, 210], 16],
+    [[190, 202, 226, 150], 22],
+  ]
+  for (let t = 0; t < TIERS.length; t++) {
+    const [col, count] = TIERS[t]
+    for (let i = 0; i < count; i++) {
+      const x = Math.floor(hash(t, i, 7) * W)
+      // 越靠上越密 —— 天顶星多,接近海平线的一截被地平雾吃掉
+      const y = Math.floor(Math.pow(hash(i, t, 13), 1.6) * (H - 6))
+      set(g, x, y, col)
+      // 最亮的那一档画成十字,一眼看得出是星不是尘
+      if (t === 0 && hash(i, 3, t) > 0.6) {
+        set(g, x - 1, y, [col[0], col[1], col[2], 120])
+        set(g, x + 1, y, [col[0], col[1], col[2], 120])
+        set(g, x, y - 1, [col[0], col[1], col[2], 120])
+        set(g, x, y + 1, [col[0], col[1], col[2], 120])
+      }
+    }
+  }
+  savePng(`${DIR}/stars.png`, g)
+}
+
 console.log('World layer art v2 generated in ' + DIR + '/')

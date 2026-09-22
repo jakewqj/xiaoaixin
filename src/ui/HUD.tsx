@@ -48,6 +48,17 @@ function HUD({ snapshot, onSlotTap, onHoldTitle }: HudProps) {
     hudStore.set(snapshot)
   }, [snapshot])
 
+  // 顶栏那两行字的读屏文本。**canvas 画什么,这里就念什么** ——
+  // 顺序和画面一致(第几天 → 季节 → 月相 → 潮汐),用顿号隔开
+  const statusLabel = [
+    `第 ${snapshot.day} 天`,
+    snapshot.season,
+    snapshot.moonPhase,
+    snapshot.tide,
+  ]
+    .filter(Boolean)
+    .join('、')
+
   // 重画一帧。热区是画出来的副产物,和像素永远对得上
   const redraw = useCallback(() => {
     const ctx = ctxRef.current
@@ -131,6 +142,10 @@ function HUD({ snapshot, onSlotTap, onHoldTitle }: HudProps) {
       {/* 饱食度条现在画在 canvas 上,canvas 没有语义。补一个只给读屏器看的节点,
           role 和 label 与它取代的 FullnessMeter 保持一致。它不可点,所以不进 Tab 顺序 */}
       <div className="sr-only" role="img" aria-label="小爱心的肚子" />
+      {/* 顶栏那两行字(第几天 / 季节 / 月相 / 潮汐)同样画在 canvas 上、同样没有语义 ——
+          §二十二·4 要求非交互元素补 sr-only,饱食度条补了,这一条一直漏着。
+          S4-1 让这几个字变成真数据之后更该补:它是「今天月亮什么样」的唯一文字出口 */}
+      <div className="sr-only" role="img" aria-label={statusLabel} />
       {/* 透明热区层:canvas 出像素,这里出语义。opacity-0 而不是 hidden ——
           hidden 会让读屏器也读不到,那就白铺了 */}
       {hotspots.map((spot) =>

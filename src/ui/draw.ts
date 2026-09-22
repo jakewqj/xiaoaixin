@@ -57,12 +57,12 @@ function drawTopBar(ctx: CanvasRenderingContext2D, snap: HudSnapshot, spots: Hot
   const dial = assets.get(TEX.dial)
   if (dial) ctx.drawImage(dial, TOP.dial.x, TOP.dial.y)
 
-  // 第一行:第 N 天 + 季节。天数是存档里的真数据,季节是 S4 之前的占位
+  // 第一行:第 N 天 + 季节。两个都是真数据(季节自 S4-1 起按日历算)
   let x = TOP.line1.x
   x += drawText(ctx, `第${snap.day}天`, x, TOP.line1.y, COLOR.ink, SIZES.normal) + 6
   if (snap.season) drawText(ctx, snap.season, x, TOP.line1.y, COLOR.inkDim, SIZES.normal)
 
-  // 第二行:月相 + 潮汐。两个都是 S4 之前的占位文字
+  // 第二行:月相 + 潮汐。两个都是真数据(S4-1 起按真实朔望月和太阴日算,见 lib/time.ts)
   x = TOP.line2.x
   icon(ctx, `${UI_DIR}/icon_moon.png`, x, TOP.line2.y + 1)
   x += 12

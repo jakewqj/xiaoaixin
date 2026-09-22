@@ -14,7 +14,7 @@ import * as assets from '../assets'
 import { EASE_IN_OUT, alternateProgress, lerp } from '../easing'
 import { indexRange, layer } from '../parallax'
 import { DUST_NEAR, drawDust } from './particles'
-import { FG_REEFS, MOTION, PARALLAX, WORLD_DIR } from '../world-data'
+import { FG_REEFS, MOTION, PARALLAX, WATER_LINE, WORLD_DIR } from '../world-data'
 
 export interface OverlayState {
   now: number
@@ -24,6 +24,53 @@ export interface OverlayState {
   worldHeight: number
   slotCount: number
   reduced: boolean
+  /** 天有多黑:0 = 正午,1 = 深夜(ROADMAP 4-1) */
+  darkness: number
+  /** 小爱心在屏幕上的位置。夜里那一圈光以她为中心 —— 她游到哪,哪里亮 */
+  petScreenX: number
+  petScreenY: number
+}
+
+// 夜色。**这是全项目第四处用 fillRect/渐变而不是 drawImage** ——
+// 前三处是海草床的矢量描边、浮尘、犁沙的沟。理由和它们一样:
+// 这是一层跟着她走、每帧都在变的光照,出不成固定 PNG;
+// 宪法五/十三 管的是**美术素材**,那些照旧全走 /assets/ 路径。
+//
+// 夜里最暗压到 55%(2026-09-21 用户拍板的方案 B)。**不压成全黑**:
+// 宪法二禁止黑暗惊吓元素,而且她多半是晚饭后才玩 —— 真压黑了,
+// 她看到的几乎永远是一块黑屏。
+const NIGHT = { r: 22, g: 38, b: 78 } as const
+// **这个 0.62 是算出来的,不是拍的。** 目标是「远处压到白天的 55%」(用户选的方案 B)。
+// 夜色不是黑而是深蓝 #16264e,它自己的亮度是 37.8,所以压出来的结果是
+// (1-a)×140 + a×37.8;要落在 77(= 140 的 55%)上,a 得是 0.62。
+// 第一版按直觉写 0.45,实测远处只降到 72%,读起来像暗角不像夜
+const NIGHT_MAX_ALPHA = 0.62
+// 她身上那圈光:内圈完全不压暗,到外圈才压满。
+// **外圈不能超过半个屏宽**(舞台 480 宽),不然画面四角永远到不了满值,
+// 上面那个算式就白算了 —— 第一版 150 就是这么虚掉的
+const GLOW_INNER = 42
+const GLOW_OUTER = 130
+
+function drawNight(ctx: CanvasRenderingContext2D, s: OverlayState): void {
+  if (s.darkness <= 0.001) return
+  const a = s.darkness * NIGHT_MAX_ALPHA
+  // **水面线以上不压** —— 那一截天空已经在天空层里自己压过夜色了,
+  // 而且月亮就画在那儿:再压一遍,月相就读成一块灰盘(实测过)
+  const skyBottom = Math.max(0, Math.round(WATER_LINE - s.camY))
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(0, skyBottom, STAGE_WIDTH, STAGE_HEIGHT - skyBottom)
+  ctx.clip()
+  const g = ctx.createRadialGradient(
+    s.petScreenX, s.petScreenY, GLOW_INNER,
+    s.petScreenX, s.petScreenY, GLOW_OUTER,
+  )
+  // 圆心透明 = 她身边照常亮;越往外夜色越浓
+  g.addColorStop(0, `rgba(${NIGHT.r},${NIGHT.g},${NIGHT.b},0)`)
+  g.addColorStop(1, `rgba(${NIGHT.r},${NIGHT.g},${NIGHT.b},${a})`)
+  ctx.fillStyle = g
+  ctx.fillRect(0, skyBottom, STAGE_WIDTH, STAGE_HEIGHT - skyBottom)
+  ctx.restore()
 }
 
 function img(file: string): HTMLImageElement | null {
@@ -79,4 +126,7 @@ export function drawOverlay(ctx: CanvasRenderingContext2D, s: OverlayState): voi
   // 近浮尘是全场最近的东西,连前景礁都压在它下面
   layer(ctx, s.camX, s.slotCount, PARALLAX.dustNear, (ox) => drawDust(ctx, s, ox, DUST_NEAR))
   ctx.restore()
+  // 夜色铺在最后,压住包括小爱心在内的所有东西 —— 天黑是对整个世界黑的。
+  // **不跟 camY 走**:它是贴在屏幕上的一层光,不是世界里的一件东西
+  drawNight(ctx, s)
 }

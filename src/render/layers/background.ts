@@ -49,6 +49,10 @@ export interface BgState {
   lockedBeyondEnd: boolean
   lockedBeforeStart: boolean
   reduced: boolean
+  /** 天有多黑:0 = 正午,1 = 深夜(ROADMAP 4-1)。星星和月亮按它渐显 */
+  darkness: number
+  /** 月亮画哪一张(0–7) */
+  moonFrame: number
   furrows: Furrow[]
 }
 
@@ -71,7 +75,11 @@ function tileX(
   for (; x < right; x += w) ctx.drawImage(tex, Math.round(x), Math.round(y))
 }
 
-// 天空 + 云。云离得最远飘得最慢,整层被水面线裁掉 —— 原来靠 overflow-hidden,这里靠 clip
+// 天空 + 云 + 夜里的星星和月亮。云离得最远飘得最慢,整层被水面线裁掉 ——
+// 原来靠 overflow-hidden,这里靠 clip。
+//
+// **天空平时不在画面里** —— 只有换气浮上水面那一下,镜头往上摇才看得见。
+// 所以月亮是「浮上来换气才看得到」的东西,这正好是这个游戏的核心动作
 function drawSky(ctx: CanvasRenderingContext2D, s: BgState, ox: number, from: number, to: number): void {
   const sky = img('sky.png')
   ctx.save()
@@ -105,6 +113,41 @@ function drawSky(ctx: CanvasRenderingContext2D, s: BgState, ox: number, from: nu
         Math.round(i * STAGE_WIDTH + drift((-9 - i * 11) % 40)),
         26 + ((i * 31) % 10),
       )
+    }
+  }
+
+  // **天空的夜色在这一层自己压,不交给 overlay 那一道。**
+  // 理由:月亮是光源,被夜色压过就读成一块灰盘 —— 实测过,`快圆了` 的凸月
+  // 在 0.62 的夜色底下亮面 107、暗面 70,两边都成了灰蓝,月相彻底看不出来。
+  // 所以顺序必须是:天 → 云 → 压夜色 → 星星 → 月亮。overlay 的那道夜色
+  // 会跳过水面线以上,不重复压一遍(见 overlay.ts 的 drawNight)
+  if (s.darkness > 0.001) {
+    ctx.fillStyle = `rgba(16,26,56,${(s.darkness * 0.72).toFixed(3)})`
+    ctx.fillRect(ox, 0, STAGE_WIDTH, WATER_LINE)
+  }
+
+  // 星星和月亮按天黑的程度渐显。**不是天一黑就「啪」地亮出来** ——
+  // darkness 本身是连续的(黎明黄昏各一小时),跟着它走就够了。
+  // 星星从 0.55 才露头:黄昏刚起那会儿天还亮,真实世界里也看不见星
+  if (s.darkness > 0.55) {
+    const stars = img('stars.png')
+    if (stars) {
+      ctx.save()
+      ctx.globalAlpha = Math.min(1, (s.darkness - 0.55) / 0.35)
+      tileX(ctx, stars, 0, ox, ox + STAGE_WIDTH)
+      ctx.restore()
+    }
+  }
+  if (s.darkness > 0.3) {
+    const moon = img(`moon_${s.moonFrame}.png`)
+    if (moon) {
+      ctx.save()
+      ctx.globalAlpha = Math.min(1, (s.darkness - 0.3) / 0.35)
+      // 每格一轮月亮,摆在偏上偏右 —— 避开云(云在 y 8–36)和水面线
+      for (let i = from; i <= to; i++) {
+        ctx.drawImage(moon, Math.round(i * STAGE_WIDTH + STAGE_WIDTH * 0.72), 4)
+      }
+      ctx.restore()
     }
   }
   ctx.restore()

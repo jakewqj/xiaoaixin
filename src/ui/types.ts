@@ -24,7 +24,7 @@ export interface SlotSpec {
 export interface HudSnapshot {
   /** 累计打开天数。真数据,来自存档 */
   day: number
-  /** 季节 / 月相 / 潮汐:S4「潮汐与月亮」才算真的,现在是占位字符串 */
+  /** 季节 / 月相 / 潮汐。S4-1 起是真数据,由 useClock 按系统时间算 */
   season: string
   moonPhase: string
   tide: string

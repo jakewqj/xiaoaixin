@@ -46,6 +46,11 @@ export interface WorldSnapshot {
   notes: NoteView[]
   /** 换气上浮/下沉的时长,和 useBreath 用的是同一个数,不能各写一份 */
   swimMs: number
+  /** 天有多黑:0 = 正午,1 = 深夜。由 useClock 按真实时间算(ROADMAP 4-1)。
+   *  慢变量,一分钟才变一次 —— 所以走快照,不进 rAF 循环自己算 */
+  darkness: number
+  /** 月亮画哪一张(0–7)。0 新月、4 满月 */
+  moonFrame: number
 }
 
 export class WorldRenderer {
@@ -481,6 +486,8 @@ export class WorldRenderer {
       clarity: s.clarity,
       lockedBeyondEnd: s.lockedBeyondEnd,
       lockedBeforeStart: s.lockedBeforeStart,
+      darkness: s.darkness,
+      moonFrame: s.moonFrame,
       // 正在犁的那道也要画出来,不然沟是等她犁完才「啪」地出现
       furrows: this.live ? [...this.furrows, this.live] : this.furrows,
     })
@@ -504,7 +511,14 @@ export class WorldRenderer {
     }
     this.spots = drawActors(this.actors, actorState)
     // 前景礁和光柱压在角色之上 —— 小爱心游过去会从礁后面过,这是唯一的深度信号
-    drawOverlay(this.overlay, common)
+    drawOverlay(this.overlay, {
+      ...common,
+      darkness: s.darkness,
+      // 她在屏幕上的位置。和 drawActors 里那次 translate 用的是同一个式子 ——
+      // 两处各算一遍就会在镜头动的那几帧错开,光圈跟不上她
+      petScreenX: this.swim.x - Math.round(this.camera.x),
+      petScreenY: this.petTop - Math.round(this.camera.y),
+    })
     this.syncHotspots()
   }
 

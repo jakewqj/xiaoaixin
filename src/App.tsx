@@ -9,6 +9,7 @@ import type { PanelContent } from './components/DialoguePanel'
 import KnowledgeCard from './components/KnowledgeCard'
 import Book from './components/Book'
 import { useQuests } from './hooks/useQuests'
+import { useClock } from './hooks/useClock'
 import Album from './components/Album'
 import type { AlbumDrawing } from './components/Album'
 import SeaPicker from './components/SeaPicker'
@@ -145,6 +146,10 @@ function App() {
   const knowledge = useKnowledge(config?.知识卡.屏蔽)
 
   const quests = useQuests()
+
+  // 天色 / 月相 / 潮汐,跟着这台机器的系统时间走(ROADMAP 4-1)。
+  // 一分钟才算一次 —— HUD 上那三个字和世界的色调读的是同一份,不会各说各的
+  const clock = useClock()
 
   // 委托的上报口(ROADMAP 3-6)。四个动作各自在自己那条路上喊一声,
   // 由这里判断要不要把挂着的那条标成「做完了」。
@@ -775,8 +780,8 @@ function App() {
 
   const bookOn = featureOn('图鉴')
 
-  // 推给 canvas 的一份快照。季节/月相/潮汐还没有真的算,先占位;
-  // 天数、贝壳、海草棵数是存档里现成的真数据。见 ROADMAP S4「潮汐与月亮」
+  // 推给 canvas 的一份快照。季节/月相/潮汐从 2026-09-21(S4-1)起是真的:
+  // 跟着系统时间算,和世界的天色读同一份(useClock)。天数、贝壳、海草棵数是存档里的真数据
   const hudSnapshot: HudSnapshot = useMemo(() => {
     const slots: SlotSpec[] = [
       // 第一排 = 道具栏,永远不超过 4 格(CLAUDE.md 十六)
@@ -800,15 +805,15 @@ function App() {
     ]
     return {
       day: save.daysPlayed,
-      season: '夏天',
-      moonPhase: '满月',
-      tide: '涨潮',
+      season: clock.season,
+      moonPhase: clock.moon.name,
+      tide: clock.tide.name,
       fullness: save.fullness,
       maxFullness: MAX_FULLNESS,
       slots,
       tip: hudTip,
     }
-  }, [save.daysPlayed, save.fullness, grownCount, breath.phase, hudTip, bookOn])
+  }, [save.daysPlayed, save.fullness, grownCount, breath.phase, hudTip, bookOn, clock])
 
   const handleSlotTap = useCallback(
     (id: string) => {
@@ -1021,6 +1026,8 @@ function App() {
     npcs: npcViews,
     notes: noteViews,
     swimMs: SWIM_MS,
+    darkness: clock.sky.darkness,
+    moonFrame: clock.moon.frame,
   }
 
   // 在水面等着的时候点她 = 帮她换气;其余时候点她 = 摸摸她

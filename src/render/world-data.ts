@@ -354,7 +354,13 @@ export const MOTION = {
 /** 世界层要用到的全部素材。少一张就少画一层,不阻塞、不白屏 */
 export const WORLD_PRELOAD: readonly string[] = [
   ...['sky.png', 'cloud_big.png', 'cloud_small.png', 'island_big.png', 'island_small.png',
-    'surface.png', 'far.png', 'sand.png', 'shadow.png', 'light_shaft.png'].map((f) => `${WORLD_DIR}/${f}`),
+    'surface.png', 'far.png', 'sand.png', 'shadow.png', 'light_shaft.png',
+    // 夜空(ROADMAP 4-1)。月亮八个相位,按 lib/time.ts 算出的真实月相挑一张。
+    // **邻居按钮那批图标漏列过一次**(3-6 才发现「问她」的图标一直是空框),
+    // assets.get 拿不到就静默跳过,漏了不报错、只是少一层
+    'stars.png', 'moon_0.png', 'moon_1.png', 'moon_2.png', 'moon_3.png',
+    'moon_4.png', 'moon_5.png', 'moon_6.png', 'moon_7.png',
+  ].map((f) => `${WORLD_DIR}/${f}`),
   ...[...FG_REEFS.files, ...FG_REEFS.kelp.files].map((f) => `${WORLD_DIR}/${f}`),
   ...new Set([...DECOR_VARIANTS.flat(), ...Object.values(SPOT_DECOR).flat()].map((d) => `${WORLD_DIR}/${d.file}`)),
   ...SCATTER.map((f) => `${WORLD_DIR}/${f}`),
