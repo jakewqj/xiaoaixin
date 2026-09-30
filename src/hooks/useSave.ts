@@ -85,6 +85,9 @@ export interface SaveData {
   // 上次**接**委托的那天(toDateString)。「每天最多 1 条」就是靠这一条,
   // 和 giftedAt / familiarityLastAt 同一个写法
   questTakenAt: string
+  // 每条自然事件上一次**看完**是哪一晚(lib/events.ts 的 nightKey)。ROADMAP 4-4。
+  // 同一晚只演一次,就靠它;第一次看完另外记进 albumEvents(`event_{id}`)
+  eventNights: Record<string, string>
 }
 
 function createSave(): SaveData {
@@ -115,6 +118,7 @@ function createSave(): SaveData {
     quest: null,
     questsDone: [],
     questTakenAt: '',
+    eventNights: {},
   }
 }
 
@@ -278,6 +282,15 @@ function parseSave(raw: string | null): SaveData | null {
         ? s.questsDone.filter((id): id is string => typeof id === 'string')
         : [],
       questTakenAt: typeof s.questTakenAt === 'string' ? s.questTakenAt : '',
+      // 自然事件是 S4-4 才加的。老存档没有就是「哪一晚都还没看过」
+      eventNights:
+        s.eventNights && typeof s.eventNights === 'object'
+          ? Object.fromEntries(
+              Object.entries(s.eventNights as Record<string, unknown>).filter(
+                (pair): pair is [string, string] => typeof pair[1] === 'string',
+              ),
+            )
+          : {},
       ...withBed(s),
     }
   } catch {

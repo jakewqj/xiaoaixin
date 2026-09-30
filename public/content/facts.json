@@ -177,6 +177,19 @@
     "已核对": true,
     "_核对记录": "2026-09-29 S4-3 新增。「已核对」由 Jake 在会话里确认后设为 true,不是 Claude Code 自己设的"
   },
+  "fact_turtle_hatching": {
+    "说法": "海龟幼崽孵化后多在夜里爬出沙窝，朝海面那边最亮的天际线爬向大海（亮光来自夜空、月亮和星星在海面上的倒影）；卵在沙里孵约两个月",
+    "出处": "NOAA Fisheries · Green Turtle「After about two months incubating in the warm sand, the eggs hatch」「Hatchlings orient seaward by moving away from the darkest silhouette of the landward dune or vegetation to crawl towards the brightest horizon.」https://www.fisheries.noaa.gov/species/green-turtle ;Nova Southeastern University 海龟研究所「After roughly two months, hatchlings emerge from their shells under darkness.」「After emerging from the nest, hatchlings instinctively crawl towards the brightest horizon.」「Naturally, this is the reflection of the night sky, moon, and stars on the ocean.」https://nsuocean.nova.edu/institutes/sea-turtles/information.html",
+    "已核对": true,
+    "_核对记录": "2026-09-29 S4-4 新增(当时未核对)。2026-09-30 Jake 读过上面两个来源后在会话里确认,「已核对」由他确认后设为 true。注意 GDD 写的「朝月光爬」是简化:原文是「最亮的天际线」,月光只是亮光来源之一"
+  },
+  "fact_red_sea_turtle_season": {
+    "说法": "红海的海龟产卵期因地点而异，5 月到 10 月都有记录；加上约两个月的孵化期，幼崽大约在 8 月到 12 月爬出",
+    "出处": "PeerJ 2022 红海中部新产卵地「E. imbricata nesting earlier in the season, starting in May and C. mydas nesting later nesting starting in late June.」https://pmc.ncbi.nlm.nih.gov/articles/PMC9252177/ ;Frontiers 2021 卫星追踪 Ras Baridi 等产卵地「during the mid to late nesting season (September – October) in 2019」https://www.frontiersin.org/journals/marine-science/articles/10.3389/fmars.2021.633814/full ;PeerJ 2022 Ras Baridi「Sea turtle eggs incubate for 2 months」「Deceased green sea turtle hatchlings were collected in September 2021 from two beaches in Ras Baridi.」https://pmc.ncbi.nlm.nih.gov/articles/PMC9415434/",
+    "已核对": true,
+    "_核对记录": "2026-09-30 新增,Jake 在会话里确认。游戏里「海龟孵化夜」取 8–10 月:几份资料都对得上的那一段(中部 6 月底产卵 + 两个月 = 8 月底;Ras Baridi 9 月有幼崽),不取最宽的 8–12 月",
+    "_澳洲": "澳洲是南半球,昆士兰的孵化在 1–3 月(昆士兰州政府新闻稿 2022-01-05「January signals the start of hatchling season」https://statements.qld.gov.au/statements/94220 ;Mon Repos 页面「late January to end March」原句 Claude Code 没抓到,用前请爸爸自己打开确认)。澳洲浅海 S7 才做,到时单开一条事件,不和红海共用月份"
+  },
   "fact_coral_spawning": {
     "说法": "许多珊瑚种类集体产卵与月相相关，常在满月后特定夜晚同步进行",
     "出处": "珊瑚生殖生物学通识",

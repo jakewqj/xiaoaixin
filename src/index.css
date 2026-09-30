@@ -115,6 +115,25 @@
   animation: card-in 400ms ease-out;
 }
 
+/* 自然事件的演出(ROADMAP 4-4):整块慢慢暗下来,每换一句台词淡入一次。
+   只动透明度,不做位移和缩放 —— 非整数的缩放会让像素抖(§二十二·3) */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.event-dim {
+  animation: fade-in 700ms ease-out;
+}
+
+.event-line {
+  animation: fade-in 400ms ease-out;
+}
+
 /* 对话面板从底部滑上来/滑下去。时长和 DialoguePanel.tsx 里卸载的延时对上 */
 .dialogue-panel {
   transition: transform 320ms ease-in-out;
@@ -211,7 +230,9 @@
    这里只剩还活在 DOM 里的那几样 */
 @media (prefers-reduced-motion: reduce) {
   .sprite-frames,
-  .knowledge-card {
+  .knowledge-card,
+  .event-dim,
+  .event-line {
     animation: none;
   }
 

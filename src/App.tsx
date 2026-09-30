@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ScreenFrame, { STAGE_WIDTH, STAGE_HEIGHT } from './components/ScreenFrame'
 import WorldCanvas from './components/WorldCanvas'
 import { EAT_MS, placeNotePos, seagrassNoteRow } from './render/world'
@@ -10,6 +10,10 @@ import KnowledgeCard from './components/KnowledgeCard'
 import Book from './components/Book'
 import { useQuests } from './hooks/useQuests'
 import { useClock } from './hooks/useClock'
+import { useEvents } from './hooks/useEvents'
+import { activeEvents, nightKey } from './lib/events'
+import type { DialogueScene } from './hooks/useDialogue'
+import EventShow from './components/EventShow'
 import Album from './components/Album'
 import type { AlbumDrawing } from './components/Album'
 import SeaPicker from './components/SeaPicker'
@@ -94,8 +98,9 @@ function App() {
   const { save, update, awayMs } = useSave()
   const pet = usePet()
   const breath = useBreath()
-  const scenes = useDialogue()
+  const baseScenes = useDialogue()
   const album = useAlbum()
+  const events = useEvents()
 
   const [pose, setPose] = useState<PoseName>('idle')
   // 「已经低头在啃了」。按下喂食到真的开吃中间隔着一段路 —— 那段路上她该是游泳的样子
@@ -136,6 +141,48 @@ function App() {
   const stage = currentStage(pet.spec, save.daysPlayed)
   const stages = stagesReached(pet.spec, save.daysPlayed)
   const sea = seaById(save.sea)
+
+  // 天色 / 月相 / 潮汐,跟着这台机器的系统时间走(ROADMAP 4-1)。
+  // 一分钟才算一次 —— HUD 上那三个字和世界的色调读的是同一份,不会各说各的。
+  // **放在这么前面**是因为自然事件的邀请(4-4)要挂进剧本队列,而那条队列在下面很早就算了;
+  // 天黑那句话(4-3)要用的 showCard 在更后面,所以经 duskRef 转一手
+  const duskRef = useRef<() => void>(() => {})
+  const onDusk = useCallback(() => duskRef.current(), [])
+  const clock = useClock(onDusk)
+
+  // 自然事件(ROADMAP 4-4):此刻条件成立、而且今晚还没看过的。
+  // 看完才记「今晚看过」—— 点了「等一下」不算看过,只是今晚不再问
+  const tonight = nightKey(clock.at)
+  const pendingEvents = useMemo(
+    () => activeEvents(events, clock.at, sea.name).filter((e) => save.eventNights[e.id] !== tonight),
+    [events, clock.at, sea.name, save.eventNights, tonight],
+  )
+
+  // 剧本 = dialogue.json 的场景 + 每条事件的一句邀请。邀请是按 events.json 现拼的,
+  // 台词一个字都不写在代码里;两个选项的字是固定的,和事件无关
+  const scenes = useMemo<Record<string, DialogueScene>>(
+    () => ({
+      ...baseScenes,
+      ...Object.fromEntries(
+        events.map((e) => [
+          `event:${e.id}`,
+          {
+            id: `event:${e.id}`,
+            text: e.邀请.text,
+            en: e.邀请.en,
+            options: [
+              { icon: '👀', label: '去看看', action: 'watch_event' },
+              { icon: '☺️', label: '等一下' },
+            ],
+          },
+        ]),
+      ),
+    }),
+    [baseScenes, events],
+  )
+  // 正在演哪一条。null = 没在演
+  const [showing, setShowing] = useState<string | null>(null)
+  const showEvent = showing ? events.find((e) => e.id === showing) : undefined
 
   const world = useWorld()
   const { config, update: updateConfig, reset: resetConfig, resetToOnlyPet } = useConfig()
@@ -578,8 +625,11 @@ function App() {
     if (awayMs >= WELCOME_BACK_DAYS * DAY_MS) ids.push('welcome_back')
     if (save.stageSeen !== '' && save.stageSeen !== stage.id) ids.push('grow_up')
     if (grownCount > save.grownSeen) ids.push('seagrass_grown')
+    // 自然事件的邀请排在最后:那些是一辈子只有几次的时刻,事件错过了下次还有
+    for (const e of pendingEvents) ids.push(`event:${e.id}`)
     return ids
   }, [
+    pendingEvents,
     save.seenScenes,
     save.grownSeen,
     save.stageSeen,
@@ -621,7 +671,7 @@ function App() {
 
   // 条件自己不成立了就把气泡收起来。比如她没点选项,而是直接去戳小爱心把气换了
   useEffect(() => {
-    if (!sceneId || !TRIGGERED.includes(sceneId)) return
+    if (!sceneId || !(TRIGGERED.includes(sceneId) || sceneId.startsWith('event:'))) return
     if (activeScenes.includes(sceneId)) return
     setSceneId(null)
   }, [sceneId, activeScenes])
@@ -652,13 +702,23 @@ function App() {
   // 玩着玩着天黑下来的那一刻,偶尔说一句「太阳下山了」(ROADMAP 4-3,nat_day_night)。
   // 走 pickByEvent 的「偶尔」规则(15%、24 小时冷却),不是每次天黑都说。
   // 她正在和谁说话时不插嘴 —— 知识卡和对话面板同一时刻只能有一个(3-6 定的底线)
+  // 正在看自然事件时也不插嘴
   const handleDusk = useCallback(() => {
-    if (sceneId || npcTalk) return
+    if (sceneId || npcTalk || showing) return
     showCard(knowledge.pickByEvent('天黑了', save.knowledgeSeen))
-  }, [sceneId, npcTalk, showCard, knowledge, save.knowledgeSeen])
-  // 天色 / 月相 / 潮汐,跟着这台机器的系统时间走(ROADMAP 4-1)。
-  // 一分钟才算一次 —— HUD 上那三个字和世界的色调读的是同一份,不会各说各的
-  const clock = useClock(handleDusk)
+  }, [sceneId, npcTalk, showing, showCard, knowledge, save.knowledgeSeen])
+  useEffect(() => {
+    duskRef.current = handleDusk
+  }, [handleDusk])
+
+  // 看完了:记「今晚看过」,第一次看完的记进相册
+  const finishEvent = useCallback(() => {
+    if (!showing) return
+    const id = showing
+    update((prev) => ({ eventNights: { ...prev.eventNights, [id]: tonight } }))
+    remember(`event_${id}`)
+    setShowing(null)
+  }, [showing, tonight, update, remember])
 
   // 收起邻居那句话。**排着队的委托卡在这一刻递上来** —— 她把完成语看完了,
   // 位置才腾得出来。她中途跑去干别的(点画画、点别的邻居)不走这条路,
@@ -720,6 +780,10 @@ function App() {
   // 宁可什么都不发生,也不临时编一个机制出来
   function chooseOption(option: DialogueOption) {
     switch (option.action) {
+      // 自然事件的邀请点了「去看看」(ROADMAP 4-4)。剧本 id 是 `event:{事件 id}`
+      case 'watch_event':
+        if (sceneId?.startsWith('event:')) setShowing(sceneId.slice('event:'.length))
+        break
       case 'feed':
       case 'goto_feed':
         feed()
@@ -786,6 +850,13 @@ function App() {
   }, [hudTip])
 
   const bookOn = featureOn('图鉴')
+
+  // 相册的回忆 = album.json 的 + 每条自然事件自己带的那一句(事件的相册文字写在 events.json,
+  // 爸爸加一条事件只改一个文件)。相册只显示发生过的,没看过的事件不会出现
+  const albumMemories = useMemo(
+    () => [...album.memories, ...events.map((e) => ({ id: `event_${e.id}`, ...e.相册 }))],
+    [album.memories, events],
+  )
 
   // 推给 canvas 的一份快照。季节/月相/潮汐从 2026-09-21(S4-1)起是真的:
   // 跟着系统时间算,和世界的天色读同一份(useClock)。天数、贝壳、海草棵数是存档里的真数据
@@ -1137,6 +1208,8 @@ function App() {
                   onHoldTitle={() => setAdminGateOpen(true)}
                 />
               )}
+              {/* 自然事件的演出盖在最上面:她点了「去看看」,正在看的时候不该还能游走、喂食 */}
+              {showEvent && <EventShow event={showEvent} onDone={finishEvent} />}
             </>
           }
         />
@@ -1158,7 +1231,7 @@ function App() {
         <Album
           pet={pet}
           stages={stages}
-          memories={album.memories}
+          memories={albumMemories}
           titles={album.titles}
           events={save.albumEvents}
           metAt={save.createdAt}

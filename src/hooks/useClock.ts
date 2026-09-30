@@ -3,6 +3,8 @@ import { moonAt, seasonAt, skyAt, tideAt } from '../lib/time'
 import type { MoonState, SkyState, TideState } from '../lib/time'
 
 export interface ClockState {
+  /** 这一份是按哪一刻算的(毫秒)。dev 下 __setClock 钉住的时刻也在这里 —— 事件按它判断,不各自读 Date.now() */
+  at: number
   sky: SkyState
   moon: MoonState
   tide: TideState
@@ -10,7 +12,7 @@ export interface ClockState {
 }
 
 function read(now: number): ClockState {
-  return { sky: skyAt(now), moon: moonAt(now), tide: tideAt(now), season: seasonAt(now) }
+  return { at: now, sky: skyAt(now), moon: moonAt(now), tide: tideAt(now), season: seasonAt(now) }
 }
 
 // 开发构建里可以把时钟钉在某一刻(测试要验「夜里是什么样」,总不能等到半夜)。
