@@ -24,7 +24,7 @@ import {
   SAND_H,
   SCATTER,
   SHAFT,
-  WATER_LINE,
+  LOW_TIDE_FINDS,
   WORLD_DIR,
 } from '../world-data'
 
@@ -54,6 +54,10 @@ export interface BgState {
   /** 月亮画哪一张(0–7) */
   moonFrame: number
   furrows: Furrow[]
+  /** 这一刻看得见的水面线(随潮水升降,ROADMAP 4-2)。平潮时等于 WATER_LINE */
+  surfaceY: number
+  /** 退潮露出了多少:0 = 没露,1 = 全露。沙地浅滩那批退潮才有的东西按它一件件冒出来 */
+  ebb: number
 }
 
 function img(file: string): HTMLImageElement | null {
@@ -84,9 +88,19 @@ function drawSky(ctx: CanvasRenderingContext2D, s: BgState, ox: number, from: nu
   const sky = img('sky.png')
   ctx.save()
   ctx.beginPath()
-  ctx.rect(ox, 0, STAGE_WIDTH, WATER_LINE)
+  ctx.rect(ox, 0, STAGE_WIDTH, s.surfaceY)
   ctx.clip()
-  if (sky) tileX(ctx, sky, 0, ox, ox + STAGE_WIDTH)
+  if (sky) {
+    tileX(ctx, sky, 0, ox, ox + STAGE_WIDTH)
+    // sky.png 自己画着远处的海平线和远海,那条线和小岛**不跟潮水动** —— 潮水涨落
+    // 远处看不出来,看得出来的是近处这条水面。退潮时近水面往下退,天空图底下会空出一截,
+    // 用它最底下那一行(远海的颜色)往下补齐。只拉伸一行像素,纵向是纯色带,不会糊
+    if (s.surfaceY > sky.height) {
+      for (let x = Math.floor(ox / sky.width) * sky.width; x < ox + STAGE_WIDTH; x += sky.width) {
+        ctx.drawImage(sky, 0, sky.height - 1, sky.width, 1, x, sky.height, sky.width, s.surfaceY - sky.height)
+      }
+    }
+  }
 
   const big = img('cloud_big.png')
   const small = img('cloud_small.png')
@@ -123,7 +137,7 @@ function drawSky(ctx: CanvasRenderingContext2D, s: BgState, ox: number, from: nu
   // 会跳过水面线以上,不重复压一遍(见 overlay.ts 的 drawNight)
   if (s.darkness > 0.001) {
     ctx.fillStyle = `rgba(16,26,56,${(s.darkness * 0.72).toFixed(3)})`
-    ctx.fillRect(ox, 0, STAGE_WIDTH, WATER_LINE)
+    ctx.fillRect(ox, 0, STAGE_WIDTH, s.surfaceY)
   }
 
   // 星星和月亮按天黑的程度渐显。**不是天一黑就「啪」地亮出来** ——
@@ -173,15 +187,15 @@ function drawSurface(ctx: CanvasRenderingContext2D, s: BgState, ox: number): voi
   const phase = (MOTION.surfaceShift * step) / MOTION.surfaceSteps
   ctx.save()
   ctx.beginPath()
-  ctx.rect(ox, WATER_LINE - 3, STAGE_WIDTH, tex.height)
+  ctx.rect(ox, s.surfaceY - 3, STAGE_WIDTH, tex.height)
   ctx.clip()
-  tileX(ctx, tex, WATER_LINE - 3, ox, ox + STAGE_WIDTH, phase)
+  tileX(ctx, tex, s.surfaceY - 3, ox, ox + STAGE_WIDTH, phase)
   ctx.restore()
 }
 
 // 三层水色渐变(读 sea 主题)。横向是均匀的,视差对它没有意义,跟着镜头走就行
 function drawWater(ctx: CanvasRenderingContext2D, s: BgState, ox: number): void {
-  const top = WATER_LINE
+  const top = s.surfaceY
   const grad = ctx.createLinearGradient(0, top, 0, s.worldHeight)
   grad.addColorStop(0, s.sea.shallow)
   grad.addColorStop(0.45, s.sea.mid)
@@ -207,7 +221,7 @@ function drawHaze(ctx: CanvasRenderingContext2D, s: BgState, ox: number): void {
   const haze = (1 - s.clarity) * MAX_HAZE
   if (haze <= 0) return
   ctx.fillStyle = `rgba(${SAND_COLOR}, ${haze})`
-  ctx.fillRect(ox, WATER_LINE, STAGE_WIDTH, s.worldHeight - WATER_LINE)
+  ctx.fillRect(ox, s.surfaceY, STAGE_WIDTH, s.worldHeight - s.surfaceY)
 }
 
 // 中景装饰:珊瑚和岩石挤在画面两侧,中间留给小爱心和海草床。
@@ -279,7 +293,32 @@ function drawSeabed(ctx: CanvasRenderingContext2D, s: BgState, ox: number, from:
       ctx.drawImage(tex, left, bottom - tex.height)
     })
   }
+  drawLowTideFinds(ctx, s, from, to)
   ctx.restore()
+}
+
+/**
+ * 退潮露出来的东西(ROADMAP 4-2)。第 k 件在 ebb 走到 k/N 时开始露、走到 (k+1)/N 时露全,
+ * 所以水越退,沙里冒出来的越多 —— 数一数今天露出来几个,就知道潮水退了多少。
+ *
+ * 潮位一分钟才算一次,ebb 从 0 走到 1 要好几个小时,所以这个淡入慢到看不出是渐变,
+ * 看起来就是「刚才还没有,现在有了」。涨潮时反过来,一件件被沙盖回去,**不会在她眼前啪地消失**
+ */
+function drawLowTideFinds(ctx: CanvasRenderingContext2D, s: BgState, from: number, to: number): void {
+  if (s.ebb <= 0) return
+  for (let i = from; i <= to; i++) {
+    const finds = LOW_TIDE_FINDS[s.spotIds[i]]
+    if (!finds) continue
+    finds.forEach((find, k) => {
+      const alpha = Math.max(0, Math.min(1, s.ebb * finds.length - k))
+      if (alpha <= 0) return
+      const tex = img(find.file)
+      if (!tex) return
+      ctx.globalAlpha = alpha
+      ctx.drawImage(tex, i * STAGE_WIDTH + find.x, s.worldHeight - find.bottom - tex.height)
+    })
+  }
+  ctx.globalAlpha = 1
 }
 
 /**
@@ -322,7 +361,7 @@ function drawShafts(ctx: CanvasRenderingContext2D, s: BgState, ox: number): void
   ctx.save()
   ctx.beginPath()
   // 光是从水面来的,不能漏到天上去,也不该压在沙底上
-  ctx.rect(ox, WATER_LINE, STAGE_WIDTH, s.worldHeight - WATER_LINE - SAND_H + 8)
+  ctx.rect(ox, s.surfaceY, STAGE_WIDTH, s.worldHeight - s.surfaceY - SAND_H + 8)
   ctx.clip()
 
   const [from, to] = indexRange(ox, SHAFT.period)
@@ -334,7 +373,7 @@ function drawShafts(ctx: CanvasRenderingContext2D, s: BgState, ox: number): void
     ctx.drawImage(
       tex,
       Math.round(i * SHAFT.period + ((i * 53) % 40) + lerp(-SHAFT.swayPx, SHAFT.swayPx, EASE_IN_OUT(swayT))),
-      WATER_LINE - 4,
+      s.surfaceY - 4,
     )
   }
   ctx.globalAlpha = 1

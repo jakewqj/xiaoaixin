@@ -14,7 +14,7 @@ import * as assets from '../assets'
 import { EASE_IN_OUT, alternateProgress, lerp } from '../easing'
 import { indexRange, layer } from '../parallax'
 import { DUST_NEAR, drawDust } from './particles'
-import { FG_REEFS, MOTION, PARALLAX, WATER_LINE, WORLD_DIR } from '../world-data'
+import { FG_REEFS, MOTION, PARALLAX, WORLD_DIR } from '../world-data'
 
 export interface OverlayState {
   now: number
@@ -29,6 +29,8 @@ export interface OverlayState {
   /** 小爱心在屏幕上的位置。夜里那一圈光以她为中心 —— 她游到哪,哪里亮 */
   petScreenX: number
   petScreenY: number
+  /** 这一刻看得见的水面线(随潮水升降)。夜色从这条线往下压,近浮尘从这条线往下沉 */
+  surfaceY: number
 }
 
 // 夜色。**这是全项目第四处用 fillRect/渐变而不是 drawImage** ——
@@ -56,7 +58,7 @@ function drawNight(ctx: CanvasRenderingContext2D, s: OverlayState): void {
   const a = s.darkness * NIGHT_MAX_ALPHA
   // **水面线以上不压** —— 那一截天空已经在天空层里自己压过夜色了,
   // 而且月亮就画在那儿:再压一遍,月相就读成一块灰盘(实测过)
-  const skyBottom = Math.max(0, Math.round(WATER_LINE - s.camY))
+  const skyBottom = Math.max(0, Math.round(s.surfaceY - s.camY))
   ctx.save()
   ctx.beginPath()
   ctx.rect(0, skyBottom, STAGE_WIDTH, STAGE_HEIGHT - skyBottom)

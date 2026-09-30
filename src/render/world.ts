@@ -20,7 +20,7 @@ import { drawOverlay } from './layers/overlay'
 import { REST_Y, Swim } from './swim'
 import type { Hotspot } from './types'
 import type { Furrow } from './layers/background'
-import { FOLLOW, FURROW, GRAZE, MOTION, SAND_H, WATER_LINE } from './world-data'
+import { ebbAmount, FOLLOW, FURROW, GRAZE, MOTION, SAND_H, surfaceLine, WATER_LINE } from './world-data'
 
 /** 她能游到的最浅处:水面线再往下留出半个身子,别把背露出水面 */
 const CEILING_PAD = 6
@@ -51,6 +51,11 @@ export interface WorldSnapshot {
   darkness: number
   /** 月亮画哪一张(0–7)。0 新月、4 满月 */
   moonFrame: number
+  /**
+   * 潮位 × 潮差,-1(大潮最低)… +1(大潮最高)。由 useClock 按真实时间算(ROADMAP 4-2)。
+   * 看得见的水面线跟着它升降,沙地浅滩退潮时露出东西。一分钟才变一次,走快照
+   */
+  tide: number
 }
 
 export class WorldRenderer {
@@ -132,13 +137,20 @@ export class WorldRenderer {
     return STAGE_HEIGHT + WATER_LINE
   }
 
+  /** 这一刻看得见的水面线。世界几何(高度、镜头下潜位)照旧认平潮线 WATER_LINE,
+   *  只有「水面在哪」跟着潮水走 —— 所以海草床、邻居、沙底一个像素都不跟着晃 */
+  get surfaceY(): number {
+    return surfaceLine(this.snap?.tide ?? 0)
+  }
+
   /** 她纵向能游的范围。上不出水面,下不钻进沙里;体型长大了范围跟着收。
+   *  **上限跟着潮水走**:涨潮水面高了,她就能游到平时去不了的高处(ROADMAP 4-2)。
    *  **犁沙是唯一的例外**:吻要插进沙面以下,身体中心就得比平时的下限再低几像素 */
   private swimBounds(): { minY: number; maxY: number } {
     const half = (FRAME_HEIGHT * (this.snap?.pet.scale ?? 1)) / 2
     const floor = this.worldHeight - SAND_H - half
     return {
-      minY: WATER_LINE + half + CEILING_PAD,
+      minY: this.surfaceY + half + CEILING_PAD,
       maxY: this.grazePhase ? Math.max(floor, this.grazeY) : floor,
     }
   }
@@ -176,6 +188,10 @@ export class WorldRenderer {
     this.camera.reduced = reduced
 
     const now = this.now()
+    // 她正站着换气时潮水动了一像素:鼻孔要跟着水面走,不然会淹进去或者多露出来一截
+    if (prev && prev.tide !== next.tide && this.breathHold && next.pet.atSurface) {
+      this.breathTo = this.standTop(next)
+    }
     if (!prev || prev.surfaced !== next.surfaced) {
       this.camera.setSurfaced(next.surfaced, now)
       this.startBreathMove(next, now)
@@ -217,7 +233,7 @@ export class WorldRenderer {
     const ax = s.pet.anchors.blowhole?.[0]
     if (ax === undefined) return 0.3 * this.worldHeight
     // 立起来之后,精灵横向上离中心多远,就等于竖向上离中心多高
-    return WATER_LINE - SURFACE_POKE + (ax - 0.5) * FRAME_WIDTH * s.pet.scale
+    return surfaceLine(s.tide) - SURFACE_POKE + (ax - 0.5) * FRAME_WIDTH * s.pet.scale
   }
 
   /** 犁沙时身体中心该在哪:让**吻部**(mouth 锚点)正好插到沙面以下 `GRAZE.dig` px。
@@ -457,6 +473,7 @@ export class WorldRenderer {
       worldHeight: this.worldHeight,
       slotCount: Math.max(1, s.slotCount),
       reduced,
+      surfaceY: this.surfaceY,
     }
 
     // 跟随者每帧向「宠物身后」的目标平滑追赶。没有跟随者就清空,他下次进场重新落位。
@@ -488,6 +505,7 @@ export class WorldRenderer {
       lockedBeforeStart: s.lockedBeforeStart,
       darkness: s.darkness,
       moonFrame: s.moonFrame,
+      ebb: ebbAmount(s.tide),
       // 正在犁的那道也要画出来,不然沟是等她犁完才「啪」地出现
       furrows: this.live ? [...this.furrows, this.live] : this.furrows,
     })

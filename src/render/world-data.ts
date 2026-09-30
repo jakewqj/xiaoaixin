@@ -8,8 +8,37 @@
 
 export const WORLD_DIR = '/assets/world'
 
-/** 水面线取整数像素:sky.png 就是按这个高度画的,非整数会引起半像素拉伸 */
+/**
+ * 水面线取整数像素:sky.png 就是按这个高度画的,非整数会引起半像素拉伸。
+ *
+ * **这是平潮时的水面,也是世界几何的基准**:世界高度、镜头下潜停在哪、沙底在哪都认它,
+ * 潮水涨落不动这些(否则海草床和邻居会跟着一上一下)。真正随潮水升降的只有
+ * **看得见的那条水面**,见 `surfaceLine()`(ROADMAP 4-2)
+ */
 export const WATER_LINE = 86
+
+/**
+ * 潮水(ROADMAP 4-2):水面线跟着真实潮位升降。
+ *
+ * `px` = 大潮那天水面最多偏离平潮线几像素(涨潮往上、退潮往下);小潮按 `TideState.range`
+ * 自动缩到 0.4 倍,约 ±3px。**这个数不是按真实比例换算的** —— 世界纵向本来就是压缩过的,
+ * 照真实潮差换算出来要么看不见、要么吃掉半屏。8px 是「一眼看得出水浅了/深了、又不挤占游戏」
+ * 的折中:退潮时潜在水下,屏幕顶上会露出一窄条水面白沫,那就是「水变浅了」。
+ *
+ * `ebbFrom` / `ebbFull`:退到平潮线以下多少(按 -1..1 的潮位算)开始露出东西、到多少全露。
+ * 小潮最低只退到 -0.4,所以小潮那几天只露出一半 —— 大潮露得多、小潮露得少,这是真的
+ */
+export const TIDE = { px: 8, ebbFrom: 0.15, ebbFull: 0.75 } as const
+
+/** 这一刻看得见的水面线在哪。`tide` = 潮位 × 潮差(-1 最低 … +1 最高) */
+export function surfaceLine(tide: number): number {
+  return WATER_LINE - Math.round(tide * TIDE.px)
+}
+
+/** 退潮露出了多少:0 = 一样都没露,1 = 全露出来了 */
+export function ebbAmount(tide: number): number {
+  return Math.max(0, Math.min(1, (-tide - TIDE.ebbFrom) / (TIDE.ebbFull - TIDE.ebbFrom)))
+}
 
 /** 金沙海底的高度(sand.png tile 的高度)。参考图沙地约占画面高 15% */
 export const SAND_H = 40
@@ -232,6 +261,37 @@ export const SPOT_DECOR: Record<string, Decor[]> = {
   ],
 }
 
+/**
+ * 退潮时才露出来的东西(ROADMAP 4-2,GDD §9.1「退潮时沙地浅滩露出更多东西」)。
+ * 按地点 id 认,和 SPOT_DECOR 同一个道理。
+ *
+ * **只露出来,不能捡** —— 捡起来放进哪个罐子是 S5-2 的事,现在没有罐子(用户 2026-09-28 拍板)。
+ * 所以它们不给热区,和中景装饰一样是风景。
+ *
+ * 摆在沙带**里面**(bottom 是离世界底边多远),不坐在沙面线上 —— 是沙子被冲开露出来的,
+ * 不是从水里掉下来的。数组顺序就是露出的先后:水越退露得越多,一件一件冒出来。
+ * 顺序故意打乱,不然看起来像从左往右扫过去一道。砗磲奶奶站在 x≈280–344 的沙面上,
+ * 这一段的东西压得更低,不和她叠
+ */
+export interface Find {
+  file: string
+  x: number
+  bottom: number
+}
+
+export const LOW_TIDE_FINDS: Record<string, Find[]> = {
+  sand_flat: [
+    { file: 'shell_pink.png', x: 182, bottom: 12 },
+    { file: 'starfish.png', x: 88, bottom: 16 },
+    { file: 'shell_white.png', x: 336, bottom: 7 },
+    { file: 'stones.png', x: 250, bottom: 14 },
+    { file: 'shell_white.png', x: 132, bottom: 9 },
+    { file: 'shell_pink.png', x: 300, bottom: 8 },
+    { file: 'starfish.png', x: 156, bottom: 21 },
+    { file: 'shell_pink.png', x: 360, bottom: 15 },
+  ],
+}
+
 /** 这一格该画哪一批装饰。没写过的地点(印度海湾/澳洲浅海还没做美术)退回原来的三套轮换 */
 export function decorFor(spotId: string | undefined, index: number): Decor[] {
   const own = spotId ? SPOT_DECOR[spotId] : undefined
@@ -364,5 +424,7 @@ export const WORLD_PRELOAD: readonly string[] = [
   ...[...FG_REEFS.files, ...FG_REEFS.kelp.files].map((f) => `${WORLD_DIR}/${f}`),
   ...new Set([...DECOR_VARIANTS.flat(), ...Object.values(SPOT_DECOR).flat()].map((d) => `${WORLD_DIR}/${d.file}`)),
   ...SCATTER.map((f) => `${WORLD_DIR}/${f}`),
+  // 退潮那批现在用的图都和 SCATTER 重了,照样列一遍:以后换成专门的图,漏列不报错、只是露不出来
+  ...new Set(Object.values(LOW_TIDE_FINDS).flat().map((f) => `${WORLD_DIR}/${f.file}`)),
   ...BUBBLE_SIZES.map((f) => `${WORLD_DIR}/${f}`),
 ]

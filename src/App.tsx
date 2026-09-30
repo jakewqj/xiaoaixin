@@ -1028,6 +1028,8 @@ function App() {
     swimMs: SWIM_MS,
     darkness: clock.sky.darkness,
     moonFrame: clock.moon.frame,
+    // 潮位 × 潮差:大潮涨得高退得低,小潮起伏小。HUD 上「涨潮/退潮」读的是同一份
+    tide: clock.tide.level * clock.tide.range,
   }
 
   // 在水面等着的时候点她 = 帮她换气;其余时候点她 = 摸摸她

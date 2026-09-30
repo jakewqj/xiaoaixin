@@ -11,12 +11,14 @@
 
 import { indexRange } from '../parallax'
 import { EASE_IN_OUT, alternateProgress, lerp, loopProgress } from '../easing'
-import { SAND_H, WATER_LINE } from '../world-data'
+import { SAND_H } from '../world-data'
 
 export interface ParticleState {
   now: number
   worldHeight: number
   reduced: boolean
+  /** 这一刻看得见的水面线(随潮水升降,ROADMAP 4-2)。浮尘从这儿沉下去,光斑贴着它闪 */
+  surfaceY: number
 }
 
 export interface DustBand {
@@ -47,7 +49,7 @@ export function drawDust(
   ox: number,
   band: DustBand,
 ): void {
-  const top = WATER_LINE + 4
+  const top = s.surfaceY + 4
   const bottom = s.worldHeight - SAND_H + 4
   const column = bottom - top
   if (column <= 0) return
@@ -92,7 +94,7 @@ export function drawSparkles(ctx: CanvasRenderingContext2D, s: ParticleState, ox
     ctx.globalAlpha = lerp(0, SPARKLE.alpha, t) * (1 - depth * 0.7)
     ctx.fillRect(
       Math.round(i * SPARKLE.period + jitter(i, 2, SPARKLE.period)),
-      Math.round(WATER_LINE + 3 + depth * SPARKLE.band),
+      Math.round(s.surfaceY + 3 + depth * SPARKLE.band),
       1,
       1,
     )
