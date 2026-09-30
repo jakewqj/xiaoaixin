@@ -16,6 +16,7 @@ const EMPTY: HudSnapshot = {
   season: '',
   moonPhase: '',
   tide: '',
+  topIcons: [],
   fullness: 0,
   maxFullness: 5,
   slots: [],
@@ -29,6 +30,7 @@ function same(a: HudSnapshot, b: HudSnapshot): boolean {
     a.season !== b.season ||
     a.moonPhase !== b.moonPhase ||
     a.tide !== b.tide ||
+    a.topIcons.join() !== b.topIcons.join() ||
     a.fullness !== b.fullness ||
     a.maxFullness !== b.maxFullness ||
     a.tip !== b.tip ||

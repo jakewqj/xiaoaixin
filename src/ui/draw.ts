@@ -64,12 +64,17 @@ function drawTopBar(ctx: CanvasRenderingContext2D, snap: HudSnapshot, spots: Hot
 
   // 第二行:月相 + 潮汐。两个都是真数据(S4-1 起按真实朔望月和太阴日算,见 lib/time.ts)
   x = TOP.line2.x
+  const moonX = x
   icon(ctx, `${UI_DIR}/icon_moon.png`, x, TOP.line2.y + 1)
   x += 12
-  x += drawText(ctx, snap.moonPhase, x, TOP.line2.y, COLOR.ink, SIZES.normal) + 5
+  x += drawText(ctx, snap.moonPhase, x, TOP.line2.y, COLOR.ink, SIZES.normal)
+  const moonEnd = x
+  x += 5
+  const tideX = x
   icon(ctx, `${UI_DIR}/icon_wave.png`, x, TOP.line2.y + 1)
   x += 12
-  drawText(ctx, snap.tide, x, TOP.line2.y, COLOR.ink, SIZES.normal)
+  x += drawText(ctx, snap.tide, x, TOP.line2.y, COLOR.ink, SIZES.normal)
+  const tideEnd = x
 
   // 饱食度条:5 格,亮着的就是还有的。没有数字、没有百分比、没有图标 ——
   // 它接替的是原来贴在海底那排海草叶片,语义靠「海草绿」这个颜色延续下来
@@ -85,6 +90,21 @@ function drawTopBar(ctx: CanvasRenderingContext2D, snap: HudSnapshot, spots: Hot
     h: TOP.titleHold.h,
     label: '小爱心',
   })
+
+  // 月相 / 潮汐可以点,点了小爱心讲一张相关的卡(ROADMAP 4-3)。
+  // **推在标题热区之后** —— DOM 里后来的盖在上面,不然长按进后台那块(整个面板)会把它吞掉。
+  // 热区 = 图标 + 字的实际宽度,上下各多留 2px,两块中间那 5px 空隙对半分。
+  // **右边不按木牌截断**:月相名字长的那几天(「快圆了」「半个月亮」)这一行本来就会画出木牌,
+  // 热区得跟着字走 —— 字画到哪就能点到哪,不然点在露出来的半个字上没反应
+  const row = { y: TOP.line2.y - 2, h: SIZES.normal + 4 }
+  const mid = Math.round((moonEnd + tideX) / 2)
+  if (snap.topIcons.includes('月相')) {
+    spots.push({ id: '__moon', x: moonX - 2, y: row.y, w: mid - (moonX - 2), h: row.h, label: `月亮,${snap.moonPhase}` })
+  }
+  if (snap.topIcons.includes('潮汐')) {
+    const end = Math.ceil(tideEnd) + 2
+    spots.push({ id: '__tide', x: mid, y: row.y, w: end - mid, h: row.h, label: `潮水,${snap.tide}` })
+  }
 }
 
 /** 一格快捷栏 */

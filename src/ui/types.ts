@@ -28,6 +28,9 @@ export interface HudSnapshot {
   season: string
   moonPhase: string
   tide: string
+  /** 顶栏哪几个图标能点出知识卡(ROADMAP 4-3):「月相」「潮汐」。
+   *  从白名单现算 —— 爸爸把某个图标的卡全屏蔽了,那个图标就不摆热区,不留点了没反应的按钮 */
+  topIcons: readonly string[]
   /** 饱食度 0–max。只画格子,**永远不显示数字或百分比、永远不变红**
    *  (CLAUDE.md 原则 1「没有失败态」+ 原 FullnessMeter 的注释) */
   fullness: number

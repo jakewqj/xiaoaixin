@@ -300,10 +300,47 @@
       "海域": "红海浅滩",
       "学科": "自然",
       "挂载点": "昼夜切换",
+      "事件": "天黑了",
       "childText": "太阳下山了\n该睡觉啦",
       "pinyin": "tài yáng xià shān le, gāi shuì jiào la",
       "en": "Good night!",
-      "dadNote": "昼夜概念。游戏时间可以跟随真实系统时间。",
+      "dadNote": "昼夜概念。游戏时间跟随真实系统时间(S4-1)。S4-3 起接上「天黑了」事件:玩着玩着正好赶上黄昏,偶尔(15%、24 小时冷却)说一句。和 bio_day_night_grazing(白天晚上我都在吃)并存 —— 天黑是真的,她照样在吃也是真的,两句不矛盾。",
+      "已核对": true
+    },
+    {
+      "id": "nat_moon_pull",
+      "学科": "自然",
+      "挂载点": "点 HUD 顶栏的月相 / 潮汐",
+      "图标": ["月相", "潮汐"],
+      "childText": "月亮拉着海水\n潮水就涨了",
+      "pinyin": "yuè liang lā zhe hǎi shuǐ, cháo shuǐ jiù zhǎng le",
+      "en": "Moon",
+      "dadNote": "潮汐主要是月球引力造成的(太阳也拉,但小得多)。「拉」是给六岁孩子的说法,引力本来就是在拉。没写海域 —— 月亮和潮水跟着她走,到哪片海都在,归图鉴「关于我」那一页。",
+      "来源": "facts.json fact_tide_moon_gravity",
+      "已核对": true
+    },
+    {
+      "id": "nat_full_moon_tide",
+      "学科": "自然",
+      "挂载点": "点 HUD 顶栏的月相",
+      "图标": ["月相"],
+      "childText": "月亮圆的时候\n潮水最大",
+      "pinyin": "yuè liang yuán de shí hou, cháo shuǐ zuì dà",
+      "en": "Moon",
+      "dadNote": "大潮。满月和新月前后日月引力叠在一起,潮差最大;游戏里的潮差就是按这个算的(lib/time.ts,满月 1.0、上下弦 0.4),沙地浅滩退潮露出来的贝壳大潮那几天最多。卡面只说满月,因为新月她在天上看不见。S4 的验收句「今天月亮圆,所以潮水大」就是这张。",
+      "来源": "facts.json fact_spring_tide",
+      "已核对": true
+    },
+    {
+      "id": "nat_tide_late",
+      "学科": "自然",
+      "挂载点": "点 HUD 顶栏的潮汐",
+      "图标": ["潮汐"],
+      "childText": "潮水每天\n晚来一会儿",
+      "pinyin": "cháo shuǐ měi tiān wǎn lái yí huìr",
+      "en": "Water",
+      "dadNote": "同一次涨潮每天比前一天晚约 50 分钟,因为月亮自己也在绕地球转,地球要多转一会儿才追得上。游戏里的潮汐就是按这个算的(lib/time.ts,实测每天推迟 50.0 分钟)。",
+      "来源": "facts.json fact_tide_50min",
       "已核对": true
     },
     {

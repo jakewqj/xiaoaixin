@@ -147,10 +147,6 @@ function App() {
 
   const quests = useQuests()
 
-  // 天色 / 月相 / 潮汐,跟着这台机器的系统时间走(ROADMAP 4-1)。
-  // 一分钟才算一次 —— HUD 上那三个字和世界的色调读的是同一份,不会各说各的
-  const clock = useClock()
-
   // 委托的上报口(ROADMAP 3-6)。四个动作各自在自己那条路上喊一声,
   // 由这里判断要不要把挂着的那条标成「做完了」。
   //
@@ -653,6 +649,17 @@ function App() {
     [update],
   )
 
+  // 玩着玩着天黑下来的那一刻,偶尔说一句「太阳下山了」(ROADMAP 4-3,nat_day_night)。
+  // 走 pickByEvent 的「偶尔」规则(15%、24 小时冷却),不是每次天黑都说。
+  // 她正在和谁说话时不插嘴 —— 知识卡和对话面板同一时刻只能有一个(3-6 定的底线)
+  const handleDusk = useCallback(() => {
+    if (sceneId || npcTalk) return
+    showCard(knowledge.pickByEvent('天黑了', save.knowledgeSeen))
+  }, [sceneId, npcTalk, showCard, knowledge, save.knowledgeSeen])
+  // 天色 / 月相 / 潮汐,跟着这台机器的系统时间走(ROADMAP 4-1)。
+  // 一分钟才算一次 —— HUD 上那三个字和世界的色调读的是同一份,不会各说各的
+  const clock = useClock(handleDusk)
+
   // 收起邻居那句话。**排着队的委托卡在这一刻递上来** —— 她把完成语看完了,
   // 位置才腾得出来。她中途跑去干别的(点画画、点别的邻居)不走这条路,
   // 那张卡就这次不给了 —— 没有任何损失,那张卡照旧挂在它本来的触发点上
@@ -808,12 +815,13 @@ function App() {
       season: clock.season,
       moonPhase: clock.moon.name,
       tide: clock.tide.name,
+      topIcons: knowledge.icons,
       fullness: save.fullness,
       maxFullness: MAX_FULLNESS,
       slots,
       tip: hudTip,
     }
-  }, [save.daysPlayed, save.fullness, grownCount, breath.phase, hudTip, bookOn, clock])
+  }, [save.daysPlayed, save.fullness, grownCount, breath.phase, hudTip, bookOn, clock, knowledge.icons])
 
   const handleSlotTap = useCallback(
     (id: string) => {
@@ -841,9 +849,16 @@ function App() {
         case 'breathe':
           handleBreathe()
           break
+        // 顶栏的月相 / 潮汐(ROADMAP 4-3)。她主动点的,一定给卡
+        case '__moon':
+          showCard(knowledge.pickByIcon('月相', save.knowledgeSeen))
+          break
+        case '__tide':
+          showCard(knowledge.pickByIcon('潮汐', save.knowledgeSeen))
+          break
       }
     },
-    [hudSnapshot.slots, feed, plant, handleBreathe],
+    [hudSnapshot.slots, feed, plant, handleBreathe, showCard, knowledge, save.knowledgeSeen],
   )
 
   const scene = sceneId ? scenes[sceneId] : undefined

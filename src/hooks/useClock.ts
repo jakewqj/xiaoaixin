@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { moonAt, seasonAt, skyAt, tideAt } from '../lib/time'
 import type { MoonState, SkyState, TideState } from '../lib/time'
 
@@ -28,20 +28,47 @@ declare global {
 // **结果是算出来的,不是存下来的**:存的只有「现在几点」这一个数。
 // 写成「effect 里 setState 一份算好的」会多一条 `set-state-in-effect` 警告,
 // 而这个仓库的规矩是 lint 一条都不新增(3-6 那轮为这条绕过三版)
-export function useClock(): ClockState {
+//
+// `onDusk`:玩着玩着天正好黑下来的那一刻(白天 → 黄昏)叫一声(ROADMAP 4-3,nat_day_night)。
+// **在定时器回调里判断,不在 effect 里比前后两份 state** —— 后者要在 effect 里 setState
+// 出卡,会多一条 `set-state-in-effect`。开局就是黄昏或夜里不算:那不是「天黑下来了」,
+// 是她来的时候天就是黑的
+export function useClock(onDusk?: () => void): ClockState {
   const [override, setOverride] = useState<number | null>(null)
   const [tick, setTick] = useState(() => Date.now())
+  // 上一次算的是哪个时刻,和最新的回调。都是定时器回调里读的,不参与渲染
+  // null = 还没走过第一步。第一步只记下时刻、不判断 —— 开局那一刻不算「天黑下来」
+  const lastAt = useRef<number | null>(null)
+  const duskCb = useRef(onDusk)
+  useEffect(() => {
+    duskCb.current = onDusk
+  }, [onDusk])
+
+  // 从 lastAt 走到 at,中间跨过了「白天 → 黄昏」就叫一声
+  const advance = useCallback((at: number) => {
+    const last = lastAt.current
+    lastAt.current = at
+    if (last === null) return
+    if (skyAt(last).phase === 'day' && skyAt(at).phase === 'dusk') duskCb.current?.()
+  }, [])
+
+  // 挂上就记下开局时刻。在 effect 里记而不是 useRef(Date.now()) —— 渲染期间不读时钟
+  useEffect(() => {
+    advance(Date.now())
+  }, [advance])
 
   useEffect(() => {
     if (import.meta.env.PROD) return
     window.__setClock = (iso) => {
       const t = iso === null ? null : Date.parse(iso)
-      setOverride(t !== null && Number.isNaN(t) ? null : t)
+      const next = t !== null && Number.isNaN(t) ? null : t
+      advance(next ?? Date.now())
+      setOverride(next)
     }
     return () => {
       delete window.__setClock
     }
-  }, [])
+  }, [advance])
 
   useEffect(() => {
     if (override !== null) return
@@ -49,12 +76,14 @@ export function useClock(): ClockState {
     // 天色变化的时刻会比整点晚几十秒。看不出来,但没必要差
     let timer = 0
     const run = () => {
-      setTick(Date.now())
+      const now = Date.now()
+      advance(now)
+      setTick(now)
       timer = window.setTimeout(run, 60000)
     }
     timer = window.setTimeout(run, 60000 - (Date.now() % 60000))
     return () => clearTimeout(timer)
-  }, [override])
+  }, [override, advance])
 
   return useMemo(() => read(override ?? tick), [override, tick])
 }

@@ -12,6 +12,8 @@ export interface KnowledgeCardData {
   // 讲她这个物种的事跟着她走,换到哪片海都在;讲某片海里的环境、邻居、故事的才写。
   // 值是 world.json 里的海域名(红海浅滩 / 印度海湾 / 澳洲浅海),不是 seas.ts 的 id
   海域?: string
+  // 点 HUD 顶栏哪个图标会给这张卡(ROADMAP 4-3):「月相」/「潮汐」。一张卡可以挂两个
+  图标?: string[]
 }
 
 interface RawCard extends KnowledgeCardData {
@@ -183,6 +185,21 @@ export function useKnowledge(blocked: string[] = []) {
     [open, index, leastRecent],
   )
 
+  // 点 HUD 顶栏的月相 / 潮汐(ROADMAP 4-3)。她主动点的,**一定要有卡** ——
+  // 和问砗磲奶奶同一条路:不掷骰子,冷却里也照给,全在冷却里就给最久没说过的那张。
+  // 点了没反应的按钮就是死控件
+  const pickByIcon = useCallback(
+    (icon: string, seen: Record<string, string>) =>
+      leastRecent(open.filter((card) => card.图标?.includes(icon)), seen),
+    [open, leastRecent],
+  )
+
+  // 能点的图标。爸爸把某个图标的卡全屏蔽了,那个图标就不该还能点
+  const icons = useMemo(
+    () => [...new Set(open.flatMap((card) => card.图标 ?? []))],
+    [open],
+  )
+
   // 哪些身体部位是可以点的。不随冷却变化,免得热区忽有忽无
   const anchors = [
     ...new Set(open.map((card) => card.锚点).filter((a): a is string => !!a)),
@@ -210,5 +227,5 @@ export function useKnowledge(blocked: string[] = []) {
     [open],
   )
 
-  return { anchors, subjects, unknownLines, bookCards, cardById, pickByAnchor, pickByEvent, pickBySubject, search }
+  return { anchors, subjects, icons, unknownLines, bookCards, cardById, pickByAnchor, pickByEvent, pickByIcon, pickBySubject, search }
 }
