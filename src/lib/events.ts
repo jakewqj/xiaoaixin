@@ -17,6 +17,8 @@ export interface EventLine {
 
 export interface EventCondition {
   海域?: string[]
+  /** world.json 的地点 id。她此刻游在这一格才算(珊瑚产卵夜只在珊瑚花园) */
+  地点?: string[]
   时段?: DayPhase[]
   /** [最少, 最多] 天,从满月那一刻算起 */
   满月后天数?: [number, number]
@@ -58,8 +60,9 @@ export function nightKey(now: number): string {
 }
 
 // 一条事件的条件此刻成立吗。没写的条件不看
-function matches(c: EventCondition, now: number, seaName: string): boolean {
+function matches(c: EventCondition, now: number, seaName: string, spotId: string | undefined): boolean {
   if (c.海域 && !c.海域.includes(seaName)) return false
+  if (c.地点 && !(spotId && c.地点.includes(spotId))) return false
   if (c.时段 && !c.时段.includes(skyAt(now).phase)) return false
   if (c.季节 && !c.季节.includes(seasonAt(now))) return false
   if (c.月份 && !c.月份.includes(new Date(now).getMonth() + 1)) return false
@@ -71,6 +74,11 @@ function matches(c: EventCondition, now: number, seaName: string): boolean {
 }
 
 /** 此刻条件成立的事件。**没核对过的不算** —— 原则 9,没出处的设定不进游戏 */
-export function activeEvents(events: NatureEvent[], now: number, seaName: string): NatureEvent[] {
-  return events.filter((e) => e.已核对 === true && matches(e.条件, now, seaName))
+export function activeEvents(
+  events: NatureEvent[],
+  now: number,
+  seaName: string,
+  spotId: string | undefined,
+): NatureEvent[] {
+  return events.filter((e) => e.已核对 === true && matches(e.条件, now, seaName, spotId))
 }

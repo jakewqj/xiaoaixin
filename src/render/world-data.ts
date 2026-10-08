@@ -411,6 +411,49 @@ export const MOTION = {
   cameraPanMs: 400,
 } as const
 
+/**
+ * 自然事件的画面(ROADMAP 4-5,layers/event-fx.ts)。
+ *
+ * 暗幕的颜色和透明度就是 4-4 那层 DOM 暗幕的 `bg-[#101a38]/50`,搬进渲染层之后观感不变。
+ */
+export const EVENT_FX = {
+  dimColor: '16, 26, 56',
+  dimAlpha: 0.5,
+  dimInMs: 700,
+  /** 减弱动态效果时画面钉在开演后的这一刻:卵团已经漂满、小海龟已经下水,只是不动 */
+  frozenAtMs: 6000,
+  coral: {
+    /** 每株珊瑚冒几颗。珊瑚花园中景 7 株 × 22 ≈ 一屏一百五十颗。
+     *  第一版 10 颗、多数 1px,上屏是零零星星几十个点,读不出「像下雪」 */
+    perCoral: 22,
+    /** 从珊瑚顶漂到水面要多久。卵团是慢慢浮上去的,不是喷出来的 */
+    riseMs: 9000,
+    /** 一株一株错开冒的时间跨度 —— 头几秒是「一处、两处、到处都是」 */
+    startSpreadMs: 3000,
+    swayMs: 3000,
+    swayPx: 2,
+    alpha: 0.9,
+    /** 粉、奶白、浅橙:珊瑚卵团的颜色。在夜色和暗幕底下都得亮得起来 */
+    colors: ['#f7b6c2', '#fbe6c8', '#f6c08a'],
+  },
+  hatch: {
+    /** 16 只、每 0.45 秒下来一只:台词走到「好多好多」时画面上真的得是一群。
+     *  第一版 12 只 / 0.7 秒,开演 3 秒才下来 4 只 */
+    count: 16,
+    staggerMs: 450,
+    /** 一只从钻进水到游出画面的时长。幼龟拼命划,比小爱心 90px/s 的巡游慢不了多少 */
+    swimMs: 9000,
+    fromX: -20,
+    spreadX: 220,
+    travelX: 520,
+    /** 钻下来之后在水面下多深的地方游(屏幕像素) */
+    depth: 18,
+    depthSpread: 40,
+    /** 划水 8fps(宪法十三:精灵翻帧低帧率) */
+    frameMs: 125,
+  },
+} as const
+
 /** 世界层要用到的全部素材。少一张就少画一层,不阻塞、不白屏 */
 export const WORLD_PRELOAD: readonly string[] = [
   ...['sky.png', 'cloud_big.png', 'cloud_small.png', 'island_big.png', 'island_small.png',
@@ -420,6 +463,8 @@ export const WORLD_PRELOAD: readonly string[] = [
     // assets.get 拿不到就静默跳过,漏了不报错、只是少一层
     'stars.png', 'moon_0.png', 'moon_1.png', 'moon_2.png', 'moon_3.png',
     'moon_4.png', 'moon_5.png', 'moon_6.png', 'moon_7.png',
+    // 海龟孵化夜的小海龟(ROADMAP 4-5,draw-hatchling.mjs 生成)
+    'hatchling.png',
   ].map((f) => `${WORLD_DIR}/${f}`),
   ...[...FG_REEFS.files, ...FG_REEFS.kelp.files].map((f) => `${WORLD_DIR}/${f}`),
   ...new Set([...DECOR_VARIANTS.flat(), ...Object.values(SPOT_DECOR).flat()].map((d) => `${WORLD_DIR}/${d.file}`)),

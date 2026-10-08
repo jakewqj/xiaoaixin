@@ -17,6 +17,7 @@ import type { ActorState, NpcView, PetView, NoteView } from './layers/actors'
 export type { NoteView } from './layers/actors'
 export { placeNotePos, seagrassNoteRow } from './layers/actors'
 import { drawOverlay } from './layers/overlay'
+import { drawEventFx } from './layers/event-fx'
 import { REST_Y, Swim } from './swim'
 import type { Hotspot } from './types'
 import type { Furrow } from './layers/background'
@@ -56,6 +57,11 @@ export interface WorldSnapshot {
    * 看得见的水面线跟着它升降,沙地浅滩退潮时露出东西。一分钟才变一次,走快照
    */
   tide: number
+  /**
+   * 正在演的自然事件画面(ROADMAP 4-5):null = 没在演;'' = 在演但这条事件没有专属画面,只压暗;
+   * 其余是 events.json 的「画面」名(coral_snow / turtle_hatch)
+   */
+  eventFx: string | null
 }
 
 export class WorldRenderer {
@@ -127,6 +133,8 @@ export class WorldRenderer {
   private furrows: Furrow[] = []
   private onEating: ((active: boolean) => void) | null = null
   private onSpot: ((index: number) => void) | null = null
+  /** 这一场事件画面是哪一刻开演的。暗幕淡入、卵团一颗颗冒出来都从这儿算 */
+  private eventAt = 0
   private spotIndex = -1
 
   get worldWidth(): number {
@@ -203,6 +211,7 @@ export class WorldRenderer {
       if (next.pet.atSurface) this.onEating?.(false)
       else this.startGraze(now)
     }
+    if (next.eventFx !== null && next.eventFx !== prev?.eventFx) this.eventAt = now
     if (next.pet.showBubbles && !prev?.pet.showBubbles) this.bubblesAt = now
     if (!next.pet.showBubbles) this.bubblesAt = null
     if (next.pet.popping && !prev?.pet.popping) this.poppingAt = now
@@ -537,6 +546,21 @@ export class WorldRenderer {
       petScreenX: this.swim.x - Math.round(this.camera.x),
       petScreenY: this.petTop - Math.round(this.camera.y),
     })
+    // 事件画面压在最上面(夜色之后):她点了「去看看」,这一刻最亮的就该是它
+    if (s.eventFx !== null) {
+      drawEventFx(this.overlay, {
+        now,
+        camX: this.camera.x,
+        camY: this.camera.y,
+        worldHeight: this.worldHeight,
+        slotCount: Math.max(1, s.slotCount),
+        spotIds: s.spotIds,
+        surfaceY: this.surfaceY,
+        reduced,
+        fx: s.eventFx,
+        at: this.eventAt,
+      })
+    }
     this.syncHotspots()
   }
 

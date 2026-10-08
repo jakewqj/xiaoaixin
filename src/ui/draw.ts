@@ -94,8 +94,8 @@ function drawTopBar(ctx: CanvasRenderingContext2D, snap: HudSnapshot, spots: Hot
   // 月相 / 潮汐可以点,点了小爱心讲一张相关的卡(ROADMAP 4-3)。
   // **推在标题热区之后** —— DOM 里后来的盖在上面,不然长按进后台那块(整个面板)会把它吞掉。
   // 热区 = 图标 + 字的实际宽度,上下各多留 2px,两块中间那 5px 空隙对半分。
-  // **右边不按木牌截断**:月相名字长的那几天(「快圆了」「半个月亮」)这一行本来就会画出木牌,
-  // 热区得跟着字走 —— 字画到哪就能点到哪,不然点在露出来的半个字上没反应
+  // 右边跟着字实际画到哪就到哪,不按木牌截断。木牌已按最长那一行加宽(见 layout.ts TOP),
+  // 正常不会画出去;真有人把月相名字改长了,热区也还跟着字走,不会点在半个字上没反应
   const row = { y: TOP.line2.y - 2, h: SIZES.normal + 4 }
   const mid = Math.round((moonEnd + tideX) / 2)
   if (snap.topIcons.includes('月相')) {

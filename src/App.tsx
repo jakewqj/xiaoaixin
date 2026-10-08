@@ -150,13 +150,7 @@ function App() {
   const onDusk = useCallback(() => duskRef.current(), [])
   const clock = useClock(onDusk)
 
-  // 自然事件(ROADMAP 4-4):此刻条件成立、而且今晚还没看过的。
-  // 看完才记「今晚看过」—— 点了「等一下」不算看过,只是今晚不再问
   const tonight = nightKey(clock.at)
-  const pendingEvents = useMemo(
-    () => activeEvents(events, clock.at, sea.name).filter((e) => save.eventNights[e.id] !== tonight),
-    [events, clock.at, sea.name, save.eventNights, tonight],
-  )
 
   // 剧本 = dialogue.json 的场景 + 每条事件的一句邀请。邀请是按 events.json 现拼的,
   // 台词一个字都不写在代码里;两个选项的字是固定的,和事件无关
@@ -370,6 +364,18 @@ function App() {
   // 一整局都不会出现。记下格号,等地点表加载完再对(2026-08-24 实测揪出来的)
   const [spotIndex, setSpotIndex] = useState(-1)
   const handleSpotChanged = useCallback((index: number) => setSpotIndex(index), [])
+
+  // 自然事件(ROADMAP 4-4):此刻条件成立、而且今晚还没看过的。
+  // 看完才记「今晚看过」—— 点了「等一下」不算看过,只是今晚不再问。
+  // 要知道她游在哪一格(珊瑚产卵夜只在珊瑚花园演),所以放在 spotIndex 后面算
+  const hereId = openSpots[spotIndex]?.id
+  const pendingEvents = useMemo(
+    () =>
+      activeEvents(events, clock.at, sea.name, hereId).filter(
+        (e) => save.eventNights[e.id] !== tonight,
+      ),
+    [events, clock.at, sea.name, hereId, save.eventNights, tonight],
+  )
 
   useEffect(() => {
     const spot = openSpots[spotIndex]
@@ -1116,6 +1122,8 @@ function App() {
     moonFrame: clock.moon.frame,
     // 潮位 × 潮差:大潮涨得高退得低,小潮起伏小。HUD 上「涨潮/退潮」读的是同一份
     tide: clock.tide.level * clock.tide.range,
+    // 正在演的自然事件画面(ROADMAP 4-5)。暗幕和专属画面都在渲染层画,台词板在 DOM
+    eventFx: showEvent ? (showEvent.画面 ?? '') : null,
   }
 
   // 在水面等着的时候点她 = 帮她换气;其余时候点她 = 摸摸她
@@ -1201,7 +1209,8 @@ function App() {
               <DialoguePanel content={panelContent} />
               {/* 对话面板从底部滑上来的时候,饱腹度条和 HUD 会被它盖住/撞在一起——
                   说话的时候先让它们让开,面板收起再回来 */}
-              {page === 'sea' && !panelContent && (
+              {/* 看自然事件的时候 HUD 也让开:暗幕画在世界层里,HUD 那块 canvas 盖在它上面,不让开就是整屏唯一没变暗的东西 */}
+              {page === 'sea' && !panelContent && !showEvent && (
                 <HUD
                   snapshot={hudSnapshot}
                   onSlotTap={handleSlotTap}

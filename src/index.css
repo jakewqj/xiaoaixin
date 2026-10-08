@@ -115,7 +115,7 @@
   animation: card-in 400ms ease-out;
 }
 
-/* 自然事件的演出(ROADMAP 4-4):整块慢慢暗下来,每换一句台词淡入一次。
+/* 自然事件的演出:每换一句台词淡入一次(整块暗下来 4-5 起搬进了渲染层)。
    只动透明度,不做位移和缩放 —— 非整数的缩放会让像素抖(§二十二·3) */
 @keyframes fade-in {
   from {
@@ -124,10 +124,6 @@
   to {
     opacity: 1;
   }
-}
-
-.event-dim {
-  animation: fade-in 700ms ease-out;
 }
 
 .event-line {
@@ -231,7 +227,6 @@
 @media (prefers-reduced-motion: reduce) {
   .sprite-frames,
   .knowledge-card,
-  .event-dim,
   .event-line {
     animation: none;
   }
